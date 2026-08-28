@@ -1,0 +1,26 @@
+# تم تاریک «شب»
+name: شب
+description: تم تیره با زمینهٔ تاریک، مناسب کار شبانه
+colors:
+  primary: "#7fd1e0"        # فیروزه‌ای روشن
+  secondary: "#9aa0a6"      # خاکستری
+  accent: "#c792ea"         # بنفش
+  overdue: "#ff5c57"        # قرمز — سررسید گذشته
+  due_soon: "#f3f99d"       # زرد — نزدیک سررسید
+  waiting: "#57c7ff"        # آبی — در انتظار
+  completed: "#5af78e"      # سبز — انجام‌شده
+  blocked: "#ff6ac1"        # صورتی — مسدود
+  header: "#7fd1e0"
+  muted: "#6b7280"
+table:
+  box: ROUNDED
+  border: "#3b4048"
+persian_digits: true
+date_format: short          # ۱۴۰۳-۰۷-۱۰
+chart_palette:
+  - "#7fd1e0"
+  - "#c792ea"
+  - "#5af78e"
+  - "#f3f99d"
+  - "#57c7ff"
+  - "#ff6ac1"

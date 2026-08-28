@@ -1,0 +1,26 @@
+# تم روشن «روز»
+name: روز
+description: تم روشن با زمینهٔ سفید، مناسب محیط پرنور
+colors:
+  primary: "#0b6e99"        # آبی نفتی
+  secondary: "#5f6368"      # خاکستری تیره
+  accent: "#8250df"         # بنفش
+  overdue: "#d1242f"        # قرمز — سررسید گذشته
+  due_soon: "#9a6700"       # خردلی — نزدیک سررسید
+  waiting: "#0969da"        # آبی — در انتظار
+  completed: "#1a7f37"      # سبز — انجام‌شده
+  blocked: "#cf222e"        # قرمز — مسدود
+  header: "#0b6e99"
+  muted: "#8c959f"
+table:
+  box: SIMPLE_HEAVY
+  border: "#d0d7de"
+persian_digits: true
+date_format: short          # ۱۴۰۳-۰۷-۱۰
+chart_palette:
+  - "#0b6e99"
+  - "#8250df"
+  - "#1a7f37"
+  - "#9a6700"
+  - "#0969da"
+  - "#cf222e"
