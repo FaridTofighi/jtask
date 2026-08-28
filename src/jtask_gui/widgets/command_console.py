@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 
 from PyQt6.QtCore import Qt
@@ -16,6 +17,15 @@ from PyQt6.QtWidgets import (
 from jtask import rewrite, taskwarrior
 
 from ..workers import submit
+
+# Taskwarrior underlines table headers with SGR escapes (\x1b[4m … \x1b[0m)
+# even when rc.color=off / rc._forcecolor=off — a QPlainTextEdit is not a
+# terminal, so strip every CSI/OSC sequence before displaying.
+_ANSI_RE = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))")
+
+
+def strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
 
 
 class _HistoryLineEdit(QLineEdit):
@@ -82,6 +92,6 @@ class CommandConsole(QWidget):
         submit(work, self._done, self._done)
 
     def _done(self, output: str) -> None:
-        self._append(output or "(بدون خروجی)")
+        self._append(strip_ansi(output) or "(بدون خروجی)")
         self._in.setEnabled(True)
         self._in.setFocus()
