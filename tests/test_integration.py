@@ -26,10 +26,10 @@ def tw_env(tmp_path, monkeypatch):
     monkeypatch.setenv("TASKRC", str(rc))
     monkeypatch.setenv("JTASK_CONFIG_DIR", str(tmp_path / "cfg"))
     monkeypatch.setattr(jalali, "LOCAL_TZ", TEHRAN)
-    taskwarrior.date_uda_names.cache_clear()
+    taskwarrior.refresh_lookups()
     config.mark_first_run_done()
     yield
-    taskwarrior.date_uda_names.cache_clear()
+    taskwarrior.refresh_lookups()
 
 
 def _run(*args: str) -> int:
@@ -110,7 +110,7 @@ def test_rejects_gregorian_looking_input(tw_env, capsys):
 def test_missing_task_binary_message(tw_env, capsys, monkeypatch):
     monkeypatch.setenv("JTASK_TASK_BIN", "")
     monkeypatch.setattr(shutil, "which", lambda _: None)
-    taskwarrior.date_uda_names.cache_clear()
+    taskwarrior.refresh_lookups()
     rc = _run("list")
     out = capsys.readouterr().out
     assert rc == 1

@@ -106,16 +106,95 @@ def passthrough(args: list[str]) -> int:
     return subprocess.run(cmd, check=False).returncode
 
 
+def _lines(args: list[str]) -> list[str]:
+    try:
+        proc = run(args)
+    except JtaskError:
+        return []
+    return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+
+
 @lru_cache(maxsize=1)
+def _show_config() -> dict[str, str]:
+    """Full ``task _show`` as a ``key=value`` dict."""
+    out: dict[str, str] = {}
+    for line in _lines(["_show"]):
+        if "=" in line:
+            key, _, value = line.partition("=")
+            out[key.strip()] = value.strip()
+    return out
+
+
+@lru_cache(maxsize=1)
+def uda_definitions() -> dict[str, dict[str, str]]:
+    """Discovered UDAs as ``{name: {"type": ..., "label": ..., "values": ...}}``."""
+    cfg = _show_config()
+    udas: dict[str, dict[str, str]] = {}
+    for key, value in cfg.items():
+        if not key.startswith("uda."):
+            continue
+        rest = key[len("uda.") :]
+        name, _, attr = rest.partition(".")
+        if not attr:
+            continue
+        udas.setdefault(name, {})[attr] = value
+    for name, spec in udas.items():
+        spec.setdefault("type", "string")
+        spec.setdefault("label", name)
+    return udas
+
+
 def date_uda_names() -> frozenset[str]:
     """Names of user-defined attributes whose type is ``date``."""
+    return frozenset(n for n, s in uda_definitions().items() if s.get("type") == "date")
+
+
+@lru_cache(maxsize=1)
+def list_projects() -> list[str]:
+    """All project names (pending via ``_projects`` plus any seen in export)."""
+    projects = set(_lines(["_projects"]))
     try:
-        proc = run(["_show"])
+        for t in export(["status:completed"]):
+            if t.get("project"):
+                projects.add(t["project"])
     except JtaskError:
-        return frozenset()
-    names = set()
-    for line in proc.stdout.splitlines():
-        line = line.strip()
-        if line.startswith("uda.") and line.endswith(".type=date"):
-            names.add(line[len("uda.") : -len(".type=date")])
-    return frozenset(names)
+        pass
+    return sorted(projects)
+
+
+@lru_cache(maxsize=1)
+def list_tags() -> list[str]:
+    """User tag names, with Taskwarrior's virtual tags filtered out."""
+    from .reports import VIRTUAL_TAGS
+
+    return sorted(t for t in _lines(["_tags"]) if t not in VIRTUAL_TAGS)
+
+
+@lru_cache(maxsize=1)
+def list_contexts() -> list[str]:
+    """Defined context names (empty when none are configured)."""
+    names = []
+    for line in _lines(["_context"]):
+        if line and line != "none":
+            names.append(line)
+    return names
+
+
+def current_context() -> str | None:
+    lines = _lines(["_get", "rc.context"])
+    return lines[0] if lines and lines[0] else None
+
+
+@lru_cache(maxsize=1)
+def list_reports() -> list[str]:
+    """Names of report definitions (built-in + custom from .taskrc)."""
+    return sorted(set(_lines(["_reports"])))
+
+
+def refresh_lookups() -> None:
+    """Drop all cached lookups (call after config or data changes)."""
+    for fn in (
+        _show_config, uda_definitions, list_projects, list_tags,
+        list_contexts, list_reports,
+    ):
+        fn.cache_clear()
