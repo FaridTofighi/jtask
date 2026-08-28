@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from .mpl_base import ThemedChart
+from .mpl_base import (
+    ThemedChart,
+    legend_fa,
+    set_title_fa,
+    set_xticklabels_fa,
+)
+
+_NAMES = ("افزوده", "تکمیل‌شده", "حذف‌شده")
 
 
 class HistoryChart(ThemedChart):
@@ -18,37 +25,36 @@ class HistoryChart(ThemedChart):
 
     def draw_chart(self, ax, data, pal: dict) -> None:
         buckets = data["buckets"]
-        labels = [self._fa(b["label"].split("-")[-1] if "-" in b["label"] else b["label"])
-                  for b in buckets]
-        x = list(range(len(buckets)))
-        added = [b["added"] for b in buckets]
-        completed = [b["completed"] for b in buckets]
-        deleted = [b["deleted"] for b in buckets]
-
-        series = [
-            ("افزوده", added, pal["primary"]),
-            ("تکمیل‌شده", completed, pal["completed"]),
-            ("حذف‌شده", deleted, pal["overdue"]),
+        labels = [
+            b["label"].split("-")[-1] if "-" in b["label"] else b["label"]
+            for b in buckets
         ]
+        x = list(range(len(buckets)))
+        values = (
+            [b["added"] for b in buckets],
+            [b["completed"] for b in buckets],
+            [b["deleted"] for b in buckets],
+        )
+        colours = (pal["primary"], pal["completed"], pal["overdue"])
+
         if self._mode == "history":
             width = 0.26
-            for i, (name, values, colour) in enumerate(series):
-                ax.bar([p + (i - 1) * width for p in x], values, width,
-                       label=name, color=colour)
+            for i, (vals, colour) in enumerate(zip(values, colours, strict=True)):
+                ax.bar([p + (i - 1) * width for p in x], vals, width, color=colour)
         else:  # ghistory: stacked
             bottom = [0] * len(buckets)
-            for name, values, colour in series:
-                ax.bar(x, values, bottom=bottom, label=name, color=colour)
-                bottom = [b + v for b, v in zip(bottom, values, strict=True)]
+            for vals, colour in zip(values, colours, strict=True):
+                ax.bar(x, vals, bottom=bottom, color=colour)
+                bottom = [b + v for b, v in zip(bottom, vals, strict=True)]
 
         step = max(1, len(buckets) // 8)
         ax.set_xticks(x[::step])
-        ax.set_xticklabels(labels[::step], rotation=45, ha="left",
+        set_xticklabels_fa(ax, labels[::step], rotation=45, ha="left",
                            fontfamily=self._family, fontsize=8)
         title = "گراف تاریخچه" if self._mode == "ghistory" else "تاریخچه"
-        ax.set_title(title, fontfamily=self._family, color=pal["text"],
+        set_title_fa(ax, title, fontfamily=self._family, color=pal["text"],
                      fontsize=13, pad=12)
-        leg = ax.legend(loc="upper left", framealpha=0.0)
+        leg = legend_fa(ax, _NAMES, loc="upper left", framealpha=0.0)
         for t in leg.get_texts():
             t.set_color(pal["text"])
             t.set_fontfamily(self._family)

@@ -152,7 +152,7 @@ def test_dep_graph_empty_note(qtbot):
     g = DependencyGraph("شب")
     qtbot.addWidget(g)
     g.show_task({"uuid": "a", "id": 1, "description": "تنها", "status": "pending"}, [])
-    texts = [it.text() for it in g.scene().items() if hasattr(it, "text")]
+    texts = [it.toPlainText() for it in g.scene().items() if hasattr(it, "toPlainText")]
     assert any("وابستگی" in t for t in texts)
 
 

@@ -1,9 +1,13 @@
 """Theme-aware matplotlib canvas base for the report charts.
 
-matplotlib ≥ 3.6 shapes and bidi-reorders Persian text natively (HarfBuzz), so
-labels are passed as raw Persian — no ``arabic-reshaper`` here, same rule as the
-Qt widgets.  Every chart is a redraw-on-demand ``FigureCanvasQTAgg``; that model
-fits Taskwarrior's report semantics and makes PNG export trivial.
+matplotlib is a low-level text renderer: it only shapes/bidi-reorders Persian
+when built against **libraqm** (see ``mpl_text``).  So chart code must NOT touch
+matplotlib's raw text API (``ax.set_title``/``set_xlabel``/``legend``/…)
+directly — it goes through the ``*_fa`` wrappers below, which route every string
+through :func:`mpl_text.fa`.  A grep test enforces this.
+
+Every chart is a redraw-on-demand ``FigureCanvasQTAgg``; that model fits
+Taskwarrior's report semantics and makes PNG export trivial.
 """
 
 from __future__ import annotations
@@ -21,17 +25,57 @@ from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 from ... import fmt  # noqa: E402
 from ...theme import palette  # noqa: E402
+from .mpl_text import fa  # noqa: E402
 
+_FONTS_REGISTERED = False
+_FONT_FAMILY = "Vazirmatn"
+
+
+# --------------------------------------------------------------------------
+# text wrappers — the ONLY way chart code is allowed to put text on an Axes
+# --------------------------------------------------------------------------
 
 def _tick_text(value, _pos=None) -> str:
-    """Format an axis tick value through the shared GUI number formatter."""
+    """Numeric axis tick → shared digit formatter (Persian/ASCII per mode)."""
     return fmt.num(int(value) if float(value).is_integer() else round(value, 1))
 
 
 TICK_FORMATTER = FuncFormatter(_tick_text)
 
-_FONTS_REGISTERED = False
-_FONT_FAMILY = "Vazirmatn"
+
+def category_tick_formatter(labels: list[str]) -> FuncFormatter:
+    """A tick formatter for a categorical/text x-axis: index → reshaped label."""
+    prepared = [fa(x) for x in labels]
+
+    def fmt_(value, _pos=None):
+        i = int(round(value))
+        return prepared[i] if 0 <= i < len(prepared) else ""
+
+    return FuncFormatter(fmt_)
+
+
+def set_title_fa(ax, text, **kw):
+    return ax.set_title(fa(text), **kw)
+
+
+def set_xlabel_fa(ax, text, **kw):
+    return ax.set_xlabel(fa(text), **kw)
+
+
+def set_ylabel_fa(ax, text, **kw):
+    return ax.set_ylabel(fa(text), **kw)
+
+
+def set_xticklabels_fa(ax, labels, **kw):
+    return ax.set_xticklabels([fa(x) for x in labels], **kw)
+
+
+def legend_fa(ax, labels, **kw):
+    return ax.legend([fa(x) for x in labels], **kw)
+
+
+def text_fa(ax, x, y, text, **kw):
+    return ax.text(x, y, fa(text), **kw)
 
 
 def register_fonts() -> str:
@@ -54,7 +98,8 @@ def register_fonts() -> str:
 class ThemedChart(QWidget):
     """A titled matplotlib canvas that restyles itself for the active theme.
 
-    Subclasses implement :meth:`draw_chart(ax, data, pal)`.
+    Subclasses implement :meth:`draw_chart(ax, data, pal)` and put text on the
+    axes only via the module-level ``*_fa`` helpers.
     """
 
     def __init__(self, theme_name: str = "شب", parent: QWidget | None = None) -> None:
@@ -82,6 +127,8 @@ class ThemedChart(QWidget):
         self.redraw()
 
     def export_png(self, path: str) -> None:
+        # savefig re-renders the same Figure object we display, so the text
+        # pipeline is identical — nothing to re-prepare here.
         self._figure.savefig(path, dpi=150, facecolor=self._figure.get_facecolor())
 
     def redraw(self) -> None:
@@ -91,7 +138,7 @@ class ThemedChart(QWidget):
         ax = self._figure.add_subplot(111)
         self._style_axes(ax, pal)
         if not self._has_data():
-            ax.text(0.5, 0.5, "داده کافی برای این نمودار وجود ندارد.",
+            text_fa(ax, 0.5, 0.5, "داده کافی برای این نمودار وجود ندارد.",
                     ha="center", va="center", color=pal["text_muted"],
                     fontsize=13, fontfamily=self._family)
             ax.set_xticks([])
@@ -121,14 +168,10 @@ class ThemedChart(QWidget):
         ax.tick_params(colors=pal["text_muted"], labelsize=9)
         ax.grid(True, axis="y", color=pal["row_line"], linewidth=0.8, alpha=0.7)
         ax.set_axisbelow(True)
-        # every numeric tick (both axes) goes through the shared digit formatter
         ax.yaxis.set_major_formatter(TICK_FORMATTER)
         ax.xaxis.set_major_formatter(TICK_FORMATTER)
         for lbl in (*ax.get_xticklabels(), *ax.get_yticklabels()):
             lbl.set_fontfamily(self._family)
-
-    def _fa(self, text: str) -> str:
-        return fmt.digits(str(text))
 
     def draw_chart(self, ax, data, pal: dict) -> None:  # pragma: no cover - abstract
         raise NotImplementedError

@@ -7,7 +7,7 @@ from PyQt6.QtGui import QBrush, QColor, QPainterPath, QPen
 from PyQt6.QtWidgets import (
     QGraphicsPathItem,
     QGraphicsScene,
-    QGraphicsSimpleTextItem,
+    QGraphicsTextItem,
     QGraphicsView,
 )
 
@@ -66,8 +66,8 @@ class DependencyGraph(QGraphicsView):
             self._edge(scene, centres[task["uuid"]], centres[d["uuid"]], pen)
 
         if not blockers and not dependents:
-            note = QGraphicsSimpleTextItem("این کار وابستگی‌ای ندارد.")
-            note.setBrush(QBrush(QColor(pal["text_muted"])))
+            note = QGraphicsTextItem("این کار وابستگی‌ای ندارد.")
+            note.setDefaultTextColor(QColor(pal["text_muted"]))
             scene.addItem(note)
 
         rect = scene.itemsBoundingRect().adjusted(-20, -20, 20, 20)
@@ -88,9 +88,10 @@ class DependencyGraph(QGraphicsView):
         scene.addItem(item)
 
         desc = (task.get("description") or "")[:22]
-        label = QGraphicsSimpleTextItem(f"#{task.get('id', '?')}  {desc}")
-        label.setBrush(QBrush(QColor(pal["text"])))
-        label.setPos(x + 8, y + _H / 2 - 8)
+        label = QGraphicsTextItem(f"#{task.get('id', '?')}  {desc}")
+        label.setDefaultTextColor(QColor(pal["text"]))
+        label.setTextWidth(_W - 12)
+        label.setPos(x + 6, y + _H / 2 - 12)
         scene.addItem(label)
 
     def _edge(self, scene, a: QPointF, b: QPointF, pen: QPen):

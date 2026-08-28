@@ -402,10 +402,9 @@ per-report toolbar (period toggle, ghistory bar-mode toggle, PNG export).
 
 - **matplotlib**: `charts/mpl_base.py` — `QtAgg` backend, bundled Vazirmatn
   registered with the font manager, `ThemedChart` restyles figure/axes/text
-  from the palette on every theme switch, `export_png()`. matplotlib ≥ 3.6
-  shapes + bidi-reorders Persian natively, so labels are **raw Persian** — no
-  `arabic-reshaper`, same rule as the Qt widgets. Empty data → a Persian
-  "داده کافی نیست" message on the axes, never a crash.
+  from the palette on every theme switch, `export_png()`. Empty data → a Persian
+  message on the axes, never a crash.
+  **Persian text handling — corrected after M4 review** (see next section).
 - **Filter-aware**: the main filter bar propagates to every report
   (`ReportsView.set_filter`); the calendar also re-queries per month.
 - **Stale-response guard**: `ReportsView._gen` / `CalendarReport._gen` — a
@@ -457,7 +456,61 @@ per-report toolbar (period toggle, ghistory bar-mode toggle, PNG export).
 
 10 M3 GUI tests + 5 core tests; 172 total green.
 
-## Later milestones (not in M1–M3)
-- **M4 — Platform**: `QSystemTrayIcon` due/overdue notifications + quiet hours,
-  PyInstaller/AppImage build, `.desktop` + icon + `StartupWMClass`, README
-  screenshots/GIF, first-run setup wizard.
+## Milestone 4 — Platform (delivered)
+
+- **Notifications** — `notifications.py`: `QSystemTrayIcon` + `NotificationManager`.
+  Polls `report_next` off-thread, classifies overdue / due-today / due-soon,
+  batches, de-dups per uuid, honours quiet hours (past-midnight wrap) and a
+  configurable interval. Tray menu (show/hide, quick-add, quit); close-to-tray
+  while notifications are on.
+- **First-run wizard** — `first_run.py`: theme / Persian digits / Vazirmatn
+  check / notifications opt-in, shown once (`settings.wizard_done`).
+- **Settings** — full notification prefs; `widgets/fa_spinbox.py` renders
+  Persian digits in the dialogs.
+- **Desktop integration** — bundled `icon.svg` + rasterised PNGs,
+  `app.setDesktopFileName("jtask-gui")` for `StartupWMClass` / Wayland app-id;
+  `packaging/` has the `.desktop` file, a PyInstaller spec, `build-appimage.sh`
+  and `install-desktop.sh`. `python -m jtask_gui` entry point.
+
+## M4 review fix — Persian text on matplotlib charts
+
+**The M2 note "matplotlib ≥ 3.6 shapes + bidi-reorders Persian natively, no
+arabic-reshaper needed" was wrong** and is retracted here.
+
+matplotlib shapes/reorders Arabic script **only when it was built against
+libraqm** (`matplotlib.ft2font.__libraqm_version__` is non-empty). The PyPI
+wheels on this dev machine were — hence the M2/M3 chart screenshots looked
+correct here (verified by zooming into the shipped screenshot: the title reads
+`نمودار سوختن (Burndown)`, correctly joined and ordered). On an install **without**
+raqm (stripped wheel, old version, a PyInstaller bundle that drops the shared
+lib) the *same code* renders raw Persian reversed and unjoined —
+`نتخوس رادومن` — which is what the review screenshot showed.
+
+**Unconditionally** reshaping (as the review first proposed) is also wrong: on a
+raqm-present install matplotlib would then shape an already-reshaped string and
+double-mangle it — producing exactly the same garble. Proven both ways with a
+render comparison.
+
+**Fix — capability-aware, matplotlib-only:**
+
+- `charts/mpl_text.py::fa(text)` — applies the digit mode, then reshapes +
+  bidi-reorders **only when `MPL_SHAPES_ARABIC` is false**; otherwise passes the
+  string through for matplotlib to shape. Correct in both environments.
+- **Never used in the Qt layer** (Qt always shapes natively — M1 rule).
+- **Structurally enforced**: chart code may not call matplotlib's raw text API.
+  `mpl_base.py` exposes `set_title_fa` / `set_xlabel_fa` / `set_ylabel_fa` /
+  `set_xticklabels_fa` / `legend_fa` / `text_fa` (each routes through `fa()`),
+  plus `category_tick_formatter`. `tests/gui/test_chart_text.py` greps every
+  chart module and fails if `ax.set_title(` / `set_xlabel` / `legend(` /
+  `ax.text(` etc. appear directly.
+- Applied to burndown and history/ghistory (all modes, all periods): title,
+  axis labels, x-tick labels, legend, empty-state text. The numeric y-tick
+  `FuncFormatter` (digit mode) is unchanged.
+- `export_png()` re-renders the same `Figure` object → identical text pipeline.
+- The M3 dependency graph switched from `QGraphicsSimpleTextItem` to
+  `QGraphicsTextItem` (full Qt text-document engine) so node labels are
+  unambiguously shaped/bidied by Qt.
+
+12 chart-text tests + updated dep-graph tests. Sweep for `drawText(` /
+custom `QPainter` text across the whole GUI: only `dep_graph.py`, now on the
+full text engine.
