@@ -56,3 +56,13 @@ def test_num_keeps_ids_ascii_even_when_persian_mode_on():
 def test_num_respects_disabled_digit_mode():
     rtl.set_digit_mode(False)
     assert rtl.num(1403) == "1403"
+
+
+def test_bidi_isolate_wraps_token_atomically():
+    out = rtl.bidi_isolate("-۲۰.۰")
+    assert out.startswith("⁦") and out.endswith("⁩")
+    assert out[1:-1] == "-۲۰.۰"
+
+
+def test_bidi_isolate_empty_is_noop():
+    assert rtl.bidi_isolate("") == ""

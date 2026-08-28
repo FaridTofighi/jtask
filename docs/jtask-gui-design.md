@@ -354,6 +354,37 @@ Screenshots after the pass: `docs/` is text-only, but the reviewer received the
 dark/light list, detail panel, long-filter, empty-state, console and placeholder
 captures.
 
+### Row state precedence
+
+`TaskTableModel._row_state` returns exactly one state per task; when a task
+matches several, the first match in this order wins (and drives the row tint,
+the `due`/description text colour, and the indicator-icon tint):
+
+1. **completed** — terminal; nothing else matters.
+2. **waiting** — the task is deliberately hidden until its `wait` date; not
+   actionable now, so this outranks urgency.
+3. **blocked** — has an unmet dependency. The useful signal is "unblock this",
+   which outranks "it's late": a blocked overdue task shows as blocked.
+4. **overdue** — `due` is in the past (pending only).
+5. **due-soon** — `due` within the configured threshold (default 3 days).
+6. *(none)* — normal styling.
+
+Indicator columns (annotation / recurrence / dependency) are independent of the
+row state and always show when the field is present; their icon is tinted with
+the row state colour when the state is overdue / blocked / waiting, otherwise
+muted.
+
+### Signed / structured numbers in RTL
+
+Any value that is a hyphen- or colon-separated token or a possibly-signed
+number (urgency, dates, ids, audit timestamps) is wrapped with Unicode isolate
+controls (`U+2066 … U+2069`) via `jtask.rtl.bidi_isolate` before it enters an
+RTL layout, so the bidi algorithm treats it as one atomic left-to-right unit
+and never floats a `-` or a separator to the wrong end (e.g. urgency `-20.0`
+renders `-۲۰.۰`, not `۲۰.۰-`). This is the general form of the fix first applied
+ad hoc to the status-bar count; `tests/gui/test_task_model.py` and
+`tests/test_rtl.py` assert the exact rendered strings.
+
 ## Later milestones (not in M1)
 
 - **M2 — Reports & Charts**: matplotlib `FigureCanvasQTAgg` renders for burndown

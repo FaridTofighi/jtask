@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali, taskwarrior
+from jtask.rtl import bidi_isolate
 
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
@@ -191,7 +192,9 @@ class DetailPanel(QScrollArea):
         self._depends.setText(",".join(str(d) for d in deps))
         self._load_annotations(task)
         self._load_udas(task)
-        self._urgency.setText(f"{float(task.get('urgency', 0)):.1f}")
+        self._urgency.setText(
+            bidi_isolate(jalali.to_persian_digits(f"{float(task.get('urgency', 0)):.1f}"))
+        )
         self._audit.setText(self._audit_text(task))
         self.opened.emit()
 
@@ -200,8 +203,9 @@ class DetailPanel(QScrollArea):
         for key, label in (("entry", "ایجاد"), ("modified", "ویرایش"), ("end", "پایان")):
             raw = task.get(f"{key}_gregorian") or task.get(key)
             if raw:
-                parts.append(f"{label}: {jalali.from_taskwarrior(raw, fmt='short')}")
-        return "  |  ".join(parts)
+                shown = bidi_isolate(jalali.from_taskwarrior(raw, fmt="short"))
+                parts.append(f"{label}: {shown}")
+        return "   ·   ".join(parts)
 
     def _load_annotations(self, task: dict) -> None:
         self._annotations.clear()

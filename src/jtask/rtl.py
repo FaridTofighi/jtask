@@ -14,7 +14,23 @@ from bidi.algorithm import get_display
 
 from .jalali import normalize_digits, to_persian_digits
 
-__all__ = ["rtl", "fa_digits", "en_digits", "num", "set_digit_mode", "digit_mode"]
+__all__ = [
+    "rtl", "fa_digits", "en_digits", "num", "set_digit_mode", "digit_mode",
+    "bidi_isolate",
+]
+
+# Unicode isolate controls — wrap a structured token (a signed number, a
+# hyphen-separated date) so the bidi algorithm treats it as one atomic LTR run
+# and never floats its sign/separators to the wrong side inside RTL text.
+_LRI = "⁦"  # LEFT-TO-RIGHT ISOLATE
+_PDI = "⁩"  # POP DIRECTIONAL ISOLATE
+
+
+def bidi_isolate(text: str) -> str:
+    """Return *text* wrapped so bidi renders it as one left-to-right unit."""
+    if not text:
+        return text
+    return f"{_LRI}{text}{_PDI}"
 
 _PERSIAN_DIGITS_DEFAULT = True
 _state = {"persian_digits": _PERSIAN_DIGITS_DEFAULT}

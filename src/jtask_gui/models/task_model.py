@@ -8,7 +8,7 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtGui import QColor, QFont
 
 from jtask import jalali
-from jtask.rtl import en_digits
+from jtask.rtl import bidi_isolate, en_digits
 
 from ..theme import palette
 from .column_spec import COLUMNS, Column
@@ -18,6 +18,8 @@ _TASK_ROLE = Qt.ItemDataRole.UserRole + 2
 _STATE_ROLE = Qt.ItemDataRole.UserRole + 3
 
 _INDICATOR_ICON = {"annotations": "annotation", "recur": "recur", "depends": "depends"}
+# hyphen-separated / colon-separated tokens that bidi must not reorder
+_STRUCTURED_KEYS = frozenset({"due", "scheduled", "wait", "until", "start", "entry", "end"})
 
 
 def _mix(a: str, b: str, t: float) -> str:
@@ -151,9 +153,13 @@ class TaskTableModel(QAbstractTableModel):
                 text = f"{float(text):.1f}"
             except ValueError:
                 pass
-        if col.is_id or not self._persian_digits:
-            return en_digits(text)
-        return jalali.to_persian_digits(text)
+        digits = en_digits(text) if (col.is_id or not self._persian_digits) \
+            else jalali.to_persian_digits(text)
+        # dates, ids and (possibly signed) numbers are structured tokens: keep
+        # them atomic so bidi never floats a '-' or a separator to the wrong end.
+        if text and (col.is_id or col.numeric or col.key in _STRUCTURED_KEYS):
+            return bidi_isolate(digits)
+        return digits
 
     def _decoration(self, task: dict, col: Column):
         if not col.indicator:
