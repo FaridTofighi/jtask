@@ -77,6 +77,52 @@ class Settings:
     def console_visible(self, value: bool) -> None:
         self._s.setValue("console/visible", bool(value))
 
+    # --- notifications ---
+    @property
+    def notifications_enabled(self) -> bool:
+        return self._s.value("notify/enabled", False, bool)
+
+    @notifications_enabled.setter
+    def notifications_enabled(self, value: bool) -> None:
+        self._s.setValue("notify/enabled", bool(value))
+
+    @property
+    def notify_states(self) -> list[str]:
+        raw = self._s.value("notify/states", ["overdue", "today"], list)
+        return [str(x) for x in (raw or [])]
+
+    @notify_states.setter
+    def notify_states(self, value: list[str]) -> None:
+        self._s.setValue("notify/states", list(value))
+
+    @property
+    def notify_interval_min(self) -> int:
+        return int(self._s.value("notify/interval_min", 15, int))
+
+    @notify_interval_min.setter
+    def notify_interval_min(self, value: int) -> None:
+        self._s.setValue("notify/interval_min", int(value))
+
+    @property
+    def quiet_hours(self) -> tuple[int, int]:
+        start = int(self._s.value("notify/quiet_start", 22, int))
+        end = int(self._s.value("notify/quiet_end", 7, int))
+        return start, end
+
+    @quiet_hours.setter
+    def quiet_hours(self, value: tuple[int, int]) -> None:
+        self._s.setValue("notify/quiet_start", int(value[0]))
+        self._s.setValue("notify/quiet_end", int(value[1]))
+
+    # --- first-run wizard ---
+    @property
+    def wizard_done(self) -> bool:
+        return self._s.value("wizard/done", False, bool)
+
+    @wizard_done.setter
+    def wizard_done(self, value: bool) -> None:
+        self._s.setValue("wizard/done", bool(value))
+
     # --- saved filters (name -> raw filter string) ---
     def saved_filters(self) -> dict[str, str]:
         raw = self._s.value("filters/saved", {}, dict) or {}

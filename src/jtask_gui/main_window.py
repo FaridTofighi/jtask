@@ -65,16 +65,20 @@ class MainWindow(QMainWindow):
         self._detail = DetailPanel()
         self._reports = ReportsView(self.settings.theme)
 
+        self._really_quit = False
         self._build_central()
         self._build_toolbars()
         self._build_sidebar()
         self._build_console()
         self._build_statusbar()
+        self._build_tray()
         self._wire()
 
         self._ensure_styled()
         self._restore_state()
         self.refresh_all()
+        if self.settings.notifications_enabled:
+            self._notify.reconfigure()
 
     def _ensure_styled(self) -> None:
         """Apply the theme stylesheet if the app was created without one."""
@@ -220,6 +224,57 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
         dock.setVisible(self.settings.console_visible)
         self._console_dock = dock
+
+    def _build_tray(self) -> None:
+        from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
+
+        from .app import app_icon
+        from .notifications import NotificationManager
+
+        self._tray = QSystemTrayIcon(app_icon(), self)
+        self._tray.setToolTip("jtask")
+        menu = QMenu(self)
+        act_show = menu.addAction("نمایش / پنهان‌کردن پنجره")
+        act_show.triggered.connect(self._toggle_window)
+        act_add = menu.addAction("افزودن سریع")
+        act_add.triggered.connect(self._focus_quick_add_from_tray)
+        menu.addSeparator()
+        act_quit = menu.addAction("خروج")
+        act_quit.triggered.connect(self._quit)
+        self._tray.setContextMenu(menu)
+        self._tray.activated.connect(self._on_tray_activated)
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            self._tray.show()
+
+        self._notify = NotificationManager(self.settings, self._tray, self)
+        self._notify.taskActivated.connect(self._raise_window)
+
+    def _on_tray_activated(self, reason) -> None:
+        from PyQt6.QtWidgets import QSystemTrayIcon
+
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self._toggle_window()
+
+    def _toggle_window(self) -> None:
+        if self.isVisible() and not self.isMinimized():
+            self.hide()
+        else:
+            self._raise_window()
+
+    def _raise_window(self) -> None:
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def _focus_quick_add_from_tray(self) -> None:
+        self._raise_window()
+        self._quick_add.focus()
+
+    def _quit(self) -> None:
+        from PyQt6.QtWidgets import QApplication
+
+        self._really_quit = True
+        QApplication.quit()
 
     def _build_statusbar(self) -> None:
         sb = self.statusBar()
@@ -471,6 +526,7 @@ class MainWindow(QMainWindow):
             self._model.set_due_soon_days(self.settings.due_soon_days)
             self._reports.refresh_digits()
             self._apply_theme(self.settings.theme)
+            self._notify.reconfigure()
             self.refresh_all()
 
     # --- busy / helpers ----------------------------------
@@ -514,6 +570,21 @@ class MainWindow(QMainWindow):
         self.settings.save_window(self.saveGeometry(), self.saveState())
         self.settings.save_columns(self._model.visible_columns(), [], {})
         self.settings.sync()
+        # keep running in the tray so notifications continue, unless the user
+        # picked "خروج" from the tray menu
+        if (
+            not self._really_quit
+            and self.settings.notifications_enabled
+            and self._tray.isVisible()
+        ):
+            event.ignore()
+            self.hide()
+            self._tray.showMessage(
+                "jtask", "برنامه در نوار وظیفه فعال است.",
+                self._tray.MessageIcon.Information, 3000,
+            )
+            return
+        self._notify.stop()
         super().closeEvent(event)
 
 

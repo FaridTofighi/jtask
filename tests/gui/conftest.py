@@ -20,6 +20,20 @@ def _tz(monkeypatch):
     monkeypatch.setattr(jalali, "LOCAL_TZ", TEHRAN)
 
 
+@pytest.fixture(autouse=True)
+def _drain_workers():
+    """Make sure no background worker from a prior test is still running —
+    a straggler could re-populate a lookup cache with the wrong TASKRC."""
+    yield
+    try:
+        from jtask_gui.workers import wait_for_done
+
+        wait_for_done(3000)
+    except Exception:  # noqa: BLE001
+        pass
+    taskwarrior.refresh_lookups()
+
+
 @pytest.fixture
 def tw_env(tmp_path, monkeypatch):
     monkeypatch.setenv("TASKDATA", str(tmp_path / "td"))

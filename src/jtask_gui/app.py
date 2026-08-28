@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtGui import QFont, QFontDatabase, QIcon
 from PyQt6.QtWidgets import QApplication
 
 try:  # honour fractional display scaling for crisp Persian text
@@ -51,13 +51,28 @@ def _load_fonts() -> str:
     return loaded_family
 
 
+def app_icon() -> QIcon:
+    icon = QIcon()
+    base = resources.files(__package__) / "resources"
+    for size in (256, 128, 64, 48):
+        try:
+            with resources.as_file(base / f"icon-{size}.png") as p:
+                icon.addFile(str(p))
+        except (FileNotFoundError, OSError):
+            pass
+    return icon
+
+
 def build_application(argv: list[str] | None = None) -> tuple[QApplication, object]:
     app = QApplication.instance() or QApplication(
         argv if argv is not None else sys.argv
     )
     app.setApplicationName("jtask-gui")
+    app.setApplicationDisplayName("jtask")
     app.setOrganizationName("jtask")
+    app.setDesktopFileName("jtask-gui")  # StartupWMClass / Wayland app-id
     app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    app.setWindowIcon(app_icon())
 
     family = _load_fonts()
     app.setFont(QFont(family, 10))
@@ -71,6 +86,13 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
         log.warning("stylesheet did not stick — UI will look unstyled")
 
     from .main_window import MainWindow
+
+    if not settings.wizard_done and QApplication.instance().platformName() != "offscreen":
+        from .widgets.first_run import FirstRunWizard
+
+        wiz = FirstRunWizard(settings)
+        wiz.exec()
+        app.setStyleSheet(render_qss(settings.theme))
 
     window = MainWindow(settings)
     window.show()

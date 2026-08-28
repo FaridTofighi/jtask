@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=jtask
+Name[fa]=جی‌تسک
+GenericName=Task Manager
+GenericName[fa]=مدیریت کارها
+Comment=Persian/Jalali desktop front-end for Taskwarrior
+Comment[fa]=رابط دسکتاپ فارسی/جلالی برای Taskwarrior
+Exec=jtask-gui
+Icon=jtask-gui
+Terminal=false
+Categories=Office;ProjectManagement;Qt;
+Keywords=task;todo;taskwarrior;jalali;persian;
+StartupWMClass=jtask-gui
+StartupNotify=true

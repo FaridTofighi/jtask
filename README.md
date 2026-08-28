@@ -105,18 +105,54 @@ date_format: short      # short: ۱۴۰۳-۰۷-۱۰   |   long: چهارشنبه
 
 ## رابط گرافیکی دسکتاپ (`jtask-gui`)
 
-یک برنامهٔ دسکتاپ PyQt6 نیز در حال ساخت است (گام نخست تکمیل شده): پوستهٔ برنامه با
-نوار پیمایش راست‌به‌چپ، جدول کارها مبتنی بر مدل Qt، پنل جزئیات با همهٔ ویژگی‌ها و
-تاریخ‌گزین جلالی، افزودن سریع با پیش‌نمایش زنده، دو پوستهٔ کامل (`شب`/`روز`)،
-فونت وزیرمتن همراهِ برنامه، و کنسول فرمان خام. نمودارها و تقویم تعاملی در گام بعدی.
+یک برنامهٔ دسکتاپ کامل PyQt6 روی همان هستهٔ `jtask`:
 
 ```bash
 pip install -e ".[gui]"
-jtask-gui
+jtask-gui                 # بار نخست، دستیار راه‌اندازی باز می‌شود
+./packaging/install-desktop.sh   # افزودن به منوی برنامه‌ها + آیکون
 ```
+
+- **پوستهٔ راست‌به‌چپ**: نوار پیمایش (نماهای سریع، پروژه‌ها، برچسب‌ها، زمینه‌ها،
+  فیلترهای ذخیره‌شده)، جدول کارها، پنل جزئیات کشویی، دو ردیف ابزار.
+- **جدول کارها** مبتنی بر `QAbstractTableModel`: مرتب‌سازی، گروه‌بندی، انتخاب چندتایی
+  و عملیات گروهی، رنگ‌بندی وضعیت (عقب‌افتاده/نزدیک/در انتظار/مسدود/تکمیل).
+- **پنل جزئیات**: همهٔ ویژگی‌ها؛ تاریخ‌گزین جلالی؛ سازندهٔ تکرار؛ **گراف وابستگی**؛
+  UDAهای پویا؛ **تفکیک فوریت** («چرا؟»).
+- **افزودن سریع** با پیش‌نمایش زندهٔ تجزیه (تاریخ نسبی فارسی هم).
+- **فیلتر**: نوار خام با تکمیل خودکار + **سازندهٔ بصری** که رشتهٔ خام معادل را هم
+  نشان می‌دهد؛ ذخیره و پین‌کردن فیلترها.
+- **کشیدن‌ورهاکردن**: کار → پروژه (تغییر پروژه)، کار → روز تقویم (تغییر سررسید).
+- **گزارش‌ها و نمودارها**: نمودار سوختن (روزانه/هفتگی/ماهانه)، تاریخچه/گراف تاریخچه،
+  خلاصهٔ پیشرفت پروژه‌ها، **تقویم جلالی تعاملی**، جدول پروژه‌ها/برچسب‌ها، و
+  گزارش‌های سفارشی `.taskrc`. خروجی PNG برای نمودارها.
+- **کنسول فرمان خام** (`task …`) برای دسترسی به هر قابلیتی که کنترل اختصاصی ندارد.
+- **اعلان‌ها**: آیکون سینی سیستم؛ اعلان دسکتاپ برای کارهای عقب‌افتاده/سررسید امروز،
+  با ساعات سکوت و بازهٔ بررسی قابل تنظیم.
+- فونت وزیرمتن **همراهِ برنامه** بارگذاری می‌شود؛ نیاز به نصب دستی نیست.
 
 همهٔ فراخوانی‌های `task` خارج از رشتهٔ رابط اجرا می‌شوند؛ داده‌های Taskwarrior هرگز
 مستقیم نوشته نمی‌شوند. جزئیات طراحی در `docs/jtask-gui-design.md`.
+
+### ساخت بستهٔ مستقل (AppImage)
+
+```bash
+# نیاز: appimagetool روی PATH
+./packaging/build-appimage.sh        # dist/jtask-gui-x86_64.AppImage
+```
+
+### نگاشت رابط گرافیکی به فرمان‌های `task`
+
+| کار در رابط | فرمان معادل |
+|---|---|
+| افزودن سریع | `task add …` |
+| علامت انجام‌شده / حذف (گروهی) | `task <uuidها> done` / `delete` |
+| ذخیرهٔ پنل جزئیات | `task <uuid> modify <تغییرات>` |
+| کشیدن به پروژه در نوار کناری | `task <uuidها> modify project:X` |
+| کشیدن به روز تقویم | `task <uuidها> modify due:<میلادی>` |
+| «واگرد آخرین عملیات» | `task undo` |
+| تغییر زمینه از نوار کناری | `task context <نام>` |
+| کنسول فرمان | هر `task …` (پس از بازنویسی تاریخ جلالی) |
 
 ## محدودیت‌های شناخته‌شده
 
@@ -151,20 +187,40 @@ date-bearing tokens in both directions.
 
 ### Desktop GUI (`jtask-gui`)
 
-A PyQt6 desktop app built on the same core (Milestone 1 complete: RTL app shell,
-Qt-model task table, full detail panel with Jalali date pickers, live-preview
-quick-add, two themes, bundled Vazirmatn, raw command console). Charts and the
-interactive Jalali calendar land in Milestone 2. See `docs/jtask-gui-design.md`.
+A full PyQt6 desktop app on the same framework-agnostic core. Every `task` call
+runs off the UI thread; the app never writes Taskwarrior's data directly.
 
 ```bash
 pip install -e ".[gui]"
-jtask-gui
+jtask-gui                        # first run opens a short setup wizard
+./packaging/install-desktop.sh   # add a menu entry + icon
+./packaging/build-appimage.sh    # standalone dist/jtask-gui-x86_64.AppImage (needs appimagetool)
 ```
+
+- **RTL shell** — right-side navigation (quick views, projects, tags, contexts,
+  saved filters), Qt-model task table (sort / group / multi-select / bulk /
+  state colour-coding), slide-in detail panel, two-row toolbar.
+- **Detail panel** — every attribute, Jalali date pickers, recurrence builder,
+  **dependency graph**, dynamic UDAs, **urgency breakdown** («چرا؟»).
+- **Quick-add** with a live parse preview (Persian relative dates included).
+- **Filtering** — raw box with autocomplete + a **visual builder** that shows
+  the equivalent raw string; save and pin filters to the sidebar.
+- **Drag-and-drop** — task → sidebar project (reassign), task → calendar day
+  (reschedule).
+- **Reports & Charts** — burndown (daily/weekly/monthly), history/ghistory,
+  project-progress summary, an **interactive Jalali calendar**, projects/tags
+  tables, discovered custom `.taskrc` reports; PNG export for charts.
+- **Command console** — raw `task …` escape hatch (Jalali dates rewritten).
+- **Notifications** — `QSystemTrayIcon` + desktop alerts for overdue / due-today
+  tasks, with quiet hours and a configurable poll interval.
+- **Vazirmatn is bundled** and auto-loaded — no manual font install.
+
+Design and milestone notes: `docs/jtask-gui-design.md`.
 
 ### Development
 
 ```bash
 pip install -e ".[dev,gui]"
-pytest -q          # 118 tests: core (jalali/rewrite/rtl/reports) + pytest-qt GUI suite
-ruff check . && mypy      # mypy targets the framework-agnostic core
+QT_QPA_PLATFORM=offscreen pytest -q   # core + pytest-qt GUI suite
+ruff check . && mypy                  # mypy targets the framework-agnostic core
 ```
