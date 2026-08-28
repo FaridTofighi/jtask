@@ -164,6 +164,8 @@ QWidget#DetailPanel QPlainTextEdit { background-color: @field@; }
 QFrame#DetailHeader { border-bottom: 1px solid @border@; }
 
 QLabel#EmptyState { color: @text_muted@; font-size: 15px; background: transparent; }
+QLabel#DepEmpty  { color: @text_muted@; font-size: 13px; background: transparent; }
+QGraphicsView    { border: 1px solid @border@; border-radius: 8px; background: @bg@; }
 
 /* ---- calendar report ---- */
 QFrame#DayCell { background: @bg_alt@; border: 1px solid @row_line@; border-radius: 6px; }

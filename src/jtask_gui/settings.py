@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QByteArray, QSettings
+from PyQt6.QtCore import QByteArray, QCoreApplication, QSettings
 
 from jtask import config as core_config
 
@@ -10,6 +10,13 @@ from .theme import DEFAULT_THEME, THEMES
 
 _ORG = "jtask"
 _APP = "jtask-gui"
+
+# Set the identity as early as this module is imported, so *any* QSettings
+# created anywhere (including a bare ``QSettings()``) lands in the same store
+# regardless of import order.  ``Settings`` also always passes the pair
+# explicitly, so this is belt-and-braces.
+QCoreApplication.setOrganizationName(_ORG)
+QCoreApplication.setApplicationName(_APP)
 
 
 class Settings:
@@ -122,6 +129,7 @@ class Settings:
     @wizard_done.setter
     def wizard_done(self, value: bool) -> None:
         self._s.setValue("wizard/done", bool(value))
+        self._s.sync()
 
     # --- saved filters (name -> raw filter string) ---
     def saved_filters(self) -> dict[str, str]:
@@ -132,11 +140,20 @@ class Settings:
         current = self.saved_filters()
         current[name] = raw
         self._s.setValue("filters/saved", current)
+        self._s.sync()
 
     def delete_filter(self, name: str) -> None:
         current = self.saved_filters()
         current.pop(name, None)
         self._s.setValue("filters/saved", current)
+        self._s.sync()
+
+    def rename_filter(self, old: str, new: str) -> None:
+        current = self.saved_filters()
+        if old in current and new and new != old:
+            current[new] = current.pop(old)
+            self._s.setValue("filters/saved", current)
+            self._s.sync()
 
     def sync(self) -> None:
         self._s.sync()

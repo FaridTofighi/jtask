@@ -91,7 +91,11 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
         from .widgets.first_run import FirstRunWizard
 
         wiz = FirstRunWizard(settings)
-        wiz.exec()
+        wiz.exec()  # _finish() applies choices if accepted
+        # Mark it done however the dialog closed (button, Esc, window X) — the
+        # wizard is a one-time thing; it must never re-appear on the next launch.
+        settings.wizard_done = True
+        settings.sync()
         app.setStyleSheet(render_qss(settings.theme))
 
     window = MainWindow(settings)

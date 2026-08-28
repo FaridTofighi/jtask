@@ -53,6 +53,7 @@ class Sidebar(QTreeWidget):
     tasksDroppedOnProject = pyqtSignal(list, str)  # (uuids, project)
     savedFilterActivated = pyqtSignal(str)  # raw filter string
     savedFilterDeleteRequested = pyqtSignal(str)  # name
+    savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -64,6 +65,8 @@ class Sidebar(QTreeWidget):
         self.setRootIsDecorated(False)
         self.setExpandsOnDoubleClick(False)
         self.setAcceptDrops(True)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._context_menu)
         self.itemClicked.connect(self._on_click)
 
         self._quick = self._section("نماهای سریع")
@@ -216,6 +219,34 @@ class Sidebar(QTreeWidget):
         if uuids and project:
             self.tasksDroppedOnProject.emit(uuids, project)
             event.acceptProposedAction()
+
+    # --- context menu (saved filters) ------------------------
+
+    def _context_menu(self, pos) -> None:
+        from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
+
+        item = self.itemAt(pos)
+        spec = item.data(0, _SPEC_ROLE) if item else None
+        if not spec or spec.get("kind") != "saved":
+            return
+        name = spec["name"]
+        menu = QMenu(self)
+        act_rename = menu.addAction("تغییر نام")
+        act_delete = menu.addAction("حذف")
+        chosen = menu.exec(self.viewport().mapToGlobal(pos))
+        if chosen == act_rename:
+            new, ok = QInputDialog.getText(self, "تغییر نام فیلتر", "نام تازه:", text=name)
+            if ok and new.strip() and new.strip() != name:
+                self.savedFilterRenameRequested.emit(name, new.strip())
+        elif chosen == act_delete:
+            confirm = QMessageBox.question(
+                self, "حذف فیلتر",
+                f"فیلتر «{name}» حذف شود؟",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if confirm == QMessageBox.StandardButton.Yes:
+                self.savedFilterDeleteRequested.emit(name)
 
     # --- events -----------------------------------------------
 

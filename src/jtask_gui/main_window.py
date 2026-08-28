@@ -311,6 +311,8 @@ class MainWindow(QMainWindow):
         self._reports._calendar.taskRescheduled.connect(self._reschedule)
         self._sidebar.tasksDroppedOnProject.connect(self._reassign_project)
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
+        self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
+        self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
@@ -374,7 +376,14 @@ class MainWindow(QMainWindow):
 
     def _save_filter(self, name: str, raw: str) -> None:
         self.settings.save_filter(name, raw)
-        self.settings.sync()
+        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+
+    def _rename_filter(self, old: str, new: str) -> None:
+        self.settings.rename_filter(old, new)
+        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+
+    def _delete_filter(self, name: str) -> None:
+        self.settings.delete_filter(name)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
 
     def _apply_saved_filter(self, raw: str) -> None:

@@ -514,3 +514,47 @@ render comparison.
 12 chart-text tests + updated dep-graph tests. Sweep for `drawText(` /
 custom `QPainter` text across the whole GUI: only `dep_graph.py`, now on the
 full text engine.
+
+## Post-M4 fixes — four bugs
+
+**Bug 1 — dependency-graph empty state overflowed the panel.** The "no
+dependencies" state was a `QGraphicsTextItem` in the scene; with only that one
+tiny item, `scene.itemsBoundingRect()` was ~200×20 and `fitInView()` (which
+scales *both* ways) magnified it ~15× to fill the view. Fix: the empty state is
+now a plain `QLabel` overlaid on the viewport and sized to it on
+`resize`/`show`/relayout — never a scene item. Separately, `_fit()` now calls
+`resetTransform()` whenever `fitInView` would magnify (`m11() > 1`), so a small
+graph is shown at 1:1 instead of blown up.
+
+**Bug 2 — saved filters could not be renamed/deleted.** Added a
+`customContextMenu` on the sidebar's saved-filter rows: «تغییر نام» (→
+`QInputDialog`, `Settings.rename_filter`) and «حذف» (→ `QMessageBox`
+confirmation, `Settings.delete_filter`). Both persist immediately and repopulate
+the sidebar.
+
+**Bugs 3 & 4 — settings / onboarding not persisting.** Root cause investigation:
+
+- QSettings persistence itself was **verified working** on the reference
+  machine (`~/.config/jtask/jtask-gui.conf`, native format); a fresh `Settings`
+  instance reads back exactly what a prior one wrote, for every setting.
+- **The actual bug (Bug 3): the first-run wizard only recorded completion
+  (`settings.wizard_done = True`) inside its `_finish()` slot, which runs only
+  when the user clicks «شروع».** Closing the wizard any other way — window ✕,
+  Esc, Alt-F4 — left the flag `False`, so it re-appeared on every launch. And a
+  re-shown wizard, clicked through, re-writes `theme` / `persian_digits` /
+  `notifications_enabled` from its own (simpler) controls, which is how it also
+  surfaced as "settings show defaults" (Bug 4): the settings *dialog* reads and
+  writes correctly — verified by test — but the wizard was silently
+  overwriting a subset of the same keys on each restart.
+- **Fixes**: `app.build_application` now sets `settings.wizard_done = True`
+  unconditionally after `wiz.exec()` returns, however it closed. `settings.py`
+  also calls `QCoreApplication.setOrganizationName/setApplicationName` at import
+  time (belt-and-braces for any stray bare `QSettings()`), and the
+  `wizard_done` / saved-filter setters now `sync()` on write so a hard kill
+  can't lose them. `Settings` continues to use the explicit
+  `QSettings("jtask", "jtask-gui")` pair, which is independent of the running
+  app's name.
+
+`tests/gui/test_persistence.py` now does a real "restart" check (write with one
+`Settings`, read with a fresh one) for a dialog value, the wizard flag, window
+geometry, columns and saved filters, plus a within-session dialog-reopen check.

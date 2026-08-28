@@ -56,6 +56,68 @@ def test_saved_filters_roundtrip(tmp_path, monkeypatch):
     assert s.saved_filters() == {}
 
 
+def test_saved_filter_rename_and_delete_via_context_menu(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask_gui.settings import Settings
+    from jtask_gui.widgets.sidebar import _SPEC_ROLE, Sidebar
+
+    s = Settings()
+    s.save_filter("اولی", "+یک")
+
+    sb = Sidebar()
+    qtbot.addWidget(sb)
+    sb.savedFilterRenameRequested.connect(s.rename_filter)
+    sb.savedFilterDeleteRequested.connect(s.delete_filter)
+    sb.populate_saved_filters(s.saved_filters())
+    assert sb._saved.child(0).data(0, _SPEC_ROLE)["name"] == "اولی"
+
+    # rename (bypassing the QInputDialog, exercising the wired signal + storage)
+    sb.savedFilterRenameRequested.emit("اولی", "دومی")
+    sb.populate_saved_filters(s.saved_filters())
+    assert s.saved_filters() == {"دومی": "+یک"}
+    assert s.saved_filters() == Settings().saved_filters()  # persisted
+    assert sb._saved.child(0).data(0, _SPEC_ROLE)["name"] == "دومی"
+
+    # delete (confirmation is the QMessageBox; the signal is the post-confirm action)
+    sb.savedFilterDeleteRequested.emit("دومی")
+    sb.populate_saved_filters(s.saved_filters())
+    assert Settings().saved_filters() == {}
+    names = [sb._saved.child(i).data(0, _SPEC_ROLE) for i in range(sb._saved.childCount())]
+    assert all(n is None or n.get("kind") != "saved" for n in names)
+
+
+def test_dep_graph_empty_state_sized_within_panel_on_first_open(qtbot, tw_env, qapp):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    win = MainWindow(Settings())
+    win.resize(1200, 780)
+    qtbot.addWidget(win)
+    win.show()
+    for _ in range(8):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+
+    dg = win._detail._dep_graph
+    # first ever open of the detail panel for a task with no dependencies
+    win._show_detail({"uuid": "solo", "id": 1, "description": "بدون وابستگی",
+                      "status": "pending"})
+    qapp.processEvents()
+
+    assert dg._empty.isVisible()
+    assert dg._empty.geometry().width() <= dg.viewport().width() + 1
+    assert dg._empty.geometry().height() <= dg.viewport().height() + 1
+    assert dg.transform().m11() <= 1.0        # nothing scaled up
+
+
 def test_sidebar_lists_and_activates_saved_filter(qtbot):
     from jtask_gui.widgets.sidebar import Sidebar
 
@@ -150,10 +212,17 @@ def test_dep_graph_empty_note(qtbot):
     from jtask_gui.widgets.dep_graph import DependencyGraph
 
     g = DependencyGraph("شب")
+    g.resize(360, 220)
     qtbot.addWidget(g)
+    g.show()
     g.show_task({"uuid": "a", "id": 1, "description": "تنها", "status": "pending"}, [])
-    texts = [it.toPlainText() for it in g.scene().items() if hasattr(it, "toPlainText")]
-    assert any("وابستگی" in t for t in texts)
+    assert g._empty.isVisible()
+    assert "وابستگی" in g._empty.text()
+    # the empty state stays inside the view, does not spill out
+    assert g._empty.geometry().width() <= g.viewport().width() + 1
+    assert g._empty.geometry().height() <= g.viewport().height() + 1
+    # and no scene items were scaled up to fill the view
+    assert g.transform().m11() <= 1.0
 
 
 # --- custom reports in the Reports view -----------------------
