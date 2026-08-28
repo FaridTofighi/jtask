@@ -15,6 +15,16 @@ from .column_spec import COLUMNS, Column
 
 _UUID_ROLE = Qt.ItemDataRole.UserRole + 1
 _TASK_ROLE = Qt.ItemDataRole.UserRole + 2
+_STATE_ROLE = Qt.ItemDataRole.UserRole + 3
+
+_INDICATOR_ICON = {"annotations": "annotation", "recur": "recur", "depends": "depends"}
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    """Blend hex colour *a* toward *b* by fraction *t* (0..1)."""
+    ai = [int(a.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
+    bi = [int(b.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(ai, bi, strict=True))
 
 
 class TaskTableModel(QAbstractTableModel):
@@ -23,18 +33,34 @@ class TaskTableModel(QAbstractTableModel):
         super().__init__()
         self._tasks: list[dict] = []
         self._columns: list[Column] = [c for c in COLUMNS if c.default_visible]
-        self._pal = palette(theme_name)
         self._persian_digits = persian_digits
         self._due_soon = due_soon_days
+        self._theme = theme_name
+        self._apply_theme(theme_name)
 
     # --- configuration ------------------------------------------------
 
-    def set_theme(self, theme_name: str) -> None:
+    def _apply_theme(self, theme_name: str) -> None:
         self._pal = palette(theme_name)
+        bg = self._pal["bg"]
+        # row tints: a wash of the state colour over the base background
+        _strength = {"overdue": 0.20, "blocked": 0.16, "due_soon": 0.14, "waiting": 0.10}
+        self._tint = {
+            state: QColor(_mix(bg, self._pal[state], t))
+            for state, t in _strength.items()
+        }
+
+    def set_theme(self, theme_name: str) -> None:
+        self._theme = theme_name
+        self._apply_theme(theme_name)
         self._emit_all_changed()
 
     def set_persian_digits(self, value: bool) -> None:
         self._persian_digits = value
+        self._emit_all_changed()
+
+    def set_due_soon_days(self, days: int) -> None:
+        self._due_soon = days
         self._emit_all_changed()
 
     def set_columns(self, keys: list[str]) -> None:
@@ -67,10 +93,15 @@ class TaskTableModel(QAbstractTableModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation,
                    role: int = Qt.ItemDataRole.DisplayRole):
-        if role != Qt.ItemDataRole.DisplayRole:
+        if orientation != Qt.Orientation.Horizontal:
             return None
-        if orientation == Qt.Orientation.Horizontal:
-            return self._columns[section].header
+        col = self._columns[section]
+        if role == Qt.ItemDataRole.DisplayRole:
+            return col.header
+        if role == Qt.ItemDataRole.ToolTipRole:
+            from .column_spec import INDICATOR_TOOLTIP
+
+            return INDICATOR_TOOLTIP.get(col.key, col.header)
         return None
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
@@ -81,21 +112,35 @@ class TaskTableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             return self._display(task, col)
+        if role == Qt.ItemDataRole.DecorationRole:
+            return self._decoration(task, col)
         if role == Qt.ItemDataRole.TextAlignmentRole:
-            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            flag = Qt.AlignmentFlag.AlignVCenter | (
+                Qt.AlignmentFlag.AlignHCenter if col.indicator
+                else Qt.AlignmentFlag.AlignRight
+            )
+            return int(flag)
         if role == Qt.ItemDataRole.ForegroundRole:
             return self._foreground(task, col)
+        if role == Qt.ItemDataRole.BackgroundRole:
+            return self._background(task)
         if role == Qt.ItemDataRole.FontRole:
-            return self._font(task)
+            return self._font(task, col)
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return task.get("description")
         if role == _UUID_ROLE:
             return task.get("uuid")
         if role == _TASK_ROLE:
             return task
+        if role == _STATE_ROLE:
+            return self._row_state(task)
         return None
 
     # --- rendering helpers --------------------------------------
 
     def _display(self, task: dict, col: Column) -> str:
+        if col.indicator:
+            return ""
         if col.formatter is not None:
             text = col.formatter(task)
         else:
@@ -110,6 +155,18 @@ class TaskTableModel(QAbstractTableModel):
             return en_digits(text)
         return jalali.to_persian_digits(text)
 
+    def _decoration(self, task: dict, col: Column):
+        if not col.indicator:
+            return None
+        present = bool(task.get(col.key))
+        if not present:
+            return None
+        from ..icons import icon
+
+        state = self._row_state(task)
+        role = state if state in ("overdue", "blocked", "waiting") else "text_muted"
+        return icon(_INDICATOR_ICON.get(col.key, "annotation"), role)
+
     def _due_dt(self, task: dict) -> datetime.datetime | None:
         raw = task.get("due_gregorian")
         m = jalali._TW_TS_RE.match(raw or "")
@@ -118,31 +175,49 @@ class TaskTableModel(QAbstractTableModel):
         y, mo, d, hh, mm, ss = (int(x) for x in m.groups())
         return datetime.datetime(y, mo, d, hh, mm, ss, tzinfo=datetime.timezone.utc)
 
-    def _foreground(self, task: dict, col: Column) -> QColor | None:
+    def _row_state(self, task: dict) -> str | None:
         status = task.get("status")
         if status == "completed":
-            return QColor(self._pal["completed"])
+            return "completed"
         if status == "waiting":
-            return QColor(self._pal["waiting"])
+            return "waiting"
         if task.get("depends") and status == "pending":
-            if col.key in ("description", "due"):
-                return QColor(self._pal["blocked"])
-        if col.key == "due":
-            due = self._due_dt(task)
-            if due and status == "pending":
-                now = datetime.datetime.now(datetime.timezone.utc)
-                if due < now:
-                    return QColor(self._pal["overdue"])
-                if due - now <= datetime.timedelta(days=self._due_soon):
-                    return QColor(self._pal["due_soon"])
+            return "blocked"
+        due = self._due_dt(task)
+        if due and status == "pending":
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if due < now:
+                return "overdue"
+            if due - now <= datetime.timedelta(days=self._due_soon):
+                return "due_soon"
         return None
 
-    def _font(self, task: dict) -> QFont | None:
-        if task.get("status") == "completed":
-            f = QFont()
-            f.setStrikeOut(True)
-            return f
+    def _foreground(self, task: dict, col: Column) -> QColor | None:
+        state = self._row_state(task)
+        if state == "completed":
+            return QColor(self._pal["completed"])
+        if state == "waiting":
+            return QColor(self._pal["waiting"])
+        if col.key == "due" and state in ("overdue", "due_soon"):
+            return QColor(self._pal[state])
+        if col.key == "description" and state == "blocked":
+            return QColor(self._pal["blocked"])
         return None
+
+    def _background(self, task: dict) -> QColor | None:
+        state = self._row_state(task)
+        return self._tint.get(state) if state in self._tint else None
+
+    def _font(self, task: dict, col: Column) -> QFont | None:
+        f = QFont()
+        touched = False
+        if task.get("status") == "completed" and col.key == "description":
+            f.setStrikeOut(True)
+            touched = True
+        if col.key == "description":
+            f.setWeight(QFont.Weight.DemiBold)
+            touched = True
+        return f if touched else None
 
     def _emit_all_changed(self) -> None:
         if self._tasks:
@@ -153,3 +228,4 @@ class TaskTableModel(QAbstractTableModel):
 
 UUID_ROLE = _UUID_ROLE
 TASK_ROLE = _TASK_ROLE
+STATE_ROLE = _STATE_ROLE

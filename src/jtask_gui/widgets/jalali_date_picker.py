@@ -66,30 +66,39 @@ class JalaliDatePicker(QWidget):
         self._with_time = with_time
         self._value: jdatetime.date | jdatetime.datetime | None = None
 
+        from .. import icons
+
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(4)
 
         self._edit = QLineEdit()
         self._edit.setPlaceholderText("۱۴۰۳-۰۷-۱۰ یا «فردا»")
+        self._edit.setClearButtonEnabled(True)
+        self._edit.setMinimumWidth(120)
         self._edit.editingFinished.connect(self._parse_text)
+        self._edit.textChanged.connect(self._maybe_cleared)
         row.addWidget(self._edit, 1)
 
         if with_time:
             self._time = QTimeEdit()
             self._time.setDisplayFormat("HH:mm")
+            self._time.setButtonSymbols(QTimeEdit.ButtonSymbols.NoButtons)
+            self._time.setFixedWidth(66)
+            self._time.setProperty("compact", True)
             self._time.timeChanged.connect(self._on_time)
             row.addWidget(self._time)
 
         self._btn = QToolButton()
-        self._btn.setText("📅")
+        self._btn.setIcon(icons.icon("calendar", "text_muted"))
+        self._btn.setToolTip("انتخاب از تقویم جلالی")
         self._btn.clicked.connect(self._open_popup)
         row.addWidget(self._btn)
 
-        self._clear = QToolButton()
-        self._clear.setText("✕")
-        self._clear.clicked.connect(self.clear)
-        row.addWidget(self._clear)
+    def _maybe_cleared(self, text: str) -> None:
+        if not text.strip() and self._value is not None:
+            self._value = None
+            self.dateChanged.emit(None)
 
     # --- value API -------------------------------------------------
 

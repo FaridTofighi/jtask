@@ -59,9 +59,15 @@ COLUMNS: list[Column] = [
     Column("wait", "انتظار", 110, default_visible=False),
     Column("urgency", "فوریت", 80, numeric=True),
     Column("status", "وضعیت", 90, formatter=_status),
-    Column("annotations", "ی", 34, indicator=True, formatter=_annot),
-    Column("recur", "ت", 34, indicator=True, formatter=_recur),
-    Column("depends", "و", 34, indicator=True, formatter=_dep),
+    Column("annotations", "", 36, indicator=True, formatter=_annot),
+    Column("recur", "", 36, indicator=True, formatter=_recur),
+    Column("depends", "", 36, indicator=True, formatter=_dep),
 ]
+
+INDICATOR_TOOLTIP = {
+    "annotations": "یادداشت دارد",
+    "recur": "کار تکرارشونده",
+    "depends": "وابستگی دارد",
+}
 
 BY_KEY = {c.key: c for c in COLUMNS}

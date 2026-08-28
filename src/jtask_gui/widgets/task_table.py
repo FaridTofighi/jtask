@@ -6,11 +6,23 @@ from PyQt6.QtCore import QSortFilterProxyModel, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
+    QLabel,
     QMenu,
+    QSizePolicy,
     QTableView,
 )
 
 from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
+
+_EMPTY_MESSAGES = {
+    "امروز": "برای امروز کاری سررسید نشده. نفسی تازه کن یا کاری برنامه‌ریزی کن.",
+    "این هفته": "این هفته کاری سررسید ندارد.",
+    "معوق": "هیچ کار عقب‌افتاده‌ای نداری — عالی!",
+    "در انتظار": "چیزی در انتظارِ دیگران نیست.",
+    "مسدودشده": "هیچ کاری مسدود نشده است.",
+    "تکمیل‌شده": "هنوز کاری تکمیل نکرده‌ای.",
+    "اقدامات بعدی": "فهرست اقدامات بعدی خالی است. با نوار «افزودن سریع» کاری اضافه کن.",
+}
 
 _GROUP_KEYS = {
     "none": None,
@@ -59,15 +71,68 @@ class TaskTable(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setSortingEnabled(True)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(False)
         self.setShowGrid(False)
-        self.verticalHeader().setVisible(False)
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.horizontalHeader().setStretchLastSection(True)
+        self.setWordWrap(False)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+
+        vh = self.verticalHeader()
+        vh.setVisible(False)
+        vh.setDefaultSectionSize(40)
+
+        hh = self.horizontalHeader()
+        hh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        hh.setStretchLastSection(False)
+        hh.setHighlightSections(False)
+        self._apply_column_sizing()
+
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._context_menu)
         self.doubleClicked.connect(self._on_double)
         self.selectionModel().selectionChanged.connect(self._on_selection)
+
+        self._empty = QLabel("", self.viewport())
+        self._empty.setObjectName("EmptyState")
+        self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty.setWordWrap(True)
+        self._empty.hide()
+
+    def _apply_column_sizing(self) -> None:
+        from ..models.column_spec import BY_KEY
+
+        hh = self.horizontalHeader()
+        for i, key in enumerate(self._model.visible_columns()):
+            col = BY_KEY.get(key)
+            if col is None:
+                continue
+            if key == "description":
+                hh.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+            elif col.indicator:
+                hh.setSectionResizeMode(i, QHeaderView.ResizeMode.Fixed)
+                self.setColumnWidth(i, col.width)
+            else:
+                self.setColumnWidth(i, col.width)
+
+    def show_empty_state(self, view_title: str, is_empty: bool) -> None:
+        if not is_empty:
+            self._empty.hide()
+            return
+        self._empty.setText(
+            _EMPTY_MESSAGES.get(view_title, "موردی برای نمایش نیست.")
+        )
+        self._position_empty()
+        self._empty.show()
+        self._empty.raise_()
+
+    def _position_empty(self) -> None:
+        vp = self.viewport().rect()
+        self._empty.setGeometry(vp.adjusted(40, 40, -40, -40))
+
+    def resizeEvent(self, event):  # noqa: N802
+        super().resizeEvent(event)
+        self._position_empty()
 
     # --- API ---------------------------------------------------
 

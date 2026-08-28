@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QPropertyAnimation, Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -25,6 +25,10 @@ from .jalali_date_picker import JalaliDatePicker
 from .recurrence_builder import RecurrenceBuilder
 
 _PRIORITIES = [("بدون", ""), ("زیاد", "H"), ("متوسط", "M"), ("کم", "L")]
+_STATUS_FA = {
+    "pending": "در جریان", "completed": "انجام‌شده", "waiting": "در انتظار",
+    "deleted": "حذف‌شده", "recurring": "تکرارشونده",
+}
 _DATE_FIELDS = [("due", "سررسید", True), ("scheduled", "زمان‌بندی", True),
                 ("wait", "انتظار", False), ("until", "مهلت", False)]
 
@@ -33,10 +37,12 @@ class DetailPanel(QScrollArea):
     saveRequested = pyqtSignal(str, list)      # uuid, modification tokens
     annotateRequested = pyqtSignal(str, str)   # uuid, text
     denotateRequested = pyqtSignal(str, str)
+    opened = pyqtSignal()
     closed = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("DetailScroll")
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._task: dict | None = None
@@ -60,6 +66,9 @@ class DetailPanel(QScrollArea):
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        form.setHorizontalSpacing(12)
+        form.setVerticalSpacing(9)
         outer.addLayout(form)
 
         self._description = QLineEdit()
@@ -141,24 +150,12 @@ class DetailPanel(QScrollArea):
         outer.addWidget(save)
         outer.addStretch(1)
 
-        self._anim = QPropertyAnimation(self, b"maximumWidth")
-        self._anim.setDuration(160)
-        self.setMaximumWidth(0)
-
     # --- show / hide -------------------------------------------
-
-    def show_panel(self) -> None:
-        self._anim.stop()
-        self._anim.setStartValue(self.maximumWidth())
-        self._anim.setEndValue(420)
-        self._anim.start()
-        self.setVisible(True)
+    # Visibility is owned by MainWindow (splitter panes reserve space even at
+    # width 0, so the panel must actually be hidden when closed). The panel
+    # only signals intent.
 
     def hide_panel(self) -> None:
-        self._anim.stop()
-        self._anim.setStartValue(self.maximumWidth())
-        self._anim.setEndValue(0)
-        self._anim.start()
         self.closed.emit()
 
     # --- population -------------------------------------------
@@ -183,7 +180,7 @@ class DetailPanel(QScrollArea):
         self._priority.setCurrentIndex(
             next((i for i, (_, v) in enumerate(_PRIORITIES) if v == pri), 0)
         )
-        self._status.setText(task.get("status", "—"))
+        self._status.setText(_STATUS_FA.get(task.get("status", ""), task.get("status", "—")))
         for key, picker in self._dates.items():
             picker.set_from_taskwarrior(task.get(f"{key}_gregorian") or task.get(key) or "")
         self._dirty_dates.clear()
@@ -196,7 +193,7 @@ class DetailPanel(QScrollArea):
         self._load_udas(task)
         self._urgency.setText(f"{float(task.get('urgency', 0)):.1f}")
         self._audit.setText(self._audit_text(task))
-        self.show_panel()
+        self.opened.emit()
 
     def _audit_text(self, task: dict) -> str:
         parts = []

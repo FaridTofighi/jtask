@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLineEdit, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from jtask import taskwarrior
 
+from .. import icons
 from ..quickadd import ParsedQuickAdd, parse_quick_add, preview_text
 from .autocomplete import make_token_completer
 
@@ -24,17 +25,18 @@ class QuickAddBar(QWidget):
 
         self._edit = QLineEdit()
         self._edit.setObjectName("QuickAdd")
-        self._edit.setPlaceholderText(
-            "افزودن سریع: «تماس با آرش فردا +تماس pri:H project:کار»  —  Enter"
+        self._edit.setClearButtonEnabled(True)
+        self._edit.addAction(
+            icons.icon("add", "text_muted"), QLineEdit.ActionPosition.LeadingPosition
         )
+        self._edit.setPlaceholderText("شرح کار…  مثال: تماس با آرش فردا +تماس pri:H")
         self._edit.textChanged.connect(self._update_preview)
         self._edit.returnPressed.connect(self._commit)
         lay.addWidget(self._edit)
 
-        from PyQt6.QtWidgets import QLabel
-
         self._preview = QLabel()
         self._preview.setObjectName("Muted")
+        self._preview.setMinimumHeight(16)
         lay.addWidget(self._preview)
 
         self._parsed: ParsedQuickAdd = ParsedQuickAdd()

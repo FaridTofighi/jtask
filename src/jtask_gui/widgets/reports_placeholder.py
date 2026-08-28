@@ -31,6 +31,7 @@ class ReportsPlaceholder(QWidget):
             "• تقویم جلالی تعاملی با نمای تراکم روزها\n\n"
             "همهٔ محورها و برچسب‌ها جلالی و متناسب با پوستهٔ فعال خواهند بود."
         )
+        body.setObjectName("Body")
         body.setAlignment(Qt.AlignmentFlag.AlignCenter)
         body.setWordWrap(True)
 

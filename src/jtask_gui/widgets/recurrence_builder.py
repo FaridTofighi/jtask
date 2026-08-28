@@ -3,16 +3,10 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLineEdit, QSpinBox, QWidget
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QSpinBox, QWidget
 
-_UNITS = [
-    ("روز", "d"),
-    ("هفته", "weekly"),
-    ("ماه", "monthly"),
-    ("سال", "yearly"),
-]
-_NAMED = {"daily": (1, "d"), "weekly": (1, "weekly"), "monthly": (1, "monthly"),
-          "yearly": (1, "yearly")}
+_UNITS = [("روز", "d"), ("هفته", "weekly"), ("ماه", "monthly"), ("سال", "yearly")]
+_NAMED = {"daily": (1, 0), "weekly": (1, 1), "monthly": (1, 2), "yearly": (1, 3)}
 
 
 class RecurrenceBuilder(QWidget):
@@ -24,15 +18,16 @@ class RecurrenceBuilder(QWidget):
         super().__init__(parent)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(4)
+        row.setSpacing(6)
 
         self._enabled = QComboBox()
         self._enabled.addItems(["بدون تکرار", "هر…"])
-        self._enabled.currentIndexChanged.connect(self._changed)
+        self._enabled.currentIndexChanged.connect(self._on_mode)
         row.addWidget(self._enabled)
 
         self._n = QSpinBox()
         self._n.setRange(1, 999)
+        self._n.setFixedWidth(64)
         self._n.valueChanged.connect(self._changed)
         row.addWidget(self._n)
 
@@ -41,11 +36,15 @@ class RecurrenceBuilder(QWidget):
             self._unit.addItem(label)
         self._unit.currentIndexChanged.connect(self._changed)
         row.addWidget(self._unit)
+        row.addStretch(1)
 
-        self._raw = QLineEdit()
-        self._raw.setPlaceholderText("یا مقدار خام: 2weeks")
-        self._raw.editingFinished.connect(self._changed)
-        row.addWidget(self._raw, 1)
+        self._on_mode(0)
+
+    def _on_mode(self, index: int) -> None:
+        on = index == 1
+        self._n.setVisible(on)
+        self._unit.setVisible(on)
+        self._changed()
 
     def set_value(self, recur: str) -> None:
         if not recur:
@@ -54,15 +53,16 @@ class RecurrenceBuilder(QWidget):
         self._enabled.setCurrentIndex(1)
         if recur in _NAMED:
             n, unit = _NAMED[recur]
-            self._n.setValue(n)
         else:
-            self._raw.setText(recur)
+            digits = "".join(c for c in recur if c.isdigit())
+            n = int(digits) if digits else 1
+            unit = 0 if "d" in recur else 1 if "w" in recur else 2 if "m" in recur else 3
+        self._n.setValue(n)
+        self._unit.setCurrentIndex(unit)
 
     def value(self) -> str:
         if self._enabled.currentIndex() == 0:
             return ""
-        if self._raw.text().strip():
-            return self._raw.text().strip()
         n = self._n.value()
         _, token = _UNITS[self._unit.currentIndex()]
         if token == "d":

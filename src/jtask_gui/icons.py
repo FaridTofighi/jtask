@@ -1,0 +1,84 @@
+"""Theme-aware icon registry (qtawesome).
+
+Call :func:`set_theme` once at startup and on every theme switch; widgets fetch
+icons by semantic name via :func:`icon` and get one tinted for the active theme.
+Directional glyphs are mirrored for the RTL UI where it matters.
+"""
+
+from __future__ import annotations
+
+import qtawesome as qta
+from PyQt6.QtGui import QIcon
+
+from .theme import palette
+
+# semantic name -> qtawesome id
+_MAP = {
+    # sidebar / views
+    "today": "mdi.calendar-today",
+    "week": "mdi.calendar-week",
+    "overdue": "mdi.alert-circle-outline",
+    "next": "mdi.flash-outline",
+    "waiting": "mdi.timer-sand",
+    "blocked": "mdi.lock-outline",
+    "completed": "mdi.check-circle-outline",
+    "projects": "mdi.folder-outline",
+    "project": "mdi.folder-outline",
+    "tags": "mdi.tag-multiple-outline",
+    "tag": "mdi.tag-outline",
+    "contexts": "mdi.layers-outline",
+    "context": "mdi.circle-medium",
+    "reports": "mdi.chart-box-outline",
+    # toolbar
+    "undo": "mdi.undo-variant",
+    "settings": "mdi.cog-outline",
+    "console": "mdi.console-line",
+    "theme_dark": "mdi.weather-night",
+    "theme_light": "mdi.white-balance-sunny",
+    "group": "mdi.format-list-group",
+    "filter": "mdi.filter-variant",
+    "add": "mdi.plus-circle-outline",
+    "clear": "mdi.close-circle-outline",
+    "calendar": "mdi.calendar-blank-outline",
+    # row indicators
+    "annotation": "mdi.note-text-outline",
+    "recur": "mdi.repeat-variant",
+    "depends": "mdi.link-variant",
+    "start": "mdi.play-circle-outline",
+    "stop": "mdi.stop-circle-outline",
+    "delete": "mdi.trash-can-outline",
+}
+
+_MIRRORED = {"undo"}  # glyphs whose direction must flip for RTL
+
+_theme = "شب"
+_cache: dict[tuple[str, str], QIcon] = {}
+
+
+def set_theme(name: str) -> None:
+    global _theme
+    if name != _theme:
+        _theme = name
+        _cache.clear()
+
+
+def _colour(role: str) -> str:
+    pal = palette(_theme)
+    return pal.get(role, pal["text"])
+
+
+def icon(name: str, role: str = "text") -> QIcon:
+    """Return the icon for *name*, tinted with palette colour *role*."""
+    key = (name, role)
+    if key in _cache:
+        return _cache[key]
+    qid = _MAP.get(name, "mdi.help-circle-outline")
+    opts: dict = {"color": _colour(role)}
+    if name in _MIRRORED:
+        opts["rotated"] = 180
+    try:
+        result = qta.icon(qid, **opts)
+    except Exception:  # noqa: BLE001 - never let a missing glyph crash the UI
+        result = QIcon()
+    _cache[key] = result
+    return result

@@ -309,6 +309,51 @@ Minor deviations from the plan above, all deliberate:
 - **Dependency picker** is a searchable `QInputDialog` over open tasks; the
   dependency *graph* view was already deferred (M3).
 
+## M1 visual/UX remediation pass
+
+A review found the M1 architecture sound but the visual execution at
+default-Qt-prototype quality. This pass addressed it.
+
+### Priority 0 — root cause (documented so it is not reintroduced)
+
+**Symptom:** the task table filled only a small top corner of the central
+area; ~90 % was blank.
+
+**Root cause:** the detail panel was the second pane of the central
+`QSplitter` and was "closed" by animating its `maximumWidth` to 0 while it
+stayed `setVisible(True)`. A `QSplitter` still **reserves its stored size slot**
+for a visible child even when that child is clamped to width 0 — so the slot
+(≈550 px, from the persisted splitter sizes) became dead blank space the table
+could not use.
+
+**Fix / invariant:** a splitter pane must be `setVisible(False)` — not merely
+zero-width — to free its space. The detail panel now:
+- starts `setVisible(False)` with `splitter.setSizes([BIG, 0])` and
+  `setCollapsible(1, True)`, `setCollapsible(0, False)`;
+- on open: `setVisible(True)` then a `QVariantAnimation` drives
+  `splitter.setSizes([total-w, w])` from 0 → 460;
+- on close: animate w → 0, then `setVisible(False)` in the `finished` slot;
+- the animation duration is 0 under the `offscreen` platform so headless tests
+  and screenshots get the deterministic end state.
+
+`tests/gui/test_main_window.py` locks this: the table's width/height must track
+the central `contentsRect` within 3 px after show, after resize, and after the
+detail panel opens and closes again.
+
+### What else changed
+
+| Priority | Change |
+|---|---|
+| P1 | `app.qss` rewritten as a real design system: 4/8/12/16/24 spacing scale, a type scale (`#H1/#H2/#Section/#Muted`), explicit hover/focus/selection/disabled states for every widget class, 40 px row height, card-style table, styled scrollbars/menus/tooltips/docks. `theme.py` palettes reworked and contrast-checked (a test asserts WCAG-AA for body + secondary text and ≥3:1 for state colours in both themes). New `icons.py` — theme-aware `qtawesome` (mdi) icons on every sidebar row, every toolbar action (directional glyphs mirrored for RTL), and the row indicator columns via `DecorationRole`. Row **state colour-coding**: `BackgroundRole` washes each row (overdue 20 %, blocked 16 %, due-soon 14 %, waiting 10 %) plus coloured `due` text and strike-through/dim for completed. |
+| P2 | Toolbar split into **two rows** — quick-add on its own full-width row, filter + controls below. Actions clustered with separators: filter · group-by (now a clearly labelled "گروه‌بندی بر اساس" dropdown) · undo · ‖ · theme toggle / settings / console (icon-only, tooltips). The confusing "پوسته:" combo became a single moon/sun **toggle** button. The filter field is the only expanding widget so it never truncates; it carries the full query as a tooltip and shows the start when unfocused, the caret end when focused. |
+| P3 | Status bar rebuilt: a pure-Persian permanent count (`«۳ کار · اقدامات بعدی»`, Persian digits, zero Latin), a green/red `Taskwarrior آماده است` / `یافت نشد` label, and a separate transient busy line (`⟳ …`). `test_main_window.py` asserts the **exact** rendered count string and that it contains no Latin letters. |
+| P4 | "گزارش‌ها و نمودارها" moved directly under the quick-views (was buried below tags/contexts), given the chart icon, bold + larger type, and separator gaps above and below. |
+| QA | `setMinimumSize(940×620)`; sidebar moved to an explicit right dock (RTL); empty states for every quick view (designed Persian copy centred in the table); hover/focus/selection states via QSS; detail panel + console got the full QSS treatment; `HighDpiScaleFactorRoundingPolicy.PassThrough`; compact Jalali date pickers (in-field clear button, buttonless time spin) so the detail form fits 460 px without clipping. |
+
+Screenshots after the pass: `docs/` is text-only, but the reviewer received the
+dark/light list, detail panel, long-filter, empty-state, console and placeholder
+captures.
+
 ## Later milestones (not in M1)
 
 - **M2 — Reports & Charts**: matplotlib `FigureCanvasQTAgg` renders for burndown

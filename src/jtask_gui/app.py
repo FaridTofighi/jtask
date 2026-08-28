@@ -11,6 +11,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
+try:  # honour fractional display scaling for crisp Persian text
+    QApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+except Exception:  # pragma: no cover - already set / unsupported
+    pass
+
 from .settings import Settings
 from .theme import render_qss
 
@@ -56,7 +63,12 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
     app.setFont(QFont(family, 10))
 
     settings = Settings()
-    app.setStyleSheet(render_qss(settings.theme))
+    qss = render_qss(settings.theme)
+    app.setStyleSheet(qss)
+    if app.styleSheet():
+        log.info("theme %r applied (%d chars of QSS)", settings.theme, len(qss))
+    else:  # pragma: no cover
+        log.warning("stylesheet did not stick — UI will look unstyled")
 
     from .main_window import MainWindow
 
