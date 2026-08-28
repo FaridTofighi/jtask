@@ -197,4 +197,6 @@ def refresh_lookups() -> None:
         _show_config, uda_definitions, list_projects, list_tags,
         list_contexts, list_reports,
     ):
-        fn.cache_clear()
+        clear = getattr(fn, "cache_clear", None)
+        if callable(clear):
+            clear()

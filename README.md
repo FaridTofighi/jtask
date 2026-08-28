@@ -103,6 +103,21 @@ date_format: short      # short: ۱۴۰۳-۰۷-۱۰   |   long: چهارشنبه
 
 <div dir="rtl">
 
+## رابط گرافیکی دسکتاپ (`jtask-gui`)
+
+یک برنامهٔ دسکتاپ PyQt6 نیز در حال ساخت است (گام نخست تکمیل شده): پوستهٔ برنامه با
+نوار پیمایش راست‌به‌چپ، جدول کارها مبتنی بر مدل Qt، پنل جزئیات با همهٔ ویژگی‌ها و
+تاریخ‌گزین جلالی، افزودن سریع با پیش‌نمایش زنده، دو پوستهٔ کامل (`شب`/`روز`)،
+فونت وزیرمتن همراهِ برنامه، و کنسول فرمان خام. نمودارها و تقویم تعاملی در گام بعدی.
+
+```bash
+pip install -e ".[gui]"
+jtask-gui
+```
+
+همهٔ فراخوانی‌های `task` خارج از رشتهٔ رابط اجرا می‌شوند؛ داده‌های Taskwarrior هرگز
+مستقیم نوشته نمی‌شوند. جزئیات طراحی در `docs/jtask-gui-design.md`.
+
 ## محدودیت‌های شناخته‌شده
 
 - زمان‌ها با **منطقهٔ زمانی سیستم** تفسیر می‌شوند (Taskwarrior همه‌چیز را UTC ذخیره
@@ -134,10 +149,22 @@ date-bearing tokens in both directions.
 - `--json` emits both Jalali and Gregorian representations per field;
   `--gregorian` shows raw Gregorian for debugging.
 
+### Desktop GUI (`jtask-gui`)
+
+A PyQt6 desktop app built on the same core (Milestone 1 complete: RTL app shell,
+Qt-model task table, full detail panel with Jalali date pickers, live-preview
+quick-add, two themes, bundled Vazirmatn, raw command console). Charts and the
+interactive Jalali calendar land in Milestone 2. See `docs/jtask-gui-design.md`.
+
+```bash
+pip install -e ".[gui]"
+jtask-gui
+```
+
 ### Development
 
 ```bash
-pip install -e ".[dev]"
-pytest -q          # unit tests (jalali, rewrite, rtl, config/themes) + isolated e2e
-ruff check . && mypy src/jtask
+pip install -e ".[dev,gui]"
+pytest -q          # 118 tests: core (jalali/rewrite/rtl/reports) + pytest-qt GUI suite
+ruff check . && mypy      # mypy targets the framework-agnostic core
 ```

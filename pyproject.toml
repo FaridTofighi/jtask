@@ -20,16 +20,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "mypy>=1.8", "ruff>=0.5"]
+gui = ["PyQt6>=6.6", "matplotlib>=3.8", "qtawesome>=1.3"]
+dev = ["pytest>=8.0", "mypy>=1.8", "ruff>=0.5", "pytest-qt>=4.4"]
 
 [project.scripts]
 jtask = "jtask.cli:main"
 
+[project.gui-scripts]
+jtask-gui = "jtask_gui.app:main"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/jtask"]
+packages = ["src/jtask", "src/jtask_gui"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/jtask/themes_data" = "jtask/themes_data"
+"src/jtask_gui/resources" = "jtask_gui/resources"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -37,6 +42,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+extend-exclude = ["src/jtask_gui/resources"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -44,7 +50,16 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
 "src/jtask/fonts.py" = ["E501"]  # copy-pasteable setup snippets
+"src/jtask_gui/**" = ["N802", "N815", "N803", "B008"]  # Qt idioms
 
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
+# The framework-agnostic core is type-checked strictly; the PyQt6 GUI layer is
+# covered by pytest-qt instead (the Qt6 stubs' pervasive `| None` returns make
+# a strict mypy pass mostly noise).
+files = ["src/jtask"]
+
+[[tool.mypy.overrides]]
+module = "jtask_gui.*"
+ignore_errors = true

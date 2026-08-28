@@ -285,6 +285,30 @@ jtask-gui                                       # launches RTL, Vazirmatn, dark 
 
 ---
 
+## Milestone 1 — delivered
+
+Shipped in `src/jtask_gui/` + `src/jtask/reports.py` + the shared lookups in
+`src/jtask/taskwarrior.py`. 118 tests pass (`pytest -q`), `ruff` clean, `mypy`
+clean on the core.
+
+Minor deviations from the plan above, all deliberate:
+
+- **Themes**: instead of two independently hand-written `shab.qss` / `ruz.qss`,
+  there is one `resources/themes/app.qss` template with `@token@` placeholders
+  and a Python palette per theme (`theme.palette`). The palette is the single
+  source of truth; a test asserts template tokens and palette keys stay in
+  lockstep. Same end result (full per-widget coverage, live switch), less
+  duplication.
+- **mypy** runs on `src/jtask` only; the PyQt6 layer is covered by `pytest-qt`
+  (the Qt6 stubs' pervasive `| None` returns make a strict GUI pass mostly
+  noise). Recorded in `pyproject.toml`.
+- **Grouping** in the task table is proxy-sort-based (group key sorts first);
+  collapsible visual group headers are deferred to M2.
+- **Settings dialog** is a compact subset (theme, Persian digits, due-soon
+  threshold); binary/`TASKDATA`/`TASKRC` overrides and column reset move to M4.
+- **Dependency picker** is a searchable `QInputDialog` over open tasks; the
+  dependency *graph* view was already deferred (M3).
+
 ## Later milestones (not in M1)
 
 - **M2 — Reports & Charts**: matplotlib `FigureCanvasQTAgg` renders for burndown
