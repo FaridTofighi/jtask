@@ -165,6 +165,19 @@ QFrame#DetailHeader { border-bottom: 1px solid @border@; }
 
 QLabel#EmptyState { color: @text_muted@; font-size: 15px; background: transparent; }
 
+/* ---- calendar report ---- */
+QFrame#DayCell { background: @bg_alt@; border: 1px solid @row_line@; border-radius: 6px; }
+QFrame#DayCell:hover { border-color: @primary@; }
+QFrame#DayCell QLabel { background: transparent; }
+
+/* ---- reports & charts ---- */
+QListWidget#Sidebar { background-color: @bg_alt@; border: none; border-right: 1px solid @border@; }
+QProgressBar {
+    background-color: @field@; border: 1px solid @border@; border-radius: 8px;
+    height: 18px; text-align: center; color: @text@;
+}
+QProgressBar::chunk { background-color: @primary@; border-radius: 7px; }
+
 QWidget#Placeholder { background-color: @bg@; }
 QWidget#Placeholder QLabel#H1 { color: @text@; }
 QWidget#Placeholder QLabel#Body { color: @text_muted@; font-size: 14px; line-height: 150%; }

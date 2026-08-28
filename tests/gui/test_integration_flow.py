@@ -120,6 +120,6 @@ def test_undo_action_is_present_and_wired(window):
 
 
 def test_reports_placeholder_shows_on_sidebar_selection(window, qapp, qtbot):
-    window._on_view_selected({"kind": "placeholder"})
+    window._on_view_selected({"kind": "reports"})
     _settle(qapp, qtbot, rounds=2)
     assert window._content.currentIndex() == 1

@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali
+from jtask.rtl import fa_digits
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,7 @@ CellFactory = Callable[[DayCellContext], QWidget]
 
 
 def _default_cell(ctx: DayCellContext) -> QWidget:
-    lbl = QLabel(str(ctx.day))
+    lbl = QLabel(fa_digits(str(ctx.day)))
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return lbl
 
@@ -68,13 +69,17 @@ class JalaliMonthGrid(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        # --- header: ‹ month year › ---
+        # --- header: « month year » (RTL: prev on the right, next on the left) ---
         header = QHBoxLayout()
-        self._prev = QPushButton("‹")
-        self._next = QPushButton("›")
+        self._prev = QPushButton("»")   # earlier month — points right
+        self._next = QPushButton("«")   # later month — points left
         for b in (self._prev, self._next):
-            b.setFixedWidth(34)
+            b.setFixedWidth(38)
             b.setAutoDefault(False)
+            b.setFlat(True)
+            f = b.font()
+            f.setPointSizeF(f.pointSizeF() + 3)
+            b.setFont(f)
         self._title = QLabel()
         self._title.setObjectName("H2")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -149,7 +154,7 @@ class JalaliMonthGrid(QWidget):
 
     def _rebuild(self) -> None:
         self._title.setText(
-            f"{jalali.MONTH_NAMES[self._month - 1]} {self._year}"
+            fa_digits(f"{jalali.MONTH_NAMES[self._month - 1]} {self._year}")
         )
         self._clear_day_cells()
 

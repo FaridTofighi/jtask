@@ -385,16 +385,43 @@ renders `-۲۰.۰`, not `۲۰.۰-`). This is the general form of the fix first a
 ad hoc to the status-bar count; `tests/gui/test_task_model.py` and
 `tests/test_rtl.py` assert the exact rendered strings.
 
-## Later milestones (not in M1)
+## Milestone 2 — Reports & Charts (delivered)
 
-- **M2 — Reports & Charts**: matplotlib `FigureCanvasQTAgg` renders for burndown
-  (daily/weekly/monthly), history/ghistory, summary progress; full interactive
-  **Jalali calendar report** reusing `JalaliMonthGrid` with a day-density cell
-  factory + click-a-day task list; projects/tags rich tables; custom `.taskrc`
-  report discovery → sortable table; per-chart PNG export.
+`src/jtask_gui/widgets/reports_view.py` replaces the M1 placeholder as central
+stack index 1. A report picker rail (right, RTL) + a content area with a
+per-report toolbar (period toggle, ghistory bar-mode toggle, PNG export).
+
+| Report | Widget | Notes |
+|---|---|---|
+| Burndown | `charts/burndown_chart.py` | stacked bars done / started / open per Jalali day\|week\|month, `report_burndown(period)` |
+| Ghistory | `charts/history_chart.py` (mode `ghistory`) | stacked bars added / completed / deleted |
+| History | same widget (mode `history`) | grouped bars |
+| Summary | `charts/summary_view.py` | per-project `QProgressBar` + open / overdue counts (not matplotlib) |
+| Calendar | `calendar_report.py` | **reuses `JalaliMonthGrid`** with a task-density cell factory; click a day → that day's task list in the side panel; `«` `»` month nav |
+| Projects / Tags | `table_reports.py` | sortable `QTableWidget`; double-click a row emits `filterRequested` → the main task list opens filtered |
+
+- **matplotlib**: `charts/mpl_base.py` — `QtAgg` backend, bundled Vazirmatn
+  registered with the font manager, `ThemedChart` restyles figure/axes/text
+  from the palette on every theme switch, `export_png()`. matplotlib ≥ 3.6
+  shapes + bidi-reorders Persian natively, so labels are **raw Persian** — no
+  `arabic-reshaper`, same rule as the Qt widgets. Empty data → a Persian
+  "داده کافی نیست" message on the axes, never a crash.
+- **Filter-aware**: the main filter bar propagates to every report
+  (`ReportsView.set_filter`); the calendar also re-queries per month.
+- **Stale-response guard**: `ReportsView._gen` / `CalendarReport._gen` — a
+  monotonic token captured per async load; a late worker result whose token is
+  stale is dropped, so fast report/period/month switching can't leave an older
+  response painted over a newer one. Regression test in `test_reports_view.py`.
+- `jdatetime` month grid now renders Persian digits in the title and default
+  cells.
+- Custom `.taskrc` report discovery → sortable table: **deferred to M3**
+  (needs parsing arbitrary report column specs; not blocking).
+
+## Later milestones (not in M1/M2)
 - **M3 — Power/UX**: visual filter builder (with "show equivalent raw filter"),
   drag-and-drop (task→project, task→calendar day), saved/pinned user filters,
-  dependency graph view, urgency factor breakdown polish.
+  dependency graph view, urgency factor breakdown polish, custom `.taskrc`
+  report discovery → sortable table.
 - **M4 — Platform**: `QSystemTrayIcon` due/overdue notifications + quiet hours,
   PyInstaller/AppImage build, `.desktop` + icon + `StartupWMClass`, README
   screenshots/GIF, first-run setup wizard.

@@ -30,7 +30,7 @@ from .widgets.command_console import CommandConsole
 from .widgets.detail_panel import DetailPanel
 from .widgets.filter_bar import FilterBar
 from .widgets.quick_add import QuickAddBar
-from .widgets.reports_placeholder import ReportsPlaceholder
+from .widgets.reports_view import ReportsView
 from .widgets.sidebar import Sidebar
 from .widgets.task_table import TaskTable
 from .workers import submit
@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         )
         self._table = TaskTable(self._model)
         self._detail = DetailPanel()
-        self._placeholder = ReportsPlaceholder()
+        self._reports = ReportsView(self.settings.theme)
 
         self._build_central()
         self._build_toolbars()
@@ -102,8 +102,8 @@ class MainWindow(QMainWindow):
         self._detail.setVisible(False)
         self._split.setSizes([1_000_000, 0])
 
-        self._content.addWidget(self._split)        # index 0: tasks
-        self._content.addWidget(self._placeholder)  # index 1: reports placeholder
+        self._content.addWidget(self._split)     # index 0: tasks
+        self._content.addWidget(self._reports)   # index 1: reports & charts
         self.setCentralWidget(self._content)
 
         from PyQt6.QtWidgets import QApplication
@@ -251,6 +251,7 @@ class MainWindow(QMainWindow):
             lambda uuids: self._bulk(uuids, "delete", "کارها حذف شدند")
         )
         self._table.startStopRequested.connect(self._start_stop)
+        self._reports.filterRequested.connect(self._drill_into_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
         self._detail.annotateRequested.connect(
@@ -316,9 +317,10 @@ class MainWindow(QMainWindow):
 
     def _load_current_view(self) -> None:
         spec = self._view_spec
-        if spec.get("kind") == "placeholder":
+        if spec.get("kind") == "reports":
             self._content.setCurrentIndex(1)
-            self._status_count.setText("")
+            self._status_count.setText("گزارش‌ها و نمودارها")
+            self._reports.set_filter(self._extra_filter)
             return
         self._content.setCurrentIndex(0)
 
@@ -353,6 +355,13 @@ class MainWindow(QMainWindow):
 
     def _on_filter_changed(self, tokens: list[str]) -> None:
         self._extra_filter = tokens
+        self._load_current_view()
+
+    def _drill_into_filter(self, tokens: list[str]) -> None:
+        """A projects/tags report row was activated — show it in the task list."""
+        self._filter_bar.set_text(" ".join(tokens))
+        self._extra_filter = tokens
+        self._view_spec = {"kind": "report", "title": "نتایج فیلتر", "fn": "report_list"}
         self._load_current_view()
 
     def _add_task(self, args: list[str]) -> None:
@@ -410,6 +419,7 @@ class MainWindow(QMainWindow):
         self._model.set_theme(name)
         self._sidebar.retint()
         self._filter_bar.retint()
+        self._reports.set_theme(name)
         self._sync_theme_action()
         self._undo_action.setIcon(icons.icon("undo"))
         self._settings_action.setIcon(icons.icon("settings"))

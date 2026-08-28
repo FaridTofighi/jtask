@@ -71,7 +71,7 @@ class Sidebar(QTreeWidget):
         self.addTopLevelItem(gap)
 
         self._reports = self._leaf(
-            None, "  گزارش‌ها و نمودارها", {"kind": "placeholder"}, "reports"
+            None, "  گزارش‌ها و نمودارها", {"kind": "reports"}, "reports"
         )
         f = self._reports.font(0)
         f.setBold(True)

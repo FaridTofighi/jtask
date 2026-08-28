@@ -1,0 +1,1 @@
+"""Matplotlib-backed report charts."""

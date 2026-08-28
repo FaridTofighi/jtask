@@ -109,7 +109,7 @@ def test_sidebar_rows_have_icons(win):
 
 
 def test_reports_entry_is_present_and_navigates_to_placeholder(win, qapp):
-    win._on_view_selected({"kind": "placeholder"})
+    win._on_view_selected({"kind": "reports"})
     qapp.processEvents()
     assert win._content.currentIndex() == 1
 
