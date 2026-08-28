@@ -268,6 +268,8 @@ def from_taskwarrior(value: str, fmt: str = "short") -> str:
     y, mo, d, hh, mm, ss = (int(x) for x in m.groups())
     utc = datetime.datetime(y, mo, d, hh, mm, ss, tzinfo=datetime.timezone.utc)
     local = utc.astimezone(LOCAL_TZ)
+    if fmt == "gregorian":
+        return local.strftime("%Y-%m-%d")
     jd = jdatetime.date.fromgregorian(date=local.date())
     if fmt == "long":
         wd = WEEKDAY_NAMES[weekday_sat(jd)]

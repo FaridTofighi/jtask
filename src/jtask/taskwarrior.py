@@ -32,6 +32,8 @@ _RC = [
     "rc.recurrence.confirmation=off",
     "rc.bulk=0",
     "rc.color=off",
+    "rc.verbose=nothing",
+    "rc.hooks=on",
 ]
 
 
@@ -69,8 +71,11 @@ def run(
 
 
 def export(filter_args: list[str] | None = None) -> list[dict]:
-    """Return the tasks matching *filter_args* as a list of dicts."""
-    proc = run(["export", *(filter_args or [])])
+    """Return the tasks matching *filter_args* as a list of dicts.
+
+    Taskwarrior requires the filter to precede the ``export`` command.
+    """
+    proc = run([*(filter_args or []), "export"])
     text = proc.stdout.strip()
     if not text:
         return []
