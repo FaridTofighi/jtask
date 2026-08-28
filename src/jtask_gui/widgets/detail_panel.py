@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from jtask import jalali, taskwarrior
 from jtask.rtl import bidi_isolate
 
+from .. import fmt
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
 from .recurrence_builder import RecurrenceBuilder
@@ -192,9 +193,7 @@ class DetailPanel(QScrollArea):
         self._depends.setText(",".join(str(d) for d in deps))
         self._load_annotations(task)
         self._load_udas(task)
-        self._urgency.setText(
-            bidi_isolate(jalali.to_persian_digits(f"{float(task.get('urgency', 0)):.1f}"))
-        )
+        self._urgency.setText(fmt.num(round(float(task.get("urgency", 0)), 1), isolate=True))
         self._audit.setText(self._audit_text(task))
         self.opened.emit()
 

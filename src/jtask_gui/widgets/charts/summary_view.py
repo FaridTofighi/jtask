@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask.rtl import fa_digits
+from ... import fmt
 
 
 class SummaryView(QScrollArea):
@@ -64,13 +64,13 @@ class SummaryView(QScrollArea):
             bar = QProgressBar()
             bar.setRange(0, 100)
             bar.setValue(int(round(row.get("pct", 0))))
-            bar.setFormat(fa_digits(f"{int(round(row.get('pct', 0)))}٪"))
+            bar.setFormat(fmt.pct(int(round(row.get("pct", 0)))))
             bar.setTextVisible(True)
             self._grid.addWidget(bar, i, 1)
 
             counts = QLabel(
-                fa_digits(f"{row.get('open', 0)} باز")
-                + (fa_digits(f"  ·  {row['overdue']} عقب‌افتاده")
+                f"{fmt.num(row.get('open', 0))} باز"
+                + (f"  ·  {fmt.num(row['overdue'])} عقب‌افتاده"
                    if row.get("overdue") else "")
             )
             counts.setObjectName("Muted")

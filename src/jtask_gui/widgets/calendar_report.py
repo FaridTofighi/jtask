@@ -20,9 +20,8 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali, reports
-from jtask.rtl import fa_digits
 
-from .. import icons
+from .. import fmt, icons
 from ..workers import submit
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
 
@@ -39,7 +38,7 @@ class _DayCell(QFrame):
         lay.setContentsMargins(6, 6, 6, 6)
         lay.setSpacing(3)
 
-        num = QLabel(fa_digits(str(ctx.day)))
+        num = QLabel(fmt.digits(str(ctx.day)))
         num.setAlignment(Qt.AlignmentFlag.AlignRight)
         if ctx.is_today:
             num.setStyleSheet(f"color:{pal['primary']}; font-weight:700;")
@@ -47,7 +46,7 @@ class _DayCell(QFrame):
 
         if count:
             colour = pal["overdue"] if overdue else pal["primary"]
-            dot = QLabel(fa_digits(f"{count} کار"))
+            dot = QLabel(fmt.digits(f"{count} کار"))
             dot.setStyleSheet(f"color:{colour}; font-size:11px;")
             dot.setAlignment(Qt.AlignmentFlag.AlignRight)
             lay.addWidget(dot)
@@ -146,7 +145,7 @@ class CalendarReport(QWidget):
     def _show_day(self, key) -> None:
         y, m, d = key
         self._day_title.setText(
-            fa_digits(f"{d} {jalali.MONTH_NAMES[m - 1]} {y}")
+            fmt.digits(f"{d} {jalali.MONTH_NAMES[m - 1]} {y}")
         )
         self._day_list.clear()
         for t in self._data.get("days", {}).get(key, []):

@@ -7,7 +7,6 @@ import tempfile
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -27,6 +26,7 @@ from .calendar_report import CalendarReport
 from .charts.burndown_chart import BurndownChart
 from .charts.history_chart import HistoryChart
 from .charts.summary_view import SummaryView
+from .segmented import SegmentedControl
 from .table_reports import ProjectsReport, TagsReport
 
 _REPORTS = [
@@ -79,19 +79,18 @@ class ReportsView(QWidget):
         self._title.setObjectName("H1")
         bar.addWidget(self._title, 1)
 
-        self._period_combo = QComboBox()
-        for label, key in _PERIODS:
-            self._period_combo.addItem(label, key)
-        self._period_combo.currentIndexChanged.connect(self._on_period)
-        bar.addWidget(self._period_combo)
+        self._period_seg = SegmentedControl(_PERIODS)
+        self._period_seg.changed.connect(self._on_period)
+        bar.addWidget(self._period_seg)
 
-        self._hist_mode = QComboBox()
-        self._hist_mode.addItem("انباشته", "ghistory")
-        self._hist_mode.addItem("گروهی", "history")
-        self._hist_mode.currentIndexChanged.connect(self._on_hist_mode)
-        bar.addWidget(self._hist_mode)
+        self._hist_seg = SegmentedControl(
+            [("انباشته", "ghistory"), ("گروهی", "history")]
+        )
+        self._hist_seg.changed.connect(self._on_hist_mode)
+        bar.addWidget(self._hist_seg)
 
         self._export_btn = QPushButton("خروجی PNG")
+        self._export_btn.setIcon(icons.icon("reports"))
         self._export_btn.clicked.connect(self._export)
         bar.addWidget(self._export_btn)
         content.addLayout(bar)
@@ -137,6 +136,14 @@ class ReportsView(QWidget):
         self._calendar.set_filter(tokens)
         self.reload()
 
+    def refresh_digits(self) -> None:
+        """Re-render every numeric surface after a digit-mode change."""
+        self._burndown.redraw()
+        self._history.redraw()
+        self._projects.refresh_digits()
+        self._tags.refresh_digits()
+        self._load_active()  # summary rebuild + calendar
+
     def reload(self) -> None:
         self._load_active()
 
@@ -154,20 +161,29 @@ class ReportsView(QWidget):
         self._active = key
         self._title.setText(self._rail.item(row).text())
         self._stack.setCurrentWidget(self._widget_for[key])
-        self._period_combo.setVisible(key in _PERIOD_REPORTS)
-        self._hist_mode.setVisible(key in ("history", "ghistory"))
+        self._period_seg.setVisible(key in _PERIOD_REPORTS)
+        self._hist_seg.setVisible(key in ("history", "ghistory"))
         self._export_btn.setVisible(key in _MPL_REPORTS)
         if key in ("history", "ghistory"):
-            self._history.set_mode("ghistory" if key == "ghistory" else "history")
+            mode = "ghistory" if key == "ghistory" else "history"
+            self._history.set_mode(mode)
+            self._hist_seg.set_value(mode)
         self._load_active()
 
-    def _on_period(self) -> None:
-        self._period = self._period_combo.currentData()
+    def _on_period(self, value) -> None:
+        self._period = value
         self._load_active()
 
-    def _on_hist_mode(self) -> None:
+    def _on_hist_mode(self, value) -> None:
         if self._active in ("history", "ghistory"):
-            self._history.set_mode(self._hist_mode.currentData())
+            self._history.set_mode(value)
+            self._active = value
+            for i in range(self._rail.count()):
+                if self._rail.item(i).data(Qt.ItemDataRole.UserRole) == value:
+                    self._rail.blockSignals(True)
+                    self._rail.setCurrentRow(i)
+                    self._rail.blockSignals(False)
+                    self._title.setText(self._rail.item(i).text())
 
     def _load_active(self) -> None:
         key = self._active

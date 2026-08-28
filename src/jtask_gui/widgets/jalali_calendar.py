@@ -25,7 +25,8 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali
-from jtask.rtl import fa_digits
+
+from .. import fmt
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ CellFactory = Callable[[DayCellContext], QWidget]
 
 
 def _default_cell(ctx: DayCellContext) -> QWidget:
-    lbl = QLabel(fa_digits(str(ctx.day)))
+    lbl = QLabel(fmt.digits(str(ctx.day)))
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return lbl
 
@@ -154,7 +155,7 @@ class JalaliMonthGrid(QWidget):
 
     def _rebuild(self) -> None:
         self._title.setText(
-            fa_digits(f"{jalali.MONTH_NAMES[self._month - 1]} {self._year}")
+            fmt.digits(f"{jalali.MONTH_NAMES[self._month - 1]} {self._year}")
         )
         self._clear_day_cells()
 

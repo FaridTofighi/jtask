@@ -17,10 +17,18 @@ matplotlib.use("QtAgg")
 import matplotlib.font_manager as fm  # noqa: E402
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 
-from jtask.rtl import fa_digits  # noqa: E402
-
+from ... import fmt  # noqa: E402
 from ...theme import palette  # noqa: E402
+
+
+def _tick_text(value, _pos=None) -> str:
+    """Format an axis tick value through the shared GUI number formatter."""
+    return fmt.num(int(value) if float(value).is_integer() else round(value, 1))
+
+
+TICK_FORMATTER = FuncFormatter(_tick_text)
 
 _FONTS_REGISTERED = False
 _FONT_FAMILY = "Vazirmatn"
@@ -90,6 +98,10 @@ class ThemedChart(QWidget):
             ax.set_yticks([])
         else:
             self.draw_chart(ax, self._data, pal)
+            ax.yaxis.set_major_formatter(TICK_FORMATTER)
+        for lbl in (*ax.get_xticklabels(), *ax.get_yticklabels()):
+            lbl.set_fontfamily(self._family)
+            lbl.set_color(pal["text_muted"])
         self._canvas.draw_idle()
 
     # --- helpers for subclasses --------------------------------
@@ -109,11 +121,14 @@ class ThemedChart(QWidget):
         ax.tick_params(colors=pal["text_muted"], labelsize=9)
         ax.grid(True, axis="y", color=pal["row_line"], linewidth=0.8, alpha=0.7)
         ax.set_axisbelow(True)
+        # every numeric tick (both axes) goes through the shared digit formatter
+        ax.yaxis.set_major_formatter(TICK_FORMATTER)
+        ax.xaxis.set_major_formatter(TICK_FORMATTER)
         for lbl in (*ax.get_xticklabels(), *ax.get_yticklabels()):
             lbl.set_fontfamily(self._family)
 
     def _fa(self, text: str) -> str:
-        return fa_digits(str(text))
+        return fmt.digits(str(text))
 
     def draw_chart(self, ax, data, pal: dict) -> None:  # pragma: no cover - abstract
         raise NotImplementedError

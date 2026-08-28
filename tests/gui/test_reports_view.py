@@ -55,20 +55,36 @@ def test_burndown_receives_bucketed_data(rv, qapp):
     assert "buckets" in rv._burndown._data
 
 
+def test_period_control_offers_all_three_granularities(rv):
+    labels = [b.text() for b in rv._period_seg._group.buttons()]
+    assert labels == ["روزانه", "هفتگی", "ماهانه"]
+
+
 def test_period_toggle_only_shown_for_time_series(rv, qapp):
     _select(rv, "burndown")
-    assert rv._period_combo.isVisibleTo(rv)
+    assert rv._period_seg.isVisibleTo(rv)
     _select(rv, "summary")
-    assert not rv._period_combo.isVisibleTo(rv)
+    assert not rv._period_seg.isVisibleTo(rv)
 
 
 def test_period_change_reloads(rv, qapp):
     _select(rv, "burndown")
     _settle(qapp)
-    rv._period_combo.setCurrentIndex(2)  # monthly
+    rv._period_seg.set_value("monthly")
+    rv._on_period("monthly")
     _settle(qapp)
     assert rv._period == "monthly"
     assert rv._burndown._data["period"] == "monthly"
+    assert rv._period_seg.value() == "monthly"  # active state reflects the mode
+
+
+def test_hist_mode_segment_reflects_active_report(rv, qapp):
+    _select(rv, "ghistory")
+    _settle(qapp)
+    assert rv._hist_seg.value() == "ghistory"
+    _select(rv, "history")
+    _settle(qapp)
+    assert rv._hist_seg.value() == "history"
 
 
 def test_projects_report_populates_and_drills_in(rv, qapp, qtbot):
@@ -107,6 +123,37 @@ def test_png_export_writes_a_file(rv, qapp, tmp_path):
     assert out.exists() and out.stat().st_size > 500
 
 
+def test_projects_report_cells_use_persian_digits(rv, qapp):
+    from PyQt6.QtCore import Qt
+
+    from jtask.rtl import set_digit_mode
+
+    set_digit_mode(True)
+    _select(rv, "projects")
+    _settle(qapp)
+    rv._projects.set_data([{"project": "وب", "open": 24, "waiting": 0,
+                            "overdue": 1, "pct": 50.0}])
+    texts = [rv._projects.item(0, c).data(Qt.ItemDataRole.DisplayRole)
+             for c in range(1, 5)]
+    assert texts == ["۲۴", "۰", "۱", "۵۰"]
+
+
+def test_chart_y_axis_ticks_use_persian_digits(rv, qapp):
+    from jtask.rtl import set_digit_mode
+
+    set_digit_mode(True)
+    rv._burndown.set_data({"period": "daily", "buckets": [
+        {"label": "1403-07-01", "pending": 10, "started": 0, "done": 0},
+        {"label": "1403-07-02", "pending": 20, "started": 0, "done": 0},
+    ]})
+    rv._burndown._canvas.draw()
+    ax = rv._burndown._figure.axes[0]
+    ticks = [t.get_text() for t in ax.get_yticklabels() if t.get_text()]
+    assert ticks
+    assert all(not any(ch.isdigit() and ch.isascii() for ch in t) for t in ticks)
+    assert any("۱" in t or "۲" in t or "۰" in t for t in ticks)
+
+
 def test_theme_switch_propagates_to_charts(rv, qapp):
     _select(rv, "burndown")
     rv.set_theme("روز")
@@ -120,7 +167,7 @@ def test_stale_response_does_not_overwrite_fresh_one(rv, qapp):
     # simulate an in-flight weekly load whose result arrives after monthly
     rv._gen += 1
     stale_gen = rv._gen
-    rv._period_combo.setCurrentIndex(2)  # monthly -> bumps _gen, loads monthly
+    rv._on_period("monthly")  # bumps _gen, loads monthly
     _settle(qapp)
 
     def guarded(setter):

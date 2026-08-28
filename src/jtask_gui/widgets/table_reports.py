@@ -10,7 +10,21 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from jtask.rtl import fa_digits
+from .. import fmt
+
+
+class _NumItem(QTableWidgetItem):
+    """A cell that displays a Persian-digit number but sorts numerically."""
+
+    def __init__(self, value: float) -> None:
+        super().__init__(fmt.num(value))
+        self._value = float(value)
+        self.setTextAlignment(int(Qt.AlignmentFlag.AlignCenter))
+
+    def __lt__(self, other) -> bool:  # noqa: D401 - Qt sort hook
+        if isinstance(other, _NumItem):
+            return self._value < other._value
+        return super().__lt__(other)
 
 
 class _BaseTableReport(QTableWidget):
@@ -32,14 +46,15 @@ class _BaseTableReport(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.doubleClicked.connect(self._on_activate)
 
-    def _num(self, value) -> QTableWidgetItem:
-        item = QTableWidgetItem()
-        item.setData(Qt.ItemDataRole.DisplayRole, fa_digits(str(value)))
-        item.setData(Qt.ItemDataRole.EditRole, float(value))
-        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        return item
+    def refresh_digits(self) -> None:
+        """Re-render numeric cells after a digit-mode change."""
+        for r in range(self.rowCount()):
+            for c in range(1, self.columnCount()):
+                item = self.item(r, c)
+                if isinstance(item, _NumItem):
+                    item.setText(fmt.num(item._value))
 
-    def _on_activate(self, index) -> None:
+    def _on_activate(self, index) -> None:  # pragma: no cover - overridden
         raise NotImplementedError
 
 
@@ -50,12 +65,11 @@ class ProjectsReport(_BaseTableReport):
         self.setSortingEnabled(False)
         self.setRowCount(len(rows))
         for r, row in enumerate(rows):
-            name = QTableWidgetItem(row["project"])
-            self.setItem(r, 0, name)
-            self.setItem(r, 1, self._num(row.get("open", 0)))
-            self.setItem(r, 2, self._num(row.get("waiting", 0)))
-            self.setItem(r, 3, self._num(row.get("overdue", 0)))
-            self.setItem(r, 4, self._num(round(row.get("pct", 0), 1)))
+            self.setItem(r, 0, QTableWidgetItem(row["project"]))
+            self.setItem(r, 1, _NumItem(row.get("open", 0)))
+            self.setItem(r, 2, _NumItem(row.get("waiting", 0)))
+            self.setItem(r, 3, _NumItem(row.get("overdue", 0)))
+            self.setItem(r, 4, _NumItem(round(row.get("pct", 0), 1)))
         self.setSortingEnabled(True)
 
     def _on_activate(self, index) -> None:
@@ -72,7 +86,7 @@ class TagsReport(_BaseTableReport):
         self.setRowCount(len(rows))
         for r, row in enumerate(rows):
             self.setItem(r, 0, QTableWidgetItem(f"#{row['tag']}"))
-            self.setItem(r, 1, self._num(row.get("count", 0)))
+            self.setItem(r, 1, _NumItem(row.get("count", 0)))
         self.setSortingEnabled(True)
 
     def _on_activate(self, index) -> None:

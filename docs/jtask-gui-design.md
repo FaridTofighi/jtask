@@ -415,6 +415,25 @@ per-report toolbar (period toggle, ghistory bar-mode toggle, PNG export).
 - `jdatetime` month grid now renders Persian digits in the title and default
   cells.
 - Custom `.taskrc` report discovery → sortable table: **deferred to M3**
+
+### M2 fix pass
+
+- **`jtask_gui/fmt.py`** is now the single number-formatting path for the whole
+  GUI (`num`, `pct`, `digits`) — respects the active digit mode (synced to the
+  global `jtask.rtl` state at startup and on settings change) and can wrap a
+  token in bidi isolates. Every user-facing number routes through it: status
+  count, task-model cells, Summary percentages, **matplotlib axis ticks** (a
+  `FuncFormatter` in `charts/mpl_base.py`, so both axes on every chart), and the
+  **Projects/Tags report cells**.
+- The Projects/Tags tables were showing ASCII digits because
+  `QTableWidgetItem` collapses `EditRole` onto `DisplayRole`; replaced with a
+  `_NumItem` that displays the formatted string and sorts on a stored float.
+- **`SegmentedControl`** (`widgets/segmented.py`) replaces the period and
+  history-mode `QComboBox`es: a single-choice button row with an explicit
+  checked/active style, so the current granularity (روزانه/هفتگی/ماهانه) and
+  bar mode (انباشته/گروهی) are always visible, not hidden inside a closed combo.
+- Light-theme reports view confirmed: figure/axes/chrome all repaint from the
+  palette on theme switch (pixel-checked `#ffffff` content, `#f5f7fa` chrome).
   (needs parsing arbitrary report column specs; not blocking).
 
 ## Later milestones (not in M1/M2)

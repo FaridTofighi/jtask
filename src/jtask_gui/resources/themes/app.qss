@@ -178,6 +178,20 @@ QProgressBar {
 }
 QProgressBar::chunk { background-color: @primary@; border-radius: 7px; }
 
+/* ---- segmented control ---- */
+QPushButton#Segment {
+    background: @field@; border: 1px solid @border@;
+    padding: 6px 14px; border-radius: 0; font-weight: 700; color: @text_muted@;
+}
+QPushButton#Segment[pos="first"] { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+QPushButton#Segment[pos="last"]  { border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-right: none; }
+QPushButton#Segment[pos="mid"]   { border-right: none; }
+QPushButton#Segment[pos="only"]  { border-radius: 8px; }
+QPushButton#Segment:hover   { background: @hover@; color: @text@; }
+QPushButton#Segment:checked {
+    background: @primary@; color: @primary_fg@; border-color: @primary@;
+}
+
 QWidget#Placeholder { background-color: @bg@; }
 QWidget#Placeholder QLabel#H1 { color: @text@; }
 QWidget#Placeholder QLabel#Body { color: @text_muted@; font-size: 14px; line-height: 150%; }

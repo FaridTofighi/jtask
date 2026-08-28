@@ -20,9 +20,9 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import reports, taskwarrior
-from jtask.rtl import fa_digits
+from jtask.rtl import set_digit_mode
 
-from . import icons
+from . import fmt, icons
 from .models.task_model import TaskTableModel
 from .settings import Settings
 from .theme import other_theme, render_qss
@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = settings or Settings()
         icons.set_theme(self.settings.theme)
+        set_digit_mode(self.settings.persian_digits)
         self.setWindowTitle("jtask — مدیریت کارها")
         self.setMinimumSize(_MIN_SIZE)
         self.resize(1240, 800)
@@ -341,7 +342,7 @@ class MainWindow(QMainWindow):
         self._model.set_tasks(tasks)
         self._table.show_empty_state(self._view_spec.get("title", ""), len(tasks) == 0)
         title = self._view_spec.get("title", "کارها")
-        self._status_count.setText(f"{fa_digits(str(len(tasks)))} کار · {title}")
+        self._status_count.setText(f"{fmt.num(len(tasks))} کار · {title}")
 
     def _on_load_error(self, message: str) -> None:
         self._end_busy()
@@ -434,8 +435,10 @@ class MainWindow(QMainWindow):
 
         dlg = SettingsDialog(self.settings, self)
         if dlg.exec():
+            set_digit_mode(self.settings.persian_digits)
             self._model.set_persian_digits(self.settings.persian_digits)
             self._model.set_due_soon_days(self.settings.due_soon_days)
+            self._reports.refresh_digits()
             self._apply_theme(self.settings.theme)
             self.refresh_all()
 
