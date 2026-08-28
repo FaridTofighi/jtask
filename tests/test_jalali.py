@@ -7,7 +7,6 @@ import pytest
 
 from jtask import jalali
 
-
 # --- digit handling -------------------------------------------------------
 
 def test_normalize_digits_persian_to_ascii():
