@@ -14,6 +14,7 @@ from .. import icons
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
+UUID_MIME = "application/x-jtask-uuids"
 
 
 def _this_week_filter() -> list[str]:
@@ -49,6 +50,9 @@ class Sidebar(QTreeWidget):
 
     activated = pyqtSignal(dict)
     contextChangeRequested = pyqtSignal(str)  # "" clears the context
+    tasksDroppedOnProject = pyqtSignal(list, str)  # (uuids, project)
+    savedFilterActivated = pyqtSignal(str)  # raw filter string
+    savedFilterDeleteRequested = pyqtSignal(str)  # name
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -59,6 +63,7 @@ class Sidebar(QTreeWidget):
         self.setUniformRowHeights(True)
         self.setRootIsDecorated(False)
         self.setExpandsOnDoubleClick(False)
+        self.setAcceptDrops(True)
         self.itemClicked.connect(self._on_click)
 
         self._quick = self._section("نماهای سریع")
@@ -84,6 +89,7 @@ class Sidebar(QTreeWidget):
         gap2.setSizeHint(0, QSize(1, 6))
         self.addTopLevelItem(gap2)
 
+        self._saved = self._section("فیلترهای ذخیره‌شده")
         self._projects = self._section("پروژه‌ها")
         self._tags = self._section("برچسب‌ها")
         self._contexts = self._section("زمینه‌ها")
@@ -169,6 +175,48 @@ class Sidebar(QTreeWidget):
             self._contexts.addChild(item)
         self.retint()
 
+    def populate_saved_filters(self, filters: dict[str, str]) -> None:
+        self._saved.takeChildren()
+        if not filters:
+            hint = QTreeWidgetItem(["(با دکمهٔ ★ کنار نوار فیلتر ذخیره کنید)"])
+            hint.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            hint.setForeground(0, self.palette().brush(self.foregroundRole()))
+            self._saved.addChild(hint)
+            return
+        for name, raw in sorted(filters.items()):
+            item = self._leaf(
+                self._saved, name,
+                {"kind": "saved", "name": name, "raw": raw}, "filter",
+            )
+            item.setToolTip(0, raw)
+        self.retint()
+
+    # --- drag & drop -----------------------------------------
+
+    def dragEnterEvent(self, event):  # noqa: N802
+        if event.mimeData().hasFormat(UUID_MIME):
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):  # noqa: N802
+        item = self.itemAt(event.position().toPoint())
+        spec = item.data(0, _SPEC_ROLE) if item else None
+        if event.mimeData().hasFormat(UUID_MIME) and spec and spec.get("kind") == "filter" \
+                and spec.get("title") and "project:" in (spec.get("filter") or [""])[0]:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):  # noqa: N802
+        item = self.itemAt(event.position().toPoint())
+        spec = item.data(0, _SPEC_ROLE) if item else None
+        if not spec or spec.get("kind") != "filter":
+            return
+        uuids = bytes(event.mimeData().data(UUID_MIME)).decode().split()
+        project = spec["title"]
+        if uuids and project:
+            self.tasksDroppedOnProject.emit(uuids, project)
+            event.acceptProposedAction()
+
     # --- events -----------------------------------------------
 
     def _on_click(self, item: QTreeWidgetItem, _column: int) -> None:
@@ -177,6 +225,9 @@ class Sidebar(QTreeWidget):
             return
         if spec["kind"] == "context":
             self.contextChangeRequested.emit(spec["name"])
+            return
+        if spec["kind"] == "saved":
+            self.savedFilterActivated.emit(spec["raw"])
             return
         resolved = dict(spec)
         flt = resolved.get("filter")

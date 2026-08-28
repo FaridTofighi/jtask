@@ -49,6 +49,7 @@ class DetailPanel(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._task: dict | None = None
         self._dirty_dates: set[str] = set()
+        self._all_tasks: list[dict] = []
 
         body = QWidget()
         body.setObjectName("DetailPanel")
@@ -137,10 +138,32 @@ class DetailPanel(QScrollArea):
         uda_wrap.setLayout(self._uda_form)
         outer.addWidget(uda_wrap)
 
+        # dependency graph
+        from .dep_graph import DependencyGraph
+
+        self._dep_label = QLabel("گراف وابستگی")
+        outer.addWidget(self._dep_label)
+        self._dep_graph = DependencyGraph()
+        outer.addWidget(self._dep_graph)
+
         # urgency + audit
+        urg_row = QHBoxLayout()
         self._urgency = QLabel("—")
+        urg_row.addWidget(self._urgency, 1)
+        self._why_btn = QPushButton("چرا؟")
+        self._why_btn.setCheckable(True)
+        self._why_btn.toggled.connect(self._toggle_why)
+        urg_row.addWidget(self._why_btn)
+        urg_wrap = QWidget()
+        urg_wrap.setLayout(urg_row)
+
         form_bottom = QFormLayout()
-        form_bottom.addRow("فوریت", self._urgency)
+        form_bottom.addRow("فوریت", urg_wrap)
+        self._why = QLabel("")
+        self._why.setObjectName("Muted")
+        self._why.setWordWrap(True)
+        self._why.setVisible(False)
+        form_bottom.addRow("", self._why)
         self._audit = QLabel("")
         self._audit.setObjectName("Muted")
         form_bottom.addRow("سوابق", self._audit)
@@ -171,6 +194,34 @@ class DetailPanel(QScrollArea):
     def set_tag_completions(self, tags: list[str]) -> None:
         self._tags.set_completions(tags)
 
+    def set_all_tasks(self, tasks: list[dict]) -> None:
+        self._all_tasks = tasks
+        if self._task:
+            self._dep_graph.show_task(self._task, tasks)
+
+    def set_theme(self, name: str) -> None:
+        self._dep_graph.set_theme(name)
+        if self._task and getattr(self, "_all_tasks", None):
+            self._dep_graph.show_task(self._task, self._all_tasks)
+
+    def _toggle_why(self, on: bool) -> None:
+        self._why.setVisible(on)
+        if on and self._task:
+            from ..workers import submit
+
+            uuid = self._task["uuid"]
+            submit(lambda: taskwarrior.urgency_terms(uuid), self._show_why)
+
+    def _show_why(self, terms: list[dict]) -> None:
+        if not terms:
+            self._why.setText("تفکیک فوریت در دسترس نیست.")
+            return
+        lines = [
+            f"{t['label']}:  {fmt.num(round(float(t['value']), 1), isolate=True)}"
+            for t in sorted(terms, key=lambda x: -abs(float(x["value"])))
+        ]
+        self._why.setText("   ·   ".join(lines))
+
     def load_task(self, task: dict) -> None:
         self._task = task
         self._dirty_dates.clear()
@@ -194,7 +245,10 @@ class DetailPanel(QScrollArea):
         self._load_annotations(task)
         self._load_udas(task)
         self._urgency.setText(fmt.num(round(float(task.get("urgency", 0)), 1), isolate=True))
+        self._why_btn.setChecked(False)
+        self._why.clear()
         self._audit.setText(self._audit_text(task))
+        self._dep_graph.show_task(task, self._all_tasks)
         self.opened.emit()
 
     def _audit_text(self, task: dict) -> str:

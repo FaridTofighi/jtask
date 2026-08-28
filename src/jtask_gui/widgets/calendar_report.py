@@ -24,16 +24,19 @@ from jtask import jalali, reports
 from .. import fmt, icons
 from ..workers import submit
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
+from .task_table import UUID_MIME
 
 
 class _DayCell(QFrame):
-    clicked = pyqtSignal(object)  # (year, month, day)
+    clicked = pyqtSignal(object)              # (year, month, day)
+    tasksDropped = pyqtSignal(list, object)   # (uuids, (y, m, d))
 
     def __init__(self, ctx: DayCellContext, count: int, overdue: bool, pal: dict) -> None:
         super().__init__()
         self._key = (ctx.year, ctx.month, ctx.day)
         self.setObjectName("DayCell")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAcceptDrops(True)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(6, 6, 6, 6)
         lay.setSpacing(3)
@@ -58,8 +61,25 @@ class _DayCell(QFrame):
     def mousePressEvent(self, event):  # noqa: N802
         self.clicked.emit(self._key)
 
+    def dragEnterEvent(self, event):  # noqa: N802
+        if event.mimeData().hasFormat(UUID_MIME):
+            event.acceptProposedAction()
+            self.setStyleSheet("QFrame#DayCell { border: 2px solid palette(highlight); }")
+
+    def dragLeaveEvent(self, event):  # noqa: N802
+        self.setStyleSheet("")
+
+    def dropEvent(self, event):  # noqa: N802
+        self.setStyleSheet("")
+        uuids = bytes(event.mimeData().data(UUID_MIME)).decode().split()
+        if uuids:
+            self.tasksDropped.emit(uuids, self._key)
+            event.acceptProposedAction()
+
 
 class CalendarReport(QWidget):
+    taskRescheduled = pyqtSignal(list, str)  # (uuids, gregorian YYYY-MM-DD)
+
     def __init__(self, theme_name: str = "شب", parent=None) -> None:
         super().__init__(parent)
         self._theme = theme_name
@@ -128,7 +148,13 @@ class CalendarReport(QWidget):
         overdue = any(self._is_overdue(t) for t in tasks)
         cell = _DayCell(ctx, len(tasks), overdue, pal)
         cell.clicked.connect(self._show_day)
+        cell.tasksDropped.connect(self._on_drop)
         return cell
+
+    def _on_drop(self, uuids: list[str], key) -> None:
+        y, m, d = key
+        greg = jdatetime.date(y, m, d).togregorian().strftime("%Y-%m-%d")
+        self.taskRescheduled.emit(uuids, greg)
 
     @staticmethod
     def _is_overdue(task: dict) -> bool:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QSortFilterProxyModel, Qt, pyqtSignal
+from PyQt6.QtCore import QMimeData, QSortFilterProxyModel, Qt, pyqtSignal
+from PyQt6.QtGui import QDrag
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
@@ -13,6 +14,8 @@ from PyQt6.QtWidgets import (
 )
 
 from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
+
+UUID_MIME = "application/x-jtask-uuids"
 
 _EMPTY_MESSAGES = {
     "امروز": "برای امروز کاری سررسید نشده. نفسی تازه کن یا کاری برنامه‌ریزی کن.",
@@ -70,6 +73,8 @@ class TaskTable(QTableView):
 
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.setSortingEnabled(True)
         self.setAlternatingRowColors(False)
         self.setShowGrid(False)
@@ -133,6 +138,17 @@ class TaskTable(QTableView):
     def resizeEvent(self, event):  # noqa: N802
         super().resizeEvent(event)
         self._position_empty()
+
+    def startDrag(self, actions):  # noqa: N802
+        uuids = self.selected_uuids()
+        if not uuids:
+            return
+        mime = QMimeData()
+        mime.setData(UUID_MIME, " ".join(uuids).encode())
+        mime.setText("، ".join(uuids))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        drag.exec(Qt.DropAction.MoveAction)
 
     # --- API ---------------------------------------------------
 

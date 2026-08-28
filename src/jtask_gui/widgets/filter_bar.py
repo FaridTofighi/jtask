@@ -1,19 +1,17 @@
-"""Raw Taskwarrior filter input with shared autocomplete.
-
-M1: raw syntax only (with autocomplete). The visual filter builder is M3.
-"""
+"""Raw Taskwarrior filter input + a visual filter builder + save-as."""
 
 from __future__ import annotations
 
 import shlex
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLineEdit, QToolButton, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QInputDialog, QLineEdit, QToolButton, QWidget
 
 from jtask import rewrite, taskwarrior
 
 from .. import icons
 from .autocomplete import make_token_completer
+from .filter_builder import FilterBuilder
 
 
 class _FilterLineEdit(QLineEdit):
@@ -33,12 +31,18 @@ class FilterBar(QWidget):
     """Emits ``filterChanged(list[str])`` — Gregorian-rewritten filter tokens."""
 
     filterChanged = pyqtSignal(list)
+    saveRequested = pyqtSignal(str, str)  # (name, raw filter string)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
+
+        self._builder_btn = QToolButton()
+        self._builder_btn.setToolTip("سازندهٔ فیلتر بصری")
+        self._builder_btn.clicked.connect(self._open_builder)
+        row.addWidget(self._builder_btn)
 
         self._edit = _FilterLineEdit()
         self._edit.setObjectName("FilterEdit")
@@ -55,6 +59,12 @@ class FilterBar(QWidget):
         self._apply_btn.clicked.connect(self._apply)
         row.addWidget(self._apply_btn)
 
+        self._save_btn = QToolButton()
+        self._save_btn.setText("★")
+        self._save_btn.setToolTip("ذخیرهٔ این فیلتر")
+        self._save_btn.clicked.connect(self._save)
+        row.addWidget(self._save_btn)
+
         self._clear_btn = QToolButton()
         self._clear_btn.setToolTip("پاک‌کردن فیلتر")
         self._clear_btn.clicked.connect(self.clear)
@@ -66,6 +76,24 @@ class FilterBar(QWidget):
     def retint(self) -> None:
         self._apply_btn.setIcon(icons.icon("filter"))
         self._clear_btn.setIcon(icons.icon("clear"))
+        self._builder_btn.setIcon(icons.icon("group"))
+
+    def _open_builder(self) -> None:
+        dlg = FilterBuilder(self._edit.text().strip(), self)
+        dlg.applied.connect(self._builder_applied)
+        dlg.exec()
+
+    def _builder_applied(self, tokens: list[str], raw_display: str) -> None:
+        self._edit.setText(raw_display)
+        self.filterChanged.emit(tokens)
+
+    def _save(self) -> None:
+        raw = self._edit.text().strip()
+        if not raw:
+            return
+        name, ok = QInputDialog.getText(self, "ذخیرهٔ فیلتر", "نام:")
+        if ok and name.strip():
+            self.saveRequested.emit(name.strip(), raw)
 
     def _on_text(self, text: str) -> None:
         self._edit.setToolTip(text or "فیلتری اعمال نشده است")

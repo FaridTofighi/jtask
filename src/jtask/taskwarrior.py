@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from functools import lru_cache
@@ -188,14 +189,53 @@ def current_context() -> str | None:
 @lru_cache(maxsize=1)
 def list_reports() -> list[str]:
     """Names of report definitions (built-in + custom from .taskrc)."""
-    return sorted(set(_lines(["_reports"])))
+    names = set(_lines(["_reports"]))
+    if not names:  # some builds return nothing for _reports
+        names = {n for n, _ in report_specs().items()}
+    return sorted(names)
+
+
+@lru_cache(maxsize=1)
+def report_specs() -> dict[str, dict[str, str]]:
+    """``{name: {description, columns, labels, filter, sort}}`` from ``_show``."""
+    specs: dict[str, dict[str, str]] = {}
+    for key, value in _show_config().items():
+        if not key.startswith("report."):
+            continue
+        _, name, attr = key.split(".", 2)
+        specs.setdefault(name, {})[attr] = value
+    return {n: s for n, s in specs.items() if "columns" in s}
+
+
+def urgency_terms(uuid: str) -> list[dict[str, float | str]]:
+    """Parsed contributing terms from ``task <uuid> info``.
+
+    Each entry is ``{"label": str, "coefficient": float, "weight": float,
+    "value": float}``; empty when Taskwarrior gives no breakdown.
+    """
+    try:
+        proc = run([uuid, "info"], extra_rc=["rc.verbose=nothing"])
+    except JtaskError:
+        return []
+    terms: list[dict[str, float | str]] = []
+    row = re.compile(r"^\s+(.+?)\s+(-?\d[\d.]*)\s+\*\s+(-?\d[\d.]*)\s+=\s+(-?\d[\d.]*)\s*$")
+    for line in proc.stdout.splitlines():
+        m = row.match(line)
+        if m:
+            terms.append({
+                "label": m.group(1).strip(),
+                "coefficient": float(m.group(2)),
+                "weight": float(m.group(3)),
+                "value": float(m.group(4)),
+            })
+    return terms
 
 
 def refresh_lookups() -> None:
     """Drop all cached lookups (call after config or data changes)."""
     for fn in (
         _show_config, uda_definitions, list_projects, list_tags,
-        list_contexts, list_reports,
+        list_contexts, list_reports, report_specs,
     ):
         clear = getattr(fn, "cache_clear", None)
         if callable(clear):

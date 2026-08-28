@@ -13,6 +13,7 @@ math itself.
 from __future__ import annotations
 
 import datetime
+import re
 from collections import Counter, defaultdict
 from typing import Any
 
@@ -45,6 +46,7 @@ __all__ = [
     "report_ghistory",
     "report_burndown",
     "report_calendar",
+    "run_custom_report",
 ]
 
 PERIODS = ("daily", "weekly", "monthly")
@@ -343,3 +345,50 @@ def report_burndown(period="daily", filter_args=None) -> dict:
 
 def report_calendar(year_j: int, month_j: int, filter_args=None) -> dict:
     return shape_calendar(_all(filter_args), year_j, month_j)
+
+
+_MODIFIER_RE = re.compile(r"\.(age|relative|countdown|remaining|indicator)$")
+
+
+def run_custom_report(name: str, filter_args=None) -> dict:
+    """Render a user-defined ``.taskrc`` report as ``{columns, labels, rows}``.
+
+    Column *values* are the plain attribute (dates in Jalali); Taskwarrior's
+    display modifiers (``due.relative`` etc.) are stripped to the base attribute.
+    """
+    specs = taskwarrior.report_specs()
+    spec = specs.get(name)
+    if not spec:
+        raise ValueError(f"گزارش سفارشی «{name}» تعریف نشده است.")
+
+    cols = [c.strip() for c in spec.get("columns", "").split(",") if c.strip()]
+    labels = [x.strip() for x in spec.get("labels", "").split(",")] or cols
+    if len(labels) < len(cols):
+        labels += cols[len(labels):]
+
+    rep_filter = [
+        tok for tok in spec.get("filter", "").split()
+        if not tok.startswith("limit:")
+    ]
+    tasks = shape_task_list(taskwarrior.export([*rep_filter, *(filter_args or [])]))
+
+    rows = []
+    for t in tasks:
+        row = []
+        for col in cols:
+            attr = _MODIFIER_RE.sub("", col)
+            value = t.get(attr, "")
+            if attr == "tags" and isinstance(value, list):
+                value = " ".join(value)
+            elif attr == "depends" and isinstance(value, list):
+                value = ",".join(str(x) for x in value)
+            row.append("" if value is None else str(value))
+        rows.append(row)
+
+    return {
+        "name": name,
+        "description": spec.get("description", name),
+        "columns": cols,
+        "labels": labels[: len(cols)],
+        "rows": rows,
+    }

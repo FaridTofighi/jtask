@@ -436,11 +436,28 @@ per-report toolbar (period toggle, ghistory bar-mode toggle, PNG export).
   palette on theme switch (pixel-checked `#ffffff` content, `#f5f7fa` chrome).
   (needs parsing arbitrary report column specs; not blocking).
 
-## Later milestones (not in M1/M2)
-- **M3 — Power/UX**: visual filter builder (with "show equivalent raw filter"),
-  drag-and-drop (task→project, task→calendar day), saved/pinned user filters,
-  dependency graph view, urgency factor breakdown polish, custom `.taskrc`
-  report discovery → sortable table.
+## Milestone 3 — Power / UX (delivered)
+
+**Core** (`taskwarrior.py`, `reports.py`):
+- `taskwarrior.report_specs()` — `report.<name>.*` parsed from `_show`.
+- `taskwarrior.urgency_terms(uuid)` — the contribution table from `task info`
+  (`{label, coefficient, weight, value}`).
+- `reports.run_custom_report(name, filter)` — renders a `.taskrc` report as
+  `{columns, labels, rows}`, Jalali dates, display modifiers stripped.
+
+**GUI**:
+| Feature | Where |
+|---|---|
+| Visual filter builder | `widgets/filter_builder.py` — project / +tags / -tags / status / priority / due-before / due-after (Jalali pickers) / raw extras. Shows the equivalent raw string with a copy button; emits Taskwarrior-ready tokens. Opened from a button on the filter bar. |
+| Saved / pinned filters | `settings.py` (`save_filter`/`saved_filters`/`delete_filter`); a `★` button on the filter bar prompts for a name; sidebar **«فیلترهای ذخیره‌شده»** section lists them, click → apply. |
+| Drag-and-drop | `TaskTable.startDrag` emits `application/x-jtask-uuids`. `Sidebar` project rows accept the drop → `task <uuids> modify project:X`. `CalendarReport` day cells accept the drop → `task <uuids> modify due:<greg>`. |
+| Dependency graph | `widgets/dep_graph.py` — `QGraphicsView`: blockers (red) → this task (primary) → dependents (muted), curved edges; embedded in the detail panel, theme-aware. |
+| Urgency breakdown | detail panel `«چرا؟»` toggle → `taskwarrior.urgency_terms` off-thread → each term with its Persian-digit contribution. |
+| Custom `.taskrc` reports | `ReportsView.discover_custom_reports()` appends non-built-in report names to the rail; `widgets/generic_report.py` renders `run_custom_report` output as a sortable table. |
+
+10 M3 GUI tests + 5 core tests; 172 total green.
+
+## Later milestones (not in M1–M3)
 - **M4 — Platform**: `QSystemTrayIcon` due/overdue notifications + quiet hours,
   PyInstaller/AppImage build, `.desktop` + icon + `StartupWMClass`, README
   screenshots/GIF, first-run setup wizard.

@@ -77,5 +77,20 @@ class Settings:
     def console_visible(self, value: bool) -> None:
         self._s.setValue("console/visible", bool(value))
 
+    # --- saved filters (name -> raw filter string) ---
+    def saved_filters(self) -> dict[str, str]:
+        raw = self._s.value("filters/saved", {}, dict) or {}
+        return {str(k): str(v) for k, v in raw.items()}
+
+    def save_filter(self, name: str, raw: str) -> None:
+        current = self.saved_filters()
+        current[name] = raw
+        self._s.setValue("filters/saved", current)
+
+    def delete_filter(self, name: str) -> None:
+        current = self.saved_filters()
+        current.pop(name, None)
+        self._s.setValue("filters/saved", current)
+
     def sync(self) -> None:
         self._s.sync()

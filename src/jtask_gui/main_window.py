@@ -253,6 +253,10 @@ class MainWindow(QMainWindow):
         )
         self._table.startStopRequested.connect(self._start_stop)
         self._reports.filterRequested.connect(self._drill_into_filter)
+        self._reports._calendar.taskRescheduled.connect(self._reschedule)
+        self._sidebar.tasksDroppedOnProject.connect(self._reassign_project)
+        self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
+        self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
         self._detail.annotateRequested.connect(
@@ -299,6 +303,29 @@ class MainWindow(QMainWindow):
     def _hide_detail(self) -> None:
         self._animate_detail(0)
 
+    # --- drag & drop / saved filters ----------------------
+
+    def _reassign_project(self, uuids: list[str], project: str) -> None:
+        self._write(
+            functools.partial(taskwarrior.command, uuids, "modify", [f"project:{project}"]),
+            f"به پروژهٔ «{project}» منتقل شد",
+        )
+
+    def _reschedule(self, uuids: list[str], gregorian: str) -> None:
+        self._write(
+            functools.partial(taskwarrior.command, uuids, "modify", [f"due:{gregorian}"]),
+            "سررسید به‌روزرسانی شد",
+        )
+
+    def _save_filter(self, name: str, raw: str) -> None:
+        self.settings.save_filter(name, raw)
+        self.settings.sync()
+        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+
+    def _apply_saved_filter(self, raw: str) -> None:
+        self._filter_bar.set_text(raw)
+        self._filter_bar._apply()
+
     # --- data flow ------------------------------------------
 
     def refresh_all(self) -> None:
@@ -314,6 +341,8 @@ class MainWindow(QMainWindow):
         )
         submit(taskwarrior.list_projects, self._detail.set_projects, self._error)
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
+        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._reports.discover_custom_reports()
         self._load_current_view()
 
     def _load_current_view(self) -> None:
@@ -340,6 +369,7 @@ class MainWindow(QMainWindow):
     def _populate_table(self, tasks: list[dict]) -> None:
         self._end_busy()
         self._model.set_tasks(tasks)
+        self._detail.set_all_tasks(tasks)
         self._table.show_empty_state(self._view_spec.get("title", ""), len(tasks) == 0)
         title = self._view_spec.get("title", "کارها")
         self._status_count.setText(f"{fmt.num(len(tasks))} کار · {title}")
@@ -418,6 +448,7 @@ class MainWindow(QMainWindow):
         else:  # pragma: no cover
             self.setStyleSheet(render_qss(name))
         self._model.set_theme(name)
+        self._detail.set_theme(name)
         self._sidebar.retint()
         self._filter_bar.retint()
         self._reports.set_theme(name)

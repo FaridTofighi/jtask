@@ -26,6 +26,7 @@ from .calendar_report import CalendarReport
 from .charts.burndown_chart import BurndownChart
 from .charts.history_chart import HistoryChart
 from .charts.summary_view import SummaryView
+from .generic_report import GenericReport
 from .segmented import SegmentedControl
 from .table_reports import ProjectsReport, TagsReport
 
@@ -105,6 +106,8 @@ class ReportsView(QWidget):
         for w in (self._burndown, self._history, self._summary, self._calendar,
                   self._projects, self._tags):
             self._stack.addWidget(w)
+        self._generic = GenericReport()
+        self._stack.addWidget(self._generic)
         self._projects.rowActivated.connect(self.filterRequested)
         self._tags.rowActivated.connect(self.filterRequested)
         content.addWidget(self._stack, 1)
@@ -120,8 +123,35 @@ class ReportsView(QWidget):
             "calendar": self._calendar, "projects": self._projects,
             "tags": self._tags,
         }
+        self._custom_names: set[str] = set()
         self._retint_rail()
         self._rail.setCurrentRow(0)
+        self.discover_custom_reports()
+
+    def discover_custom_reports(self) -> None:
+        """Append user-defined .taskrc reports (that aren't built-ins) to the rail."""
+        def work():
+            from jtask import taskwarrior
+            builtins = {"active", "all", "blocked", "blocking", "completed", "list",
+                        "long", "ls", "minimal", "newest", "next", "oldest",
+                        "overdue", "ready", "recurring", "unblocked", "waiting"}
+            return {n: s.get("description", n)
+                    for n, s in taskwarrior.report_specs().items()
+                    if n not in builtins}
+
+        def apply(specs: dict):
+            for name in specs:
+                if name in self._custom_names:
+                    continue
+                self._custom_names.add(name)
+                item = QListWidgetItem(specs[name] or name)
+                item.setData(Qt.ItemDataRole.UserRole, f"custom:{name}")
+                item.setData(Qt.ItemDataRole.UserRole + 5, "reports")
+                self._rail.addItem(item)
+                self._widget_for[f"custom:{name}"] = self._generic
+            self._retint_rail()
+
+        submit(work, apply)
 
     # --- API -------------------------------------------------
 
@@ -214,6 +244,10 @@ class ReportsView(QWidget):
         elif key == "tags":
             submit(functools.partial(reports.report_tags, flt),
                    guarded(self._tags.set_data))
+        elif key.startswith("custom:"):
+            name = key.split(":", 1)[1]
+            submit(functools.partial(reports.run_custom_report, name, flt),
+                   guarded(self._generic.set_data))
 
     def _export(self) -> None:
         widget = self._widget_for[self._active]
