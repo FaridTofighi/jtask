@@ -62,6 +62,58 @@ def test_add_appears_with_jalali_date_then_completes(window, qapp, qtbot):
     assert "خرید شیر" in done_descs
 
 
+def test_edit_due_date_via_detail_panel_persists_as_jalali(window, qapp, qtbot):
+    from jtask import reports
+
+    window._view_spec = {"kind": "report", "title": "بعدی", "fn": "report_next"}
+    window._quick_add._edit.setText("بازبینی گزارش")
+    window._quick_add._commit()
+    _settle(qapp, qtbot)
+
+    model = window._model
+    row = [model.task_at(r)["description"] for r in range(model.rowCount())].index(
+        "بازبینی گزارش"
+    )
+    window._show_detail(model.task_at(row))
+    _settle(qapp, qtbot, rounds=2)
+
+    # set a Jalali due date through the picker, then save — this used to crash
+    # because _save_task re-ran rewrite_args over the already-Gregorian value.
+    target = jdatetime.date(1403, 8, 1)  # -> 2024-10-22
+    window._detail._dates["due"].set_value(target)
+    window._detail._save()
+    _settle(qapp, qtbot)
+
+    fresh = {t["description"]: t for t in reports.report_list()}
+    assert fresh["بازبینی گزارش"]["due"] == jalali.to_persian_digits("1403-08-01")
+    assert fresh["بازبینی گزارش"]["due_gregorian"].startswith("20241021") or \
+        fresh["بازبینی گزارش"]["due_gregorian"].startswith("20241022")
+
+
+def test_edit_description_via_detail_panel(window, qapp, qtbot):
+    from jtask import reports
+
+    window._quick_add._edit.setText("عنوان اولیه")
+    window._quick_add._commit()
+    _settle(qapp, qtbot)
+    window._on_view_selected({"kind": "report", "title": "همه", "fn": "report_list"})
+    _settle(qapp, qtbot)
+
+    model = window._model
+    row = [model.task_at(r)["description"] for r in range(model.rowCount())].index(
+        "عنوان اولیه"
+    )
+    window._show_detail(model.task_at(row))
+    _settle(qapp, qtbot, rounds=2)
+    window._detail._description.setText("عنوان ویرایش‌شده")
+    window._detail._save()
+    _settle(qapp, qtbot)
+
+    descs = [t["description"] for t in reports.report_list()]
+    assert "عنوان ویرایش‌شده" in descs
+    assert "عنوان اولیه" not in descs
+
+
 def test_undo_action_is_present_and_wired(window):
     assert window._undo_action.text() == "واگرد آخرین عملیات"
     assert not window._undo_action.shortcut().isEmpty()

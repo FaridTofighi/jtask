@@ -370,12 +370,11 @@ class MainWindow(QMainWindow):
         )
 
     def _save_task(self, uuid: str, mods: list[str]) -> None:
-        from jtask import rewrite
-
+        # The detail panel already emits Taskwarrior-ready tokens: its Jalali
+        # date pickers hand back Gregorian strings, so mods must NOT be run
+        # through rewrite_args again (that would reject the Gregorian dates).
         self._write(
-            functools.partial(
-                taskwarrior.command, [uuid], "modify", rewrite.rewrite_args(mods)
-            ),
+            functools.partial(taskwarrior.command, [uuid], "modify", mods),
             "کار به‌روزرسانی شد",
         )
 
