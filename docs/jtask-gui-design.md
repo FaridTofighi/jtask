@@ -558,3 +558,132 @@ the sidebar.
 `tests/gui/test_persistence.py` now does a real "restart" check (write with one
 `Settings`, read with a fresh one) for a dialog value, the wizard flag, window
 geometry, columns and saved filters, plus a within-session dialog-reopen check.
+
+---
+
+# Feature-parity mission — Phase 0 (audit + plan, awaiting review)
+
+Goal: bring jtask-gui to genuine native coverage of Taskwarrior's important
+capabilities (not "covered because the console can run it"), with **zero
+regression** to M1–M4 and the Raw Console kept **permanently** as the escape
+hatch.
+
+## Architecture as it stands (audit)
+
+**Two packages, one repo:**
+
+- `src/jtask/` — framework-agnostic core. `taskwarrior.py` is the *only* place
+  that shells out to `task` (`run` / `command` / `add` / `export` /
+  `passthrough` + cached `_show`/`_projects`/`_tags`/`_udas`/`_context`/
+  `_reports` lookups + `report_specs` + `urgency_terms`). `reports.py` shapes
+  `task export` JSON into GUI-ready structures. `jalali.py` / `rewrite.py` do
+  the Jalali↔Gregorian layer. `errors.py` = `JtaskError`.
+- `src/jtask_gui/` — PyQt6. `app.py` bootstraps (RTL, bundled Vazirmatn, theme,
+  icon, wizard gate). `main_window.py` orchestrates. `workers.py` =
+  `QThreadPool`+`TaskRunnable`, the single off-thread path with
+  `finished/failed` signals. `fmt.py` = the single number/digit formatter.
+  `theme.py` = one QSS template + palette per theme. `settings.py` = `QSettings`
+  wrapper (persisted, restart-tested). `icons.py` = theme-aware qtawesome.
+
+**Every `task`-executing call site** (audited): `main_window` (add / done /
+delete / start / stop / modify / annotate / denotate / undo / context /
+drag-drop modify), `command_console` (`taskwarrior.run` raw), `reports_view` +
+`calendar_report` + `notifications` + `detail_panel` (read-only `reports.*`).
+Nothing bypasses `taskwarrior.py`.
+
+**UI surfaces today:** main window shell (RTL sidebar / task table / slide-in
+detail panel / two-row toolbar / status bar / tray), quick-add, raw+visual
+filter, Reports & Charts (burndown / history / ghistory / summary / Jalali
+calendar / projects / tags / discovered custom reports), command console,
+settings dialog, first-run wizard.
+
+**Console-only capabilities right now** (the parity gap): `append`, `prepend`,
+`duplicate`, `log`, `purge`, `edit`, `import`, user-facing `export`, `sync`,
+`config`, full `context` management, `calc`, `stats`, `diagnostics`, `help`,
+`timesheet`, per-field history, most built-in reports, UDA-definition
+management, non-date filter modifiers / regex / boolean grammar in the builder.
+Full list with target milestones: `docs/taskwarrior-feature-matrix.md`.
+
+**Test baseline:** `QT_QPA_PLATFORM=offscreen pytest -q` → **205 passed**,
+`ruff` + `mypy` clean. Deps all present (PyQt6 6.11, matplotlib 3.11 *with
+libraqm*, jdatetime 6, arabic-reshaper, python-bidi, qtawesome, pytest-qt).
+Taskwarrior **3.5.0**.
+
+## Feasibility resolutions
+
+Both open questions resolved in `docs/taskwarrior-feature-matrix.md` §Feasibility:
+
+- **Per-field history** — *real data available*: `task <id> information` emits a
+  `Date | Modification` change log (`Priority changed from 'M' to 'H'` etc.).
+  History tab parses it; no fabricated diff.
+- **Timesheet** — *feasible without Timewarrior* (which is **not installed**):
+  the same modification log records `Start set` / `Start deleted (duration:…)`
+  pairs = a retroactive per-session history from Taskwarrior's own data. Plus
+  the live `start` for the current timer. Timewarrior is *detected*, not
+  assumed, and used as an optional richer source if present.
+
+## Proposed milestone breakdown (M5–M9) — for review before any code
+
+Each milestone: its own review, its own screenshots (final-only, per view/theme),
+full existing suite green + new tests, feature-matrix rows flipped to
+Implemented/Partial with honest notes.
+
+### M5 — Task-lifecycle command parity (no new "manager" screens)
+`append` · `prepend` · `duplicate` (show new id/uuid, refresh) · `log` dialog ·
+`purge` (hard confirm + exact count) · undo preview ("N operations will be
+reverted") + GUI confirm · full **Add Task dialog** (all fields, reuses pickers/
+recurrence/deps) · **bulk** priority / tag +/− / status / project / wait-due
+changes with affected-count · GUI-enforced confirm layer that ignores the
+user's `rc.confirmation`/`rc.bulk`. *Touches:* `taskwarrior.py` (a few verbs),
+`main_window`, `task_table` context menu, new small dialogs. *Lowest risk,
+highest parity-per-line.*
+
+### M6 — Task insight: History · Raw Data · Statistics · Timesheet · timer
+Detail panel gains tabs — **History** (modification-log parse, Jalali),
+**Raw Data** (read-only `task <uuid> export` pretty-printed), keep
+Details/Dependencies/Annotations as first-class tabs. New **Statistics** view
+(from `task stats` + export breakdowns, charts reuse `mpl_base`/`fa()`).
+New **Timesheet** view (session parse + current timer + totals). Task table +
+detail show a **running-timer** indicator with elapsed time. *Touches:*
+`detail_panel` (tabify), new `reports.task_history()` / `reports.timesheet()` in
+core, new views.
+
+### M7 — Data safety: Import / Export / Sync
+**Export dialog** (JSON | Taskwarrior format, filter | all, destination, preview
+count). **Import dialog** (file picker, format detect, preview + count,
+validate, confirm, run via `task import`). **Sync Manager** (async, idle/
+running/success/failed, last-sync time, retry, no concurrent runs, auto-refresh
+after; detects whether sync is configured, else points at Config Manager).
+*Touches:* `taskwarrior.py` (`sync` / `import` / `export` wrappers), new
+toolbar/status controls, new dialogs.
+
+### M8 — Configuration surface: Config · Context · UDA · Reports managers
+All writes via `task config` only — never `.taskrc` text.
+**Configuration Manager** (current / default / overridden per `rc.*`, grouped:
+confirmation, dates, weekstart, default command, hooks, sync, verbosity,
+aliases, colors). **Context Manager** (list/create/edit/delete/activate, show
+read+write filters, active context shown prominently). **UDA Manager** (CRUD
+definitions, type→widget map, validation). **Reports Manager** (run any
+fixed/custom report; edit columns/labels/sort/filter/dateformat for *custom*
+reports; **never overwrite** a user's existing definition without explicit
+confirm). *Touches:* `taskwarrior.py` (`config` read/write helpers, richer
+report-spec parse), several new manager views.
+
+### M9 — Power tools + filter grammar + docs
+**Diagnostics** view (`task diagnostics` / `information` / `version`, readable,
+copyable, exportable). **Command Browser / Help** (from installed `task help`,
+send-to-console). **Calc** panel (wraps `task calc`). **Filter builder**
+extensions: regex, `and/or/xor`+parens (or clearly defer to the raw box),
+id/uuid field, virtual-tag picker, UDA filters, more `.modifier`s. Date-grammar
+**regression test sweep** (absolute / relative / today-tomorrow-yesterday /
+math / before-after / due-scheduled-wait-until / recurrence anchors / date
+UDAs). Final status report + matrix/compat docs finalised.
+
+## Deferred / console-only by design (documented, not gaps)
+
+`execute` (arbitrary shell), `news`, `logo`/`colors`, `task edit` (`$EDITOR`),
+undo-of-a-specific-past-change, per-variable config *source path*. The Raw
+Console stays **permanently** — future Taskwarrior versions, power-user syntax,
+custom hooks/reports, and anything M5–M9 doesn't grow a control for.
+
+**STOP — awaiting review of this milestone breakdown before implementation.**
