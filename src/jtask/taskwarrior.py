@@ -28,6 +28,10 @@ __all__ = [
     "undo_preview",
     "information",
     "stats",
+    "export_text",
+    "import_file",
+    "sync_status",
+    "synchronize",
     "passthrough",
     "date_uda_names",
 ]
@@ -111,6 +115,54 @@ def add(args: list[str]) -> str:
     """Run ``task add`` and return its stdout (contains the new task id)."""
     proc = run(["add", *args], extra_rc=["rc.verbose=new-id"])
     return proc.stdout.strip()
+
+
+def export_text(filter_args: list[str] | None = None, *, array: bool = True) -> str:
+    """Raw ``task export`` JSON text — *array* toggles ``rc.json.array``.
+
+    ``array=True`` → one indented JSON array (readable); ``array=False`` →
+    newline-delimited JSON objects (the canonical ``task import`` shape).
+    """
+    rc = ["rc.json.array=on" if array else "rc.json.array=off"]
+    return run([*(filter_args or []), "export"], quiet=True, extra_rc=rc).stdout.strip()
+
+
+_IMPORT_COUNT_RE = re.compile(r"Imported (\d+) tasks?")
+
+
+def import_file(path: str) -> dict:
+    """``task import <path>`` — returns ``{added, modified, total, stdout}``."""
+    out = run(["import", path]).stdout
+    added = len(re.findall(r"^\s*add\s+", out, re.MULTILINE))
+    modified = len(re.findall(r"^\s*mod\s+", out, re.MULTILINE))
+    m = _IMPORT_COUNT_RE.search(out)
+    total = int(m.group(1)) if m else added + modified
+    return {"added": added, "modified": modified, "total": total, "stdout": out.strip()}
+
+
+_SYNC_KEYS = (
+    ("rc.sync.server.url", "remote"),
+    ("rc.sync.server.origin", "remote"),
+    ("rc.sync.local.server_dir", "local"),
+    ("rc.sync.local.server", "local"),
+)
+
+
+def sync_status() -> dict:
+    """Whether Taskwarrior sync is configured, and where to.
+
+    ``{"configured": bool, "kind": "remote"|"local"|None, "target": str}``.
+    """
+    for key, kind in _SYNC_KEYS:
+        val = "".join(_lines(["_get", key])).strip()
+        if val:
+            return {"configured": True, "kind": kind, "target": val}
+    return {"configured": False, "kind": None, "target": ""}
+
+
+def synchronize() -> str:
+    """``task sync`` — raises :class:`TaskCommandError` on failure."""
+    return run(["synchronize"]).stdout.strip()
 
 
 def command(

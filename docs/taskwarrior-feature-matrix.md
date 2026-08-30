@@ -29,9 +29,10 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `undo` | ✅ toolbar + Ctrl+Z — **preview dialog** ("N operations would be reverted" + raw diff) then GUI confirm before applying (M5) | ✅ | — | Implemented |
 | `purge` | ✅ context-menu action on deleted tasks — hard confirm (type «پاک‌سازی») + exact count, `taskwarrior.purge()` returns purged count (M5) | ✅ | — | Implemented |
 | `edit` | ❌ (spawns `$EDITOR`) | ✅ | "Raw task editor" = export `.task` text → edit → re-import; else console | Console-only |
-| `import` / `import-v2` | ❌ | ✅ | Import dialog: file picker, format detect, preview, confirm → **M7** | Console-only |
-| `export` | 🟡 core `taskwarrior.export` used internally; no user export | ✅ | Export dialog: JSON/TW-format, filter/all, destination → **M7** | Partial |
-| `synchronize` / `sync` | ❌ | ✅ | Sync Manager: async, status, last-sync, retry, no concurrent runs → **M6** | Console-only |
+| `import` | ✅ Import dialog — file picker, shape detect (array vs JSON-lines), count + sample preview, same-UUID-updates warning, `task import` (M7) | ✅ | — | Implemented |
+| `import-v2` | — | ✅ | legacy `*.data` migration path only — not a JSON importer; console-only by design | Console-only |
+| `export` | ✅ Export dialog — scope (all / current filter / custom) × format (indented array / JSON lines), destination picker (Jalali-dated default), live count (M7); `taskwarrior.export_text()` | ✅ | — | Implemented |
+| `synchronize` / `sync` | ✅ Sync Manager — detects config (`rc.sync.*`), server/kind shown, last-sync time (Jalali, persisted), async run with visible state, no concurrent runs, refresh after; unconfigured → points at Config Manager (M7) | ✅ | — | Implemented |
 | `config` | ❌ | ✅ | Configuration Manager (read current/default/overridden, write via `task config`) → **M8** | Console-only |
 | `context` | 🟡 sidebar switch + `task context none/<name>` | ✅ | Context Manager: create/edit/delete, show filters → **M8** | Partial |
 | `calc` | ❌ | ✅ | Calc panel wrapping `task calc` → **M9** | Console-only |
@@ -108,11 +109,12 @@ convenience, not capability.
 ### Backup / Restore — **not a milestone item**
 
 Taskwarrior has never had a first-class backup/restore command, and jtask does
-not add one. The **Export** feature (M7 — all tasks, JSON *or* Taskwarrior
-format, to a file the user chooses) plus **Import** together give a complete
-manual backup-and-restore path: `export` everything → keep the file →
-`import` it into a fresh database. This is deliberate; a dedicated "backup"
-button would only be a thin alias over Export with all filters cleared.
+not add one. The **Export** dialog (M7 — scope "all", either JSON shape, to a
+file the user chooses) plus the **Import** dialog together give a complete
+manual backup-and-restore path: export everything → keep the file → import it
+into a fresh database (round-trip verified in `tests/test_data_io.py`). This is
+deliberate; a dedicated "backup" button would only be a thin alias over Export
+with the scope forced to "all".
 
 ### GUI-enforced confirmation layer (M5)
 

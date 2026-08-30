@@ -84,6 +84,17 @@ class Settings:
     def console_visible(self, value: bool) -> None:
         self._s.setValue("console/visible", bool(value))
 
+    # --- sync ---
+    @property
+    def last_sync(self) -> str:
+        """ISO-8601 local timestamp of the last successful sync, or ''."""
+        return self._s.value("sync/last", "", str)
+
+    @last_sync.setter
+    def last_sync(self, value: str) -> None:
+        self._s.setValue("sync/last", str(value))
+        self._s.sync()
+
     # --- notifications ---
     @property
     def notifications_enabled(self) -> bool:

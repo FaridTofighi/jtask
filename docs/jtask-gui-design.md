@@ -820,3 +820,43 @@ inline table edit, bulk annotate, back-dating a logged task's `end`,
 
 _Next in M6: nothing outstanding for the milestone's stated scope — History /
 Raw Data / Statistics / Timesheet / timer indicator all landed._
+
+---
+
+## M7 — implementation log (complete)
+
+### Core (`taskwarrior.py`, TDD in `tests/test_data_io.py`)
+
+- `export_text(filter, *, array=True)` — raw `task export` text; `array` toggles
+  `rc.json.array` (indented array ↔ newline-delimited objects).
+- `import_file(path)` → `{added, modified, total, stdout}` (counts `add` / `mod`
+  lines + the "Imported N tasks" tally).
+- `sync_status()` → `{configured, kind: remote|local|None, target}` from
+  `rc.sync.server.url` / `.origin` / `rc.sync.local.server_dir` / `.server`.
+- `synchronize()` → `task sync` stdout, raises `TaskCommandError` on failure.
+- `import-v2` is **not** wrapped — it is the legacy `*.data` migration path,
+  not a JSON importer.
+
+### GUI — a «داده» toolbar menu (خروجی / ورود / همگام‌سازی)
+
+- **`widgets/export_dialog.py`** — `ExportDialog(current_filter)`: scope
+  (`SegmentedControl` all / current / custom) × format (indented array /
+  JSON lines), destination picker (default `~/jtask-export-<jalali>.json`),
+  live "N کار برای خروجی" count (generation-guarded). `write_export(spec)`
+  writes the file and returns `{path, bytes, count, when}`.
+- **`widgets/import_dialog.py`** — `ImportDialog`: file picker; `inspect_import()`
+  (pure, tested) detects array vs JSON-lines vs invalid, returns count + sample;
+  OK enabled only for a valid file; warns that same-UUID tasks are updated.
+  `main_window._open_import` runs `taskwarrior.import_file` async and reports
+  added / modified.
+- **`widgets/sync_dialog.py`** — `SyncManagerDialog(settings)`: reads
+  `sync_status()` async; unconfigured → explanation + pointer to the (M8)
+  Config Manager, button disabled; configured → kind + target + last-sync
+  (Jalali, from `Settings.last_sync`), a run button that disables itself while
+  running (no concurrent runs), stores the timestamp and emits `synced` →
+  `refresh_all` on success.
+
+### M7 scope — complete
+
+Export dialog · Import dialog · Sync Manager — all landed with tests +
+screenshots. `Settings.last_sync` added (persisted).

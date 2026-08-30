@@ -208,6 +208,30 @@ class MainWindow(QMainWindow):
 
         row2.addSeparator()
 
+        from PyQt6.QtWidgets import QMenu, QToolButton
+
+        self._data_btn = QToolButton()
+        self._data_btn.setIcon(icons.icon("data"))
+        self._data_btn.setText("داده")
+        self._data_btn.setToolTip("خروجی / ورود / همگام‌سازی")
+        self._data_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        data_menu = QMenu(self._data_btn)
+        self._export_action = data_menu.addAction(
+            icons.icon("export"), "خروجی گرفتن…"
+        )
+        self._export_action.triggered.connect(self._open_export)
+        self._import_action = data_menu.addAction(
+            icons.icon("import"), "ورود از فایل…"
+        )
+        self._import_action.triggered.connect(self._open_import)
+        data_menu.addSeparator()
+        self._sync_action = data_menu.addAction(icons.icon("sync"), "همگام‌سازی…")
+        self._sync_action.triggered.connect(self._open_sync)
+        self._data_btn.setMenu(data_menu)
+        row2.addWidget(self._data_btn)
+
+        row2.addSeparator()
+
         self._theme_action = QAction(self)
         self._theme_action.triggered.connect(self._toggle_theme)
         self._sync_theme_action()
@@ -510,6 +534,57 @@ class MainWindow(QMainWindow):
     def _add_task(self, args: list[str]) -> None:
         self._write(functools.partial(taskwarrior.add, args), "کار افزوده شد")
 
+    # --- M7 data safety: export / import / sync -----------
+
+    def _open_export(self) -> None:
+        from .widgets.export_dialog import ExportDialog, write_export
+
+        dlg = ExportDialog(self._extra_filter, self)
+        if not dlg.exec():
+            return
+        spec = dlg.spec()
+        if not spec["path"]:
+            self.statusBar().showMessage("مسیر مقصد مشخص نشده است.", 2500)
+            return
+        self._begin_busy("در حال خروجی‌گیری…")
+
+        def done(res: dict) -> None:
+            self._end_busy()
+            self._op_status.success("خروجی گرفته شد")
+            self.statusBar().showMessage(
+                f"{fmt.num(res['count'])} کار در «{res['path']}» ذخیره شد", 5000
+            )
+
+        submit(functools.partial(write_export, spec), done, self._op_failed)
+
+    def _open_import(self) -> None:
+        from .widgets.import_dialog import ImportDialog
+
+        dlg = ImportDialog(self)
+        if not dlg.exec():
+            return
+        path = dlg.path()
+        self._begin_busy("در حال ورود…")
+
+        def done(res: dict) -> None:
+            self._end_busy()
+            self._op_status.success("ورود انجام شد")
+            self.statusBar().showMessage(
+                f"{fmt.num(res['added'])} کار افزوده، "
+                f"{fmt.num(res['modified'])} به‌روزرسانی شد",
+                5000,
+            )
+            self.refresh_all()
+
+        submit(functools.partial(taskwarrior.import_file, path), done, self._op_failed)
+
+    def _open_sync(self) -> None:
+        from .widgets.sync_dialog import SyncManagerDialog
+
+        dlg = SyncManagerDialog(self.settings, self)
+        dlg.synced.connect(self.refresh_all)
+        dlg.exec()
+
     def _open_task_form(self, mode: str) -> None:
         from .widgets.task_form import TaskFormDialog
 
@@ -724,6 +799,10 @@ class MainWindow(QMainWindow):
         self._console_action.setIcon(icons.icon("console"))
         self._add_full_action.setIcon(icons.icon("add"))
         self._log_action.setIcon(icons.icon("completed"))
+        self._data_btn.setIcon(icons.icon("data"))
+        self._export_action.setIcon(icons.icon("export"))
+        self._import_action.setIcon(icons.icon("import"))
+        self._sync_action.setIcon(icons.icon("sync"))
 
     def _toggle_console(self, visible: bool) -> None:
         self._console_dock.setVisible(visible)
