@@ -129,6 +129,8 @@ CATALOG: dict[str, str] = {
     "action.manage": "مدیریت Taskwarrior…",
     "action.manage.tip": "پیکربندی · زمینه‌ها · ویژگی‌های سفارشی · گزارش‌ها",
     "action.settings": "تنظیمات",
+    "action.settings.tip": "ظاهر · زبان · تقویم · اعلان‌ها",
+    "toolbar.more.tip": "ابزارهای بیشتر — مدیریت Taskwarrior · تشخیص و ابزارها",
     "action.console": "کنسول فرمان",
     "action.console.tip": "کنسول فرمان خام (task …)",
     "action.tools": "تشخیص و ابزارها…",

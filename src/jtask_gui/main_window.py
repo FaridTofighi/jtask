@@ -236,24 +236,11 @@ class MainWindow(QMainWindow):
 
         row2.addSeparator()
 
+        # -- view cluster: theme + console toggle (both stateful, stay visible)
         self._theme_action = QAction(self)
         self._theme_action.triggered.connect(self._toggle_theme)
         self._sync_theme_action()
         row2.addAction(self._theme_action)
-
-        self._manage_action = QAction(
-            icons.icon("manage"), t("action.manage"), self
-        )
-        self._manage_action.setToolTip(
-            t("action.manage.tip")
-        )
-        self._manage_action.triggered.connect(self._open_manager)
-        row2.addAction(self._manage_action)
-
-        self._settings_action = QAction(icons.icon("settings"), t("action.settings"), self)
-        self._settings_action.setToolTip(t("action.settings"))
-        self._settings_action.triggered.connect(self._open_settings)
-        row2.addAction(self._settings_action)
 
         self._console_action = QAction(icons.icon("console"), t("action.console"), self)
         self._console_action.setToolTip(t("action.console.tip"))
@@ -261,10 +248,31 @@ class MainWindow(QMainWindow):
         self._console_action.toggled.connect(self._toggle_console)
         row2.addAction(self._console_action)
 
+        row2.addSeparator()
+
+        # -- config cluster: settings + a flat "more" menu for the rarely-used
+        #    Manage / Diagnostics entry points (one extra click, no submenu)
+        self._settings_action = QAction(icons.icon("settings"), t("action.settings"), self)
+        self._settings_action.setToolTip(t("action.settings.tip"))
+        self._settings_action.triggered.connect(self._open_settings)
+        row2.addAction(self._settings_action)
+
+        self._manage_action = QAction(icons.icon("manage"), t("action.manage"), self)
+        self._manage_action.setToolTip(t("action.manage.tip"))
+        self._manage_action.triggered.connect(self._open_manager)
         self._tools_action = QAction(icons.icon("tools"), t("action.tools"), self)
         self._tools_action.setToolTip(t("action.tools.tip"))
         self._tools_action.triggered.connect(self._open_tools)
-        row2.addAction(self._tools_action)
+
+        self._more_btn = QToolButton()
+        self._more_btn.setIcon(icons.icon("more"))
+        self._more_btn.setToolTip(t("toolbar.more.tip"))
+        self._more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        more_menu = QMenu(self._more_btn)
+        more_menu.addAction(self._manage_action)
+        more_menu.addAction(self._tools_action)
+        self._more_btn.setMenu(more_menu)
+        row2.addWidget(self._more_btn)
 
         self._toolbars = [row1, row2]
 

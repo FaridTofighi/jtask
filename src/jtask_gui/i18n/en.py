@@ -137,6 +137,8 @@ CATALOG.update({
     "action.manage": "Manage Taskwarrior…",
     "action.manage.tip": "Configuration · contexts · UDAs · reports",
     "action.settings": "Settings",
+    "action.settings.tip": "Appearance · language · calendar · notifications",
+    "toolbar.more.tip": "More tools — Manage Taskwarrior · Diagnostics & tools",
     "action.console": "Command Console",
     "action.console.tip": "Raw command console (task …)",
     "action.tools": "Diagnostics & tools…",

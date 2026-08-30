@@ -1464,3 +1464,40 @@ Purge (red-edged disabled button).
 
 _Next: d4 — toolbar grouping + flat overflow menu (Resolution 3), tooltip
 audit (test), icon-consistency pass._
+
+## d4 — implementation log (complete)
+
+Row-two of the main toolbar, regrouped as it outgrew a single flat run.
+
+### Grouping
+`filter · | · group · | · create (add-full, log) · | · undo · | · data ▾ · | ·
+view (theme, console) · | · config (settings, ⋯)` — separators between every
+cluster (the guard test asserts ≥ 4).
+
+### Flat overflow (Resolution 3)
+The two rarely-used dialog entry points — **Manage Taskwarrior** and
+**Diagnostics & tools** — moved behind a `⋯` `QToolButton` (InstantPopup, one
+level, no submenu). Neither had a keyboard shortcut, so nothing regressed;
+`_manage_action` / `_tools_action` keep their handlers and are reachable in one
+extra click. Settings and the Console toggle stay directly on the bar (Settings
+is frequent; the Console toggle needs its visible checked state).
+
+### Tooltips
+`action.settings.tip` (“Appearance · language · calendar · notifications”) and
+`toolbar.more.tip` added — Settings previously had a tooltip identical to its
+label. Guard test `test_d4_toolbar.py`: every toolbar control (actions, the two
+menu buttons, every flat-menu entry) has a non-empty tooltip; Settings / Manage
+/ Tools tooltips differ from their labels.
+
+### Icons
+The icon set is already uniform (`qtawesome` `mdi.*`, mostly `-outline`). One
+mismatch fixed: `tools` was `mdi.help-circle-outline` → `mdi.wrench-outline`
+(it opens Diagnostics, not help). New `more` → `mdi.dots-horizontal`.
+
+### Evidence
+Full suite **420 passing** (415 + 5), ruff + mypy clean. Snapshot regenerated
+(the overflow menu makes the Manage / Tools labels render as menu text, + the
+two new tooltip strings). Toolbar + flat `⋯` menu screenshots captured.
+
+_Next: d5 — priority بحرانی→بالا + glossary + baselines; dep-graph node sizing;
+bidi-safe paths._
