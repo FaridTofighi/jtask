@@ -33,8 +33,8 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `import-v2` | — | ✅ | legacy `*.data` migration path only — not a JSON importer; console-only by design | Console-only |
 | `export` | ✅ Export dialog — scope (all / current filter / custom) × format (indented array / JSON lines), destination picker (Jalali-dated default), live count (M7); `taskwarrior.export_text()` | ✅ | — | Implemented |
 | `synchronize` / `sync` | ✅ Sync Manager — detects config (`rc.sync.*`), server/kind shown, last-sync time (Jalali, persisted), async run with visible state, no concurrent runs, refresh after; unconfigured → points at Config Manager (M7) | ✅ | — | Implemented |
-| `config` | ❌ | ✅ | Configuration Manager (read current/default/overridden, write via `task config`) → **M8** | Console-only |
-| `context` | 🟡 sidebar switch + `task context none/<name>` | ✅ | Context Manager: create/edit/delete, show filters → **M8** | Partial |
+| `config` | ✅ Configuration Manager — every `rc.*` (searchable, grouped), current / default / overridden, edit + "reset to default" via `task config` (never `.taskrc` text) (M8) | ✅ | — | Implemented |
+| `context` | ✅ Context Manager — list / create / edit / delete / activate, read+write filters shown; sidebar switch stays (M8) | ✅ | separate write-filter form is version-dependent (documented) | Implemented |
 | `calc` | ❌ | ✅ | Calc panel wrapping `task calc` → **M9** | Console-only |
 | `count` | ✅ used internally (status bar counts) | ✅ | — | Implemented |
 | `stats` | ✅ "آمار" report — `task stats` parsed, Persian labels, Jalali dates, Persian digits, respects the active filter (M6) | ✅ | — | Implemented |
@@ -45,12 +45,12 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `news` | ❌ | ✅ | (low value) console-only, documented | Console-only |
 | `execute` | ❌ | ✅ | intentionally console-only (arbitrary shell) | Console-only |
 | `calendar` | 🟡 CLI has it; GUI has its own Jalali calendar report (M2) | ✅ | GUI calendar is better; TW `calendar` stays console | Implemented |
-| built-in reports (`next/list/all/waiting/blocked/blocking/ready/active/completed/recurring/overdue/minimal/newest/oldest/long/ls`) | 🟡 sidebar quick-views map several; not all | ✅ | Reports Manager: run any report, configurable → **M8** | Partial |
+| built-in reports (`next/list/all/waiting/blocked/blocking/ready/active/completed/recurring/overdue/minimal/newest/oldest/long/ls`) | ✅ Reports Manager lists every report with its columns / filter; sidebar quick-views map the common ones (M8) | ✅ | run-any-report-inline is via a custom report or the console | Implemented |
 | `burndown.*` / `history.*` / `ghistory.*` | ✅ native charts (M2), computed from export | ✅ | period-granularity toggle done | Implemented |
 | `summary` | ✅ native progress view (M2) | ✅ | — | Implemented |
 | `timesheet` | ✅ "برگهٔ زمان" — sessions rebuilt from `Start set` / `Start deleted (duration:…)` log pairs, Jalali date-range picker, per-task / per-project / per-day totals, running-session marker, honest label; detects Timewarrior (M6) | ✅ | multi-day session split; per-task `information` calls capped at 300 | Implemented |
 | `colors` / `logo` | — | ✅ | not applicable to a GUI | Not-applicable |
-| `show` | ❌ (used internally via `_show`) | ✅ | folded into Configuration Manager → **M8** | Console-only |
+| `show` | ✅ folded into the Configuration Manager (current / default / overridden) (M8) | ✅ | — | Implemented |
 | `_*` helper commands | ✅ used internally as shared lookups | ✅ | — | Implemented |
 
 ## B. Task attributes (`task _columns`)
@@ -63,7 +63,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | priority | ✅ combo + **bulk** (M5) | ✅ table | — |
 | due / scheduled / wait / until | ✅ Jalali pickers + **bulk date change / clear** (M5) | ✅ table (Jalali) | `until` not yet in the bulk dialog |
 | status | 🟡 via done/delete/start actions | ✅ table | — |
-| recur / rtype / mask / imask | ✅ recurrence builder (M3) | 🟡 indicator icon | recurrence templates view → M8 |
+| recur / rtype / mask / imask | ✅ recurrence builder (M3) | 🟡 indicator icon | recurrence-template browser → later (not in M8) |
 | depends | ✅ picker + dep graph (M3) | ✅ indicator + graph | — |
 | annotations | ✅ detail + shown in History tab | 🟡 indicator icon | dedicated Annotations tab → later |
 | urgency | ✅ read-only + "چرا؟" breakdown | ✅ table column | — |
@@ -71,7 +71,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | start | ✅ start/stop + **live timer indicator** with elapsed (M6) | ✅ status bar | — |
 | uuid / id / parent | ✅ shown + **Raw Data tab** (M6) | ✅ | — |
 | template | ❌ | ❌ | rare; console-only, documented |
-| UDAs (any) | ✅ dynamic widgets in detail (M1) | ✅ (if a column) | UDA **Manager** (CRUD the definitions) → M8; UDA **filters** → M9 |
+| UDAs (any) | ✅ dynamic widgets in detail (M1) + **UDA Manager** CRUD of definitions (M8) | ✅ (if a column) | UDA **filters** in the builder → M9 |
 
 ## C. Filtering grammar
 
@@ -95,11 +95,11 @@ convenience, not capability.
 | Area | Native GUI | Gap → milestone |
 |---|---|---|
 | theme / Persian digits / due-soon threshold / notifications | ✅ settings dialog (persisted) | — |
-| Taskwarrior `rc.*` settings (dateformat, weekstart, confirmation, recurrence, hooks, verbosity, aliases, sync.*, color.*, …) | ❌ | Configuration Manager (current / default / overridden, write via `task config`) → M8 |
-| contexts | 🟡 switch only | Context Manager → M8 |
-| UDA definitions | ❌ | UDA Manager → M8 |
-| report definitions | 🟡 custom reports *discovered & rendered* read-only (M3) | Reports Manager (create/edit definitions, never clobber existing) → M8 |
-| aliases | ❌ | list in Command Browser → M9 |
+| Taskwarrior `rc.*` settings (dateformat, weekstart, confirmation, recurrence, hooks, verbosity, sync.*, color.*, …) | ✅ Configuration Manager (M8) — current / default / overridden, write/reset via `task config` | — |
+| contexts | ✅ Context Manager (M8) — full CRUD + activate + filters | — |
+| UDA definitions | ✅ UDA Manager (M8) — CRUD (name / label / type / values / default); delete warns data is kept | — |
+| report definitions | ✅ Reports Manager (M8) — all reports listed; custom reports editable (columns / labels / sort / filter / dateformat / description); built-ins read-only, overriding one needs explicit confirm | — |
+| aliases | 🟡 visible in the Config Manager (`alias.*` rows) | dedicated list in Command Browser → M9 |
 | hooks | ❌ | list (read-only) in Diagnostics → M9 |
 
 ---

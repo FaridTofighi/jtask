@@ -345,3 +345,18 @@ QListWidget#ImportSample {
     background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
 }
 QListWidget#ImportSample::item { padding: 3px 6px; }
+
+/* ============================ M8 — Taskwarrior managers =============== */
+QTableWidget#ConfigTable, QTableWidget#ContextTable,
+QTableWidget#UdaTable, QTableWidget#ReportTable {
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QTableWidget#ConfigTable::item, QTableWidget#ContextTable::item,
+QTableWidget#UdaTable::item, QTableWidget#ReportTable::item { padding: 4px 8px; }
+QTableWidget#ConfigTable QHeaderView::section,
+QTableWidget#ContextTable QHeaderView::section,
+QTableWidget#UdaTable QHeaderView::section,
+QTableWidget#ReportTable QHeaderView::section {
+    background-color: @bg_alt@; color: @text_muted@; border: none;
+    border-bottom: 1px solid @border@; padding: 5px 6px; font-weight: 700;
+}

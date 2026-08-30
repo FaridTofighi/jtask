@@ -237,6 +237,15 @@ class MainWindow(QMainWindow):
         self._sync_theme_action()
         row2.addAction(self._theme_action)
 
+        self._manage_action = QAction(
+            icons.icon("manage"), "مدیریت Taskwarrior…", self
+        )
+        self._manage_action.setToolTip(
+            "پیکربندی · زمینه‌ها · ویژگی‌های سفارشی · گزارش‌ها"
+        )
+        self._manage_action.triggered.connect(self._open_manager)
+        row2.addAction(self._manage_action)
+
         self._settings_action = QAction(icons.icon("settings"), "تنظیمات", self)
         self._settings_action.setToolTip("تنظیمات")
         self._settings_action.triggered.connect(self._open_settings)
@@ -585,6 +594,13 @@ class MainWindow(QMainWindow):
         dlg.synced.connect(self.refresh_all)
         dlg.exec()
 
+    def _open_manager(self) -> None:
+        from .widgets.manager_dialog import ManagerDialog
+
+        dlg = ManagerDialog(self)
+        dlg.changed.connect(self.refresh_all)
+        dlg.exec()
+
     def _open_task_form(self, mode: str) -> None:
         from .widgets.task_form import TaskFormDialog
 
@@ -799,6 +815,7 @@ class MainWindow(QMainWindow):
         self._console_action.setIcon(icons.icon("console"))
         self._add_full_action.setIcon(icons.icon("add"))
         self._log_action.setIcon(icons.icon("completed"))
+        self._manage_action.setIcon(icons.icon("manage"))
         self._data_btn.setIcon(icons.icon("data"))
         self._export_action.setIcon(icons.icon("export"))
         self._import_action.setIcon(icons.icon("import"))

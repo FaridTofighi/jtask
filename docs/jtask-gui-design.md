@@ -860,3 +860,47 @@ Raw Data / Statistics / Timesheet / timer indicator all landed._
 
 Export dialog · Import dialog · Sync Manager — all landed with tests +
 screenshots. `Settings.last_sync` added (persisted).
+
+---
+
+## M8 — implementation log (complete)
+
+### Core (`taskwarrior.py`, TDD in `tests/test_config_surface.py`)
+
+All writes go through `task config` / `task context` — `.taskrc` text is never
+touched.
+
+- `config_names()` (lru) — `task _config`, ~245 known variables.
+- `config_defaults()` (lru) — parses `task show` (no arg): a `<name>  <value>`
+  row followed by `  Default value <d>` ⇒ *name* is overridden → `{name: d}`.
+- `config_set(name, value)` / `config_unset(name)` — the latter tolerates
+  "No entry named …" (exit 2) as a no-op.
+- `context_list()` — `[{name, read, write, active}]`; parser is
+  indentation-independent (jtask strips lines) and mirrors read→write when the
+  write filter is blank.
+- `context_define(name, read, write="")` / `context_delete` / `context_activate`.
+- `uda_set(name, attr, value)` / `uda_delete(name)` (unsets every `uda.<name>.*`).
+- `report_set(name, attr, value)`; `BUILTIN_REPORTS` frozenset.
+
+### GUI — one «مدیریت Taskwarrior» dialog (toolbar action, 4 tabs)
+
+- **`widgets/config_manager.py`** — searchable, group-filtered table
+  (name / current / default), overridden rows bold + tooltip; double-click →
+  `_EditDialog` with «ذخیره» / «بازگردانی به پیش‌فرض» (reset is confirmed).
+- **`widgets/context_manager.py`** — table + add / edit / activate / deactivate
+  / delete (delete confirmed); `_ContextDialog` notes the separate-write-filter
+  version caveat.
+- **`widgets/uda_manager.py`** — table + `_UdaDialog` (name / label / type
+  [string·numeric·date·duration] / values / default); delete confirmed with a
+  "data is kept" warning.
+- **`widgets/report_manager.py`** — every report with type (داخلی/سفارشی);
+  custom reports fully editable; editing a **built-in** offers a same-name
+  override only after an explicit confirm — a user's own report is never
+  silently clobbered.
+- **`widgets/manager_dialog.py`** — `QTabWidget` host; each tab's `changed`
+  bubbles up → `main_window.refresh_all`.
+
+### M8 scope — complete
+
+Configuration Manager · Context Manager · UDA Manager · Reports Manager — all
+landed with tests + screenshots.

@@ -32,6 +32,17 @@ __all__ = [
     "import_file",
     "sync_status",
     "synchronize",
+    "config_names",
+    "config_defaults",
+    "config_set",
+    "config_unset",
+    "context_list",
+    "context_define",
+    "context_delete",
+    "context_activate",
+    "uda_set",
+    "uda_delete",
+    "report_set",
     "passthrough",
     "date_uda_names",
 ]
@@ -399,11 +410,140 @@ def urgency_terms(uuid: str) -> list[dict[str, float | str]]:
     return terms
 
 
+# --------------------------------------------------------------------------
+# M8 — configuration surface.  Every write goes through ``task config``; jtask
+# never edits ``.taskrc`` text.  ``config`` prompts for confirmation, so these
+# always pass ``rc.confirmation=off`` explicitly (it is already in ``_RC``, but
+# make the intent visible).
+# --------------------------------------------------------------------------
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+@lru_cache(maxsize=1)
+def config_names() -> list[str]:
+    """Every config variable Taskwarrior knows about (``task _config``)."""
+    return sorted(_lines(["_config"]))
+
+
+@lru_cache(maxsize=1)
+def config_defaults() -> dict[str, str]:
+    """``{name: default}`` for variables whose value differs from the default.
+
+    Parsed from ``task show`` (no argument): a ``<name>  <value>`` row followed
+    by a ``  Default value <default>`` row means *name* is overridden.
+    """
+    defaults: dict[str, str] = {}
+    last_name: str | None = None
+    for raw in _lines(["show"]):
+        line = _ANSI_RE.sub("", raw)
+        if line.startswith("Default value"):
+            if last_name is not None:
+                defaults[last_name] = line[len("Default value") :].strip()
+            last_name = None
+            continue
+        m = re.match(r"^(\S+)\s{2,}(.*)$", line)
+        if m and not line.startswith("Config Variable"):
+            last_name = m.group(1)
+        else:
+            last_name = None
+    return defaults
+
+
+def config_set(name: str, value: str) -> str:
+    """``task config <name> <value>`` (empty *value* removes the override)."""
+    args = ["config", name] + ([value] if value != "" else [])
+    return run(args).stdout.strip()
+
+
+def config_unset(name: str) -> str:
+    """Remove a config override. A no-op (not an error) if it isn't set."""
+    proc = run(["config", name], check=False)
+    if proc.returncode != 0 and "No entry named" not in (proc.stdout + proc.stderr):
+        raise TaskCommandError(
+            f"حذف «{name}» ناموفق بود (کد {proc.returncode}).",
+            returncode=proc.returncode,
+            stderr=(proc.stderr or proc.stdout or "").strip(),
+            cmd=["task", "config", name],
+        )
+    return proc.stdout.strip()
+
+
+def context_list() -> list[dict]:
+    """``[{name, read, write, active}]`` from ``task context list``."""
+    active = current_context() or ""
+    rows: dict[str, dict] = {}
+    order: list[str] = []
+    cur: str | None = None
+    for raw in _lines(["context", "list"]):
+        line = _ANSI_RE.sub("", raw).strip()
+        if line.startswith("Name") or set(line) <= {"-", " "} or not line:
+            continue
+        # continuation line: "write <filter> <yes|no>"
+        m = re.match(r"^(read|write)\s+(.*?)\s+(yes|no)$", line)
+        if m and cur:
+            rows[cur][m.group(1)] = m.group(2).strip()
+            continue
+        # first line: "<name> <read|write> <filter> <yes|no>"
+        m = re.match(r"^(\S+)\s+(read|write)\s+(.*?)\s+(yes|no)$", line)
+        if m:
+            cur = m.group(1)
+            if cur not in rows:
+                rows[cur] = {"name": cur, "read": "", "write": ""}
+                order.append(cur)
+            rows[cur][m.group(2)] = m.group(3).strip()
+    for name, entry in rows.items():
+        entry["active"] = name == active
+        if not entry["write"]:
+            entry["write"] = entry["read"]
+    return [rows[n] for n in order]
+
+
+def context_define(name: str, read: str, write: str = "") -> None:
+    """Define / redefine a context. A single *read* filter is applied to both
+    unless a distinct *write* is given."""
+    run(["context", "define", name, read])
+    if write and write != read:
+        try:
+            run(["context", "define", name, "write", write])
+        except JtaskError:
+            pass  # older Taskwarrior without separate read/write filters
+
+
+def context_delete(name: str) -> str:
+    return run(["context", "delete", name]).stdout.strip()
+
+
+def context_activate(name: str | None) -> str:
+    return run(["context", name or "none"]).stdout.strip()
+
+
+def uda_set(name: str, attr: str, value: str) -> str:
+    return config_set(f"uda.{name}.{attr}", value)
+
+
+def uda_delete(name: str) -> None:
+    for key in list(_show_config()):
+        if key == f"uda.{name}" or key.startswith(f"uda.{name}."):
+            config_unset(key)
+
+
+def report_set(name: str, attr: str, value: str) -> str:
+    return config_set(f"report.{name}.{attr}", value)
+
+
+BUILTIN_REPORTS = frozenset({
+    "active", "all", "blocked", "blocking", "completed", "list", "long", "ls",
+    "minimal", "newest", "next", "oldest", "overdue", "ready", "recurring",
+    "unblocked", "waiting",
+})
+
+
 def refresh_lookups() -> None:
     """Drop all cached lookups (call after config or data changes)."""
     for fn in (
         _show_config, uda_definitions, list_projects, list_tags,
-        list_contexts, list_reports, report_specs,
+        list_contexts, list_reports, report_specs, config_names, config_defaults,
     ):
         clear = getattr(fn, "cache_clear", None)
         if callable(clear):
