@@ -16,7 +16,7 @@ _NAME_KEYS = ("chart.history.added", "chart.history.completed", "chart.history.d
 class HistoryChart(ThemedChart):
     """``mode`` is ``"ghistory"`` (stacked bars) or ``"history"`` (grouped bars)."""
 
-    def __init__(self, theme_name: str = "شب", parent=None) -> None:
+    def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(theme_name, parent)
         self._mode = "ghistory"
 

@@ -30,7 +30,7 @@ def _mix(a: str, b: str, t: float) -> str:
 
 
 class TaskTableModel(QAbstractTableModel):
-    def __init__(self, theme_name: str = "شب", persian_digits: bool = True,
+    def __init__(self, theme_name: str = "dark", persian_digits: bool = True,
                  due_soon_days: int = 3) -> None:
         super().__init__()
         self._tasks: list[dict] = []

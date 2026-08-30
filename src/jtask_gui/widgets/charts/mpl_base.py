@@ -104,7 +104,7 @@ class ThemedChart(QWidget):
     axes only via the module-level ``*_fa`` helpers.
     """
 
-    def __init__(self, theme_name: str = "شب", parent: QWidget | None = None) -> None:
+    def __init__(self, theme_name: str = "dark", parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._family = register_fonts()
         self._theme = theme_name

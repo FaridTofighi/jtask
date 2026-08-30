@@ -666,4 +666,26 @@ CATALOG: dict[str, str] = {
     "chart.summary.col.open_overdue": "باز / عقب‌افتاده",
     "chart.summary.open": "{n} باز",
     "chart.summary.overdue": "  ·  {n} عقب‌افتاده",
+
+    # ---- themes (theme.py / settings / first-run) ---------
+    "theme.dark": "شب",
+    "theme.light": "روز",
+
+    # ---- sidebar quick views (i2 — key/label decoupled) --
+    "view.today": "امروز",
+    "view.week": "این هفته",
+    "view.overdue": "معوق",
+    "view.next": "اقدامات بعدی",
+    "view.waiting": "در انتظار",
+    "view.blocked": "مسدودشده",
+    "view.completed": "تکمیل‌شده",
+    "view.filter_results": "نتایج فیلتر",
+    "view.tasks": "کارها",
+    "view.empty.today": "برای امروز کاری سررسید نشده. نفسی تازه کن یا کاری برنامه‌ریزی کن.",
+    "view.empty.week": "این هفته کاری سررسید ندارد.",
+    "view.empty.overdue": "هیچ کار عقب‌افتاده‌ای نداری — عالی!",
+    "view.empty.waiting": "چیزی در انتظارِ دیگران نیست.",
+    "view.empty.blocked": "هیچ کاری مسدود نشده است.",
+    "view.empty.completed": "هنوز کاری تکمیل نکرده‌ای.",
+    "view.empty.next": "فهرست اقدامات بعدی خالی است. با نوار «افزودن سریع» کاری اضافه کن.",
 }

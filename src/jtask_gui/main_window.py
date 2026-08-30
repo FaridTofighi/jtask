@@ -45,7 +45,7 @@ from .workers import submit
 
 log = logging.getLogger("jtask_gui.window")
 
-_DEFAULT_VIEW = {"kind": "report", "title": "اقدامات بعدی", "fn": "report_ready"}
+_DEFAULT_VIEW = {"kind": "report", "key": "next", "fn": "report_ready"}
 _DETAIL_WIDTH = 460
 _MIN_SIZE = QSize(940, 620)
 
@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(_MIN_SIZE)
         self.resize(1240, 800)
 
-        self._view_spec: dict = dict(_DEFAULT_VIEW)
+        self._view_spec: dict = dict(_DEFAULT_VIEW, title=t("view.next"))
         self._extra_filter: list[str] = []
         self._pending_ops = 0
 
@@ -531,8 +531,8 @@ class MainWindow(QMainWindow):
         self._end_busy()
         self._model.set_tasks(tasks)
         self._detail.set_all_tasks(tasks)
-        self._table.show_empty_state(self._view_spec.get("title", ""), len(tasks) == 0)
-        title = self._view_spec.get("title", "کارها")
+        self._table.show_empty_state(self._view_spec.get("key", ""), len(tasks) == 0)
+        title = self._view_spec.get("title") or t("view.tasks")
         self._status_count.setText(t("status.count", n=fmt.num(len(tasks)), title=title))
 
     def _on_load_error(self, err: object) -> None:
@@ -554,7 +554,7 @@ class MainWindow(QMainWindow):
         """A projects/tags report row was activated — show it in the task list."""
         self._filter_bar.set_text(" ".join(tokens))
         self._extra_filter = tokens
-        self._view_spec = {"kind": "report", "title": "نتایج فیلتر", "fn": "report_list"}
+        self._view_spec = {"kind": "report", "title": t("view.filter_results"), "fn": "report_list"}
         self._load_current_view()
 
     def _add_task(self, args: list[str]) -> None:
@@ -805,10 +805,10 @@ class MainWindow(QMainWindow):
 
     def _sync_theme_action(self) -> None:
         nxt = other_theme(self.settings.theme)
-        glyph = "theme_light" if nxt == "روز" else "theme_dark"
+        glyph = "theme_light" if nxt == "light" else "theme_dark"
         self._theme_action.setIcon(icons.icon(glyph))
-        self._theme_action.setText(t("theme.switch_label", name=nxt))
-        self._theme_action.setToolTip(t("theme.switch_tip", name=nxt))
+        self._theme_action.setText(t("theme.switch_label", name=t(f"theme.{nxt}")))
+        self._theme_action.setToolTip(t("theme.switch_tip", name=t(f"theme.{nxt}")))
 
     def _toggle_theme(self) -> None:
         self._apply_theme(other_theme(self.settings.theme))

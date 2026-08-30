@@ -50,8 +50,12 @@ class SettingsDialog(QDialog):
         form.addRow(t("settings.language"), self._language)
 
         self._theme = QComboBox()
-        self._theme.addItems(list(THEMES))
-        self._theme.setCurrentText(settings.theme)
+        for key in THEMES:
+            self._theme.addItem(t(f"theme.{key}"), key)
+        self._theme.setCurrentIndex(
+            max(0, list(THEMES).index(settings.theme))
+            if settings.theme in THEMES else 0
+        )
         form.addRow(t("settings.theme"), self._theme)
 
         self._digits = QCheckBox(t("settings.persian_digits"))
@@ -120,7 +124,7 @@ class SettingsDialog(QDialog):
 
     def _accept(self) -> None:
         s = self._settings
-        s.theme = self._theme.currentText()
+        s.theme = self._theme.currentData()
 
         # Resolution 1: a change here is an explicit user choice — record it so a
         # future language switch never silently rewrites the digit mode.

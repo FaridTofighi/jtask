@@ -1,15 +1,3 @@
 {
- "src/jtask_gui/icons.py": 1,
- "src/jtask_gui/main_window.py": 4,
- "src/jtask_gui/models/task_model.py": 1,
- "src/jtask_gui/theme.py": 2,
- "src/jtask_gui/widgets/bulk_edit.py": 1,
- "src/jtask_gui/widgets/calendar_report.py": 1,
- "src/jtask_gui/widgets/charts/history_chart.py": 1,
- "src/jtask_gui/widgets/charts/mpl_base.py": 1,
- "src/jtask_gui/widgets/charts/summary_view.py": 1,
- "src/jtask_gui/widgets/dep_graph.py": 1,
- "src/jtask_gui/widgets/reports_view.py": 1,
- "src/jtask_gui/widgets/sidebar.py": 13,
- "src/jtask_gui/widgets/task_table.py": 7
+ "src/jtask_gui/theme.py": 1
 }

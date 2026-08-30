@@ -81,7 +81,7 @@ class _DayCell(QFrame):
 class CalendarReport(QWidget):
     taskRescheduled = pyqtSignal(list, str)  # (uuids, gregorian YYYY-MM-DD)
 
-    def __init__(self, theme_name: str = "شب", parent=None) -> None:
+    def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
         self._theme = theme_name
         self._filter: list[str] = []

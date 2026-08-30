@@ -18,15 +18,10 @@ from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
 
 UUID_MIME = "application/x-jtask-uuids"
 
-_EMPTY_MESSAGES = {
-    "امروز": "برای امروز کاری سررسید نشده. نفسی تازه کن یا کاری برنامه‌ریزی کن.",
-    "این هفته": "این هفته کاری سررسید ندارد.",
-    "معوق": "هیچ کار عقب‌افتاده‌ای نداری — عالی!",
-    "در انتظار": "چیزی در انتظارِ دیگران نیست.",
-    "مسدودشده": "هیچ کاری مسدود نشده است.",
-    "تکمیل‌شده": "هنوز کاری تکمیل نکرده‌ای.",
-    "اقدامات بعدی": "فهرست اقدامات بعدی خالی است. با نوار «افزودن سریع» کاری اضافه کن.",
-}
+# keyed by the sidebar quick-view *stable key* (i2), not its display label
+_EMPTY_KEYS = frozenset({
+    "today", "week", "overdue", "waiting", "blocked", "completed", "next",
+})
 
 _GROUP_KEYS = {
     "none": None,
@@ -126,13 +121,16 @@ class TaskTable(QTableView):
             else:
                 self.setColumnWidth(i, col.width)
 
-    def show_empty_state(self, view_title: str, is_empty: bool) -> None:
+    def show_empty_state(self, view_key: str, is_empty: bool) -> None:
         if not is_empty:
             self._empty.hide()
             return
-        self._empty.setText(
-            _EMPTY_MESSAGES.get(view_title, t("table.empty.generic"))
+        msg = (
+            t(f"view.empty.{view_key}")
+            if view_key in _EMPTY_KEYS
+            else t("table.empty.generic")
         )
+        self._empty.setText(msg)
         self._position_empty()
         self._empty.show()
         self._empty.raise_()

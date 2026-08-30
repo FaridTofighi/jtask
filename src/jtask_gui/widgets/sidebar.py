@@ -29,20 +29,24 @@ def _this_week_filter() -> list[str]:
     ]
 
 
+# (label_key, icon/stable key, spec). The spec's ``key`` is the stable identity
+# used by the empty-state lookup; ``title`` is the localized display label.
 QUICK_VIEWS = [
-    ("امروز", "today",
-     {"kind": "filter", "title": "امروز", "filter": ["due:today", "status:pending"]}),
-    ("این هفته", "week",
-     {"kind": "filter", "title": "این هفته", "filter": _this_week_filter}),
-    ("معوق", "overdue", {"kind": "filter", "title": "معوق", "filter": ["+OVERDUE"]}),
-    ("اقدامات بعدی", "next",
-     {"kind": "report", "title": "اقدامات بعدی", "fn": "report_ready"}),
-    ("در انتظار", "waiting",
-     {"kind": "report", "title": "در انتظار", "fn": "report_waiting"}),
-    ("مسدودشده", "blocked",
-     {"kind": "report", "title": "مسدودشده", "fn": "report_blocked"}),
-    ("تکمیل‌شده", "completed",
-     {"kind": "report", "title": "تکمیل‌شده", "fn": "report_completed"}),
+    ("view.today", "today",
+     {"kind": "filter", "key": "today",
+      "filter": ["due:today", "status:pending"]}),
+    ("view.week", "week",
+     {"kind": "filter", "key": "week", "filter": _this_week_filter}),
+    ("view.overdue", "overdue",
+     {"kind": "filter", "key": "overdue", "filter": ["+OVERDUE"]}),
+    ("view.next", "next",
+     {"kind": "report", "key": "next", "fn": "report_ready"}),
+    ("view.waiting", "waiting",
+     {"kind": "report", "key": "waiting", "fn": "report_waiting"}),
+    ("view.blocked", "blocked",
+     {"kind": "report", "key": "blocked", "fn": "report_blocked"}),
+    ("view.completed", "completed",
+     {"kind": "report", "key": "completed", "fn": "report_completed"}),
 ]
 
 
@@ -71,8 +75,9 @@ class Sidebar(QTreeWidget):
         self.itemClicked.connect(self._on_click)
 
         self._quick = self._section(t("sidebar.section.quick"))
-        for label, glyph, spec in QUICK_VIEWS:
-            self._leaf(self._quick, label, spec, glyph)
+        for label_key, glyph, spec in QUICK_VIEWS:
+            spec = dict(spec, title=t(label_key))
+            self._leaf(self._quick, t(label_key), spec, glyph)
 
         gap = QTreeWidgetItem([""])
         gap.setFlags(Qt.ItemFlag.NoItemFlags)

@@ -24,7 +24,7 @@ def _fresh():
 
 def test_dialog_value_survives_restart(store):
     s1 = _fresh()
-    s1.theme = "روز"
+    s1.theme = "light"
     s1.due_soon_days = 12
     s1.notifications_enabled = True
     s1.notify_states = ["overdue", "soon"]
@@ -33,7 +33,7 @@ def test_dialog_value_survives_restart(store):
     del s1
 
     s2 = _fresh()
-    assert s2.theme == "روز"
+    assert s2.theme == "light"
     assert s2.due_soon_days == 12
     assert s2.notifications_enabled is True
     assert set(s2.notify_states) == {"overdue", "soon"}

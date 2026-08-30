@@ -16,7 +16,7 @@ from ...i18n import t
 
 
 class SummaryView(QScrollArea):
-    def __init__(self, theme_name: str = "شب", parent=None) -> None:
+    def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("DetailScroll")
         self.setWidgetResizable(True)

@@ -57,7 +57,7 @@ _MAP = {
 
 _MIRRORED = {"undo"}  # glyphs whose direction must flip for RTL
 
-_theme = "شب"
+_theme = "dark"
 _cache: dict[tuple[str, str], QIcon] = {}
 
 

@@ -55,7 +55,7 @@ _MPL_REPORTS = {"burndown", "ghistory", "history"}
 class ReportsView(QWidget):
     filterRequested = pyqtSignal(list)  # user drilled into a project/tag
 
-    def __init__(self, theme_name: str = "شب", parent=None) -> None:
+    def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
         self._theme = theme_name
         self._filter: list[str] = []

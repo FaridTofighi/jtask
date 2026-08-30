@@ -6,7 +6,7 @@ from PyQt6.QtCore import QByteArray, QCoreApplication, QSettings
 
 from jtask import config as core_config
 
-from .theme import DEFAULT_THEME, THEMES
+from .theme import DEFAULT_THEME, THEMES, canonical_theme
 
 _ORG = "jtask"
 _APP = "jtask-gui"
@@ -26,12 +26,16 @@ class Settings:
     # --- theme ---
     @property
     def theme(self) -> str:
-        name = self._s.value("theme", DEFAULT_THEME, str)
+        stored = self._s.value("theme", DEFAULT_THEME, str)
+        name = canonical_theme(stored)
+        if name != stored:  # one-time migration of the pre-i2 Persian names
+            self._s.setValue("theme", name)
+            self._s.sync()
         return name if name in THEMES else DEFAULT_THEME
 
     @theme.setter
     def theme(self, name: str) -> None:
-        self._s.setValue("theme", name)
+        self._s.setValue("theme", canonical_theme(name))
 
     # --- language ---
     @property

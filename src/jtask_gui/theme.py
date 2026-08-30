@@ -13,7 +13,7 @@ from importlib import resources
 
 __all__ = [
     "THEMES", "DEFAULT_THEME", "palette", "render_qss", "template_text",
-    "other_theme", "DEFAULT_CHART_PALETTE",
+    "other_theme", "canonical_theme", "DEFAULT_CHART_PALETTE",
 ]
 
 DEFAULT_CHART_PALETTE = ["#6cc7dd", "#b98cf0", "#7fdca0", "#f0c674", "#7aa2ff", "#ff7ac0"]
@@ -74,8 +74,19 @@ _RUZ = {
     "chip_fg": "#0a5a75",
 }
 
-THEMES: dict[str, dict[str, str]] = {"شب": _SHAB, "روز": _RUZ}
-DEFAULT_THEME = "شب"
+# Stable theme keys (i2). Display labels come from the i18n catalog
+# (``theme.dark`` / ``theme.light``). ``_LEGACY_THEME`` maps the pre-i2 Persian
+# names a saved ``.conf`` might still hold — see ``Settings.theme``.
+THEMES: dict[str, dict[str, str]] = {"dark": _SHAB, "light": _RUZ}
+DEFAULT_THEME = "dark"
+_LEGACY_THEME = {"شب": "dark", "روز": "light"}
+
+
+def canonical_theme(name: str | None) -> str:
+    """Map any stored value (incl. the pre-i2 Persian names) to a live key."""
+    if name in THEMES:
+        return name  # type: ignore[return-value]
+    return _LEGACY_THEME.get(name or "", DEFAULT_THEME)
 
 # State colours consumed by the Qt model rather than the QSS.
 MODEL_COLOUR_KEYS = frozenset({"overdue", "due_soon", "waiting", "completed", "blocked"})

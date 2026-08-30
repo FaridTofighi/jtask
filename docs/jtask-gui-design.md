@@ -1043,5 +1043,43 @@ grep-based new-hardcoded-string gate active from i1).
 Full suite: **334 → 336 passing** (2 new gate tests), ruff + mypy clean, no
 regression in the default (fa / Jalali) configuration.
 
-_Next: i2 — decouple identity from labels + theme-name QSettings migration
-(with the Resolution 3 regression test)._
+---
+
+## i2 — implementation log (complete)
+
+Decouple every remaining "display label doubles as an identity key". Still
+fa-only visually — the snapshot gate stays **byte-identical**.
+
+- **Theme names** `شب`/`روز` → stable keys `dark`/`light`. `theme.THEMES` re-keyed;
+  `theme.canonical_theme(name)` maps any stored value (incl. the pre-i2 Persian
+  names via `_LEGACY_THEME`) to a live key. `Settings.theme` getter **migrates**
+  a legacy value and writes it back once; setter canonicalises on write. Display
+  labels via the catalog (`theme.dark` / `theme.light`) in the Settings dialog
+  (now `addItem(label, key)` + `currentData()`) and the first-run wizard.
+  All `theme_name="شب"` defaults → `"dark"` (6 widgets); `icons._theme`;
+  `main_window` theme-switch glyph + label.
+- **Sidebar quick views** — `QUICK_VIEWS` first element is now a catalog key;
+  each spec carries a stable `"key"` (`today`, `week`, …) plus a localized
+  `"title"`. `main_window._DEFAULT_VIEW` / the filter-results spec follow.
+- **`task_table` empty states** — `_EMPTY_MESSAGES` (keyed on the Persian view
+  title) replaced by `_EMPTY_KEYS` + `t(f"view.empty.{key}")`;
+  `show_empty_state()` now takes the stable key, fed from `spec["key"]`.
+
+### Gates
+
+- **Snapshot** (`test_i18n_snapshot.py`): still **0 added / 0 removed** — the
+  sidebar/theme labels render the exact same Persian.
+- **String ceiling** (`test_no_new_hardcoded_strings.py`): regenerated —
+  **1 file, 1 literal** (`theme.py` `_LEGACY_THEME`, which *must* hold the old
+  Persian names). Every other user-facing string in the GUI now routes through
+  `t()`.
+- **Resolution 3** (`tests/gui/test_i2_theme_migration.py`, 7 cases): seed a raw
+  QSettings `theme=شب` as a pre-i2 build would → `Settings().theme == "dark"`,
+  persisted, second load stable; unknown value → default; canonical names pass
+  through; labels come from the catalog.
+
+Full suite: **336 → 341 passing**, ruff + mypy clean, no fa/Jalali regression.
+
+_Next: i3 — layout direction follows Language (remove the 15 hardcoded
+`setLayoutDirection(RightToLeft)`, sidebar dock L/R, conditional icon mirroring,
+restart-prompt flow, QSS/scrollbar re-verify in LTR)._

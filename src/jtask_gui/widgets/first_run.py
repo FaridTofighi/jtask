@@ -43,7 +43,7 @@ class FirstRunWizard(QDialog):
         self._theme_group = QButtonGroup(self)
         trow = QHBoxLayout()
         for i, name in enumerate(THEMES):
-            rb = QRadioButton(name)
+            rb = QRadioButton(t(f"theme.{name}"))
             if name == settings.theme:
                 rb.setChecked(True)
             self._theme_group.addButton(rb, i)

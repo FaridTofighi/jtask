@@ -1,9 +1,9 @@
 """Bulk field editor — one form that modifies many tasks at once (§ M5).
 
-Only the fields the user actually touches are emitted; everything left on
-"— بدون تغییر —" is omitted from the resulting ``task … modify`` mods.  Dates
-come back Taskwarrior-ready (Gregorian) from the shared Jalali picker, so the
-caller must *not* run them through ``rewrite_args`` again.
+Only the fields the user actually touches are emitted; everything left on the
+"no change" sentinel is omitted from the resulting ``task … modify`` mods.
+Dates come back Taskwarrior-ready (Gregorian) from the shared Jalali picker, so
+the caller must *not* run them through ``rewrite_args`` again.
 """
 
 from __future__ import annotations

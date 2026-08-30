@@ -19,7 +19,7 @@ _W, _H, _GAP_X, _GAP_Y = 150, 44, 24, 70
 
 
 class DependencyGraph(QGraphicsView):
-    def __init__(self, theme_name: str = "شب", parent=None) -> None:
+    def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
         self._theme = theme_name
         self._task: dict | None = None
