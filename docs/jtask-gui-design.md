@@ -950,3 +950,49 @@ date-grammar sweep — all landed with tests + screenshots.
 ## Mission complete — M5–M9
 
 See `docs/feature-parity-status.md` for the final report.
+
+---
+
+## i18n + selectable-calendar mission — Phase 0 (awaiting approval)
+
+Full audit: `docs/i18n-phase0-audit.md`. Summary of the two decisions the mission
+asked to document here:
+
+### Translation mechanism — centralized catalog, not Qt `.ts`/`.qm`
+
+**Decision:** a `jtask_gui/i18n.py` module with `t(key, **kw)` over TOML catalogs
+(`i18n/fa.toml`, `i18n/en.toml`), **not** `QTranslator` + `.ts`/`.qm` +
+`pylupdate6`/`lrelease`.
+
+**Reasoning:** the audit found ~20 modules that build Persian label
+lists/dicts **at import time** (`_STATUS`, `_PRIORITY`, `_VTAGS`, `_REPORTS`,
+`_ATTR_FA`, `_STATUS_FA`, …). `self.tr()` needs a live `QObject` + installed
+translator; `QCoreApplication.translate()` needs the translator installed before
+the call — both unavailable at import. Every such constant would have to become a
+function regardless, and once it is, the `.ts` layer buys nothing over a plain
+catalog lookup. Add: ~120 f-string interpolation sites (vs. Qt's `%1`/`.arg()`),
+zero existing Qt-i18n infrastructure, and the mission's own requirement that
+`docs/i18n-glossary.md` be the single source of truth — a concept-keyed
+Python/TOML catalog maps 1:1 to glossary rows and is diff-reviewable; generated
+`.ts` XML is not. A central `i18n.py` also matches the codebase's existing
+"one path" pattern (`fmt.py` for numbers, `taskwarrior.py` for TW access). The
+`.ts`/Linguist tooling mainly pays off with non-developer translators, which is
+not this project's situation; a catalog still scales to future languages
+(`i18n/de.toml`).
+
+### Language ⇄ Calendar are independent; both require restart
+
+`Settings.language` (fa/en) drives UI text + **layout direction** + terminology +
+font. `Settings.calendar` (jalali/gregorian) drives only date rendering/entry via
+a `CalendarSystem` abstraction. Taskwarrior storage stays Gregorian/UTC. Changing
+either setting **requires an app restart** (clear modal prompt) — live
+retranslation across ~48 widget modules + relayout of a built tree + font swap is
+high-surface, low-payoff; the existing digit-mode toggle stays live.
+
+### Proposed milestones: i1 (glossary + catalog infra) · i2 (decouple identity
+from labels) · i3 (layout direction follows language) · i4 (CalendarSystem
+abstraction + shared Gregorian/Jalali grid) · i5 (English catalog + transliteration
++ digit/font defaults) · i6 (four-combination hardening + docs). Detail and
+rationale in `docs/i18n-phase0-audit.md`.
+
+**STOP — awaiting approval before implementation.**
