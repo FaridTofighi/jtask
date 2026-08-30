@@ -59,5 +59,9 @@ class OperationStatus(QLabel):
     def failed(self, message: str) -> None:
         self._set("failed", message)
 
-    def cancelled(self, message: str = "لغو شد") -> None:
+    def cancelled(self, message: str | None = None) -> None:
+        if message is None:
+            from ..i18n import t
+
+            message = t("op.cancelled")
         self._set("cancelled", message, fade_ms=2500)

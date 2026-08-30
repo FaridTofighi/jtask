@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import fonts
 
+from ..i18n import t
 from ..settings import Settings
 from ..theme import THEMES
 
@@ -25,20 +26,20 @@ class FirstRunWizard(QDialog):
     def __init__(self, settings: Settings, parent=None) -> None:
         super().__init__(parent)
         self._settings = settings
-        self.setWindowTitle("به jtask خوش آمدید")
+        self.setWindowTitle(t("firstrun.title"))
         self.setMinimumWidth(460)
         root = QVBoxLayout(self)
         root.setSpacing(14)
 
-        title = QLabel("راه‌اندازی اولیهٔ jtask")
+        title = QLabel(t("firstrun.heading"))
         title.setObjectName("H1")
         root.addWidget(title)
         root.addWidget(QLabel(
-            "یک لایهٔ فارسی/جلالی روی Taskwarrior. چند تنظیم کوتاه:"
+            t("firstrun.intro")
         ))
 
         # theme
-        root.addWidget(_section("پوسته"))
+        root.addWidget(_section(t("firstrun.section.theme")))
         self._theme_group = QButtonGroup(self)
         trow = QHBoxLayout()
         for i, name in enumerate(THEMES):
@@ -52,15 +53,15 @@ class FirstRunWizard(QDialog):
         self._theme_names = list(THEMES)
 
         # digits
-        self._digits = QCheckBox("نمایش ارقام فارسی (۰–۹)")
+        self._digits = QCheckBox(t("firstrun.digits"))
         self._digits.setChecked(settings.persian_digits)
         root.addWidget(self._digits)
 
         # font check
-        root.addWidget(_section("فونت وزیرمتن"))
+        root.addWidget(_section(t("firstrun.section.font")))
         font_row = QHBoxLayout()
         self._font_status = QLabel("—")
-        check_btn = QPushButton("بررسی نصب")
+        check_btn = QPushButton(t("firstrun.check_font"))
         check_btn.clicked.connect(self._check_font)
         font_row.addWidget(self._font_status, 1)
         font_row.addWidget(check_btn)
@@ -68,13 +69,13 @@ class FirstRunWizard(QDialog):
         self._check_font()
 
         # notifications
-        root.addWidget(_section("اعلان‌ها"))
-        self._notify = QCheckBox("اعلان دسکتاپ برای کارهای عقب‌افتاده و سررسید امروز")
+        root.addWidget(_section(t("firstrun.section.notifications")))
+        self._notify = QCheckBox(t("firstrun.notify"))
         self._notify.setChecked(settings.notifications_enabled)
         root.addWidget(self._notify)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("شروع")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(t("firstrun.start"))
         buttons.button(QDialogButtonBox.StandardButton.Ok).setObjectName("Primary")
         buttons.accepted.connect(self._finish)
         root.addWidget(buttons)
@@ -82,10 +83,10 @@ class FirstRunWizard(QDialog):
     def _check_font(self) -> None:
         found, _ = fonts.is_vazir_installed()
         if found:
-            self._font_status.setText("وزیرمتن روی سیستم پیدا شد ✔")
+            self._font_status.setText(t("firstrun.font.found"))
         else:
             self._font_status.setText(
-                "پیدا نشد — برنامه نسخهٔ همراهِ خود را بارگذاری می‌کند."
+                t("firstrun.font.missing")
             )
 
     def _finish(self) -> None:

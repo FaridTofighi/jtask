@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from ..i18n import t
 
 
 def inspect_import(path: str) -> dict:
@@ -38,27 +39,30 @@ def inspect_import(path: str) -> dict:
     tasks: list[dict] = []
     fmt_name = ""
     if not text:
-        return {"ok": False, "count": 0, "format": "", "sample": [], "error": "فایل خالی است."}
+        return {
+            "ok": False, "count": 0, "format": "", "sample": [],
+            "error": t("import.empty_file"),
+        }
     try:
         if text.startswith("["):
             tasks = json.loads(text)
-            fmt_name = "آرایهٔ JSON"
+            fmt_name = t("import.fmt.array")
         else:
             for line in text.splitlines():
                 line = line.strip().rstrip(",")
                 if line and line not in "[]":
                     tasks.append(json.loads(line))
-            fmt_name = "خطوط JSON"
+            fmt_name = t("import.fmt.lines")
     except (json.JSONDecodeError, ValueError) as exc:
         return {
             "ok": False, "count": 0, "format": "", "sample": [],
-            "error": f"قالب JSON نامعتبر است: {exc}",
+            "error": t("import.invalid_json", exc=exc),
         }
 
     if not isinstance(tasks, list) or not tasks:
         return {
             "ok": False, "count": 0, "format": fmt_name, "sample": [],
-            "error": "هیچ کاری در فایل پیدا نشد.",
+            "error": t("import.no_tasks"),
         }
     sample = [str(t.get("description", "—")) for t in tasks[:8] if isinstance(t, dict)]
     return {"ok": True, "count": len(tasks), "format": fmt_name, "sample": sample, "error": ""}
@@ -69,7 +73,7 @@ class ImportDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ImportDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("ورود کارها از فایل")
+        self.setWindowTitle(t("import.title"))
         self.setMinimumWidth(500)
 
         root = QVBoxLayout(self)
@@ -78,10 +82,10 @@ class ImportDialog(QDialog):
 
         pick = QHBoxLayout()
         self._path = QLineEdit()
-        self._path.setPlaceholderText("مسیر فایل JSON")
+        self._path.setPlaceholderText(t("import.path.placeholder"))
         self._path.textChanged.connect(self._inspect)
         pick.addWidget(self._path, 1)
-        browse = QPushButton("انتخاب…")
+        browse = QPushButton(t("btn.choose"))
         browse.clicked.connect(self._browse)
         pick.addWidget(browse)
         root.addLayout(pick)
@@ -96,18 +100,16 @@ class ImportDialog(QDialog):
         self._sample.setMaximumHeight(150)
         root.addWidget(self._sample)
 
-        self._warn = QLabel(
-            "کارهایی که شناسهٔ یکسان (UUID) با کارهای موجود دارند، به‌روزرسانی می‌شوند."
-        )
+        self._warn = QLabel(t("import.warn_same_uuid"))
         self._warn.setObjectName("FormHint")
         self._warn.setWordWrap(True)
         root.addWidget(self._warn)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
-        self._ok = btns.addButton("ورود", QDialogButtonBox.ButtonRole.AcceptRole)
+        self._ok = btns.addButton(t("import.ok"), QDialogButtonBox.ButtonRole.AcceptRole)
         self._ok.setObjectName("Primary")
         self._ok.clicked.connect(self.accept)
         self._ok.setEnabled(False)
@@ -115,7 +117,7 @@ class ImportDialog(QDialog):
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "انتخاب فایل", self._path.text(), "JSON (*.json);;همه (*)"
+            self, t("import.open_dialog"), self._path.text(), t("export.file_filter")
         )
         if path:
             self._path.setText(path)
@@ -132,7 +134,7 @@ class ImportDialog(QDialog):
             self._info.setText(rep["error"])
             self._ok.setEnabled(False)
             return
-        self._info.setText(f"{fmt.num(rep['count'])} کار · قالب: {rep['format']}")
+        self._info.setText(t("import.summary", n=fmt.num(rep['count']), fmt=rep['format']))
         for d in rep["sample"]:
             self._sample.addItem(d)
         if rep["count"] > len(rep["sample"]):

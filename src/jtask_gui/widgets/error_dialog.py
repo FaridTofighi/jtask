@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import icons
+from ..i18n import t
 
 
 class ErrorDialog(QDialog):
@@ -37,7 +38,7 @@ class ErrorDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("ErrorDialog")
-        self.setWindowTitle("خطا")
+        self.setWindowTitle(t("error.title"))
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setMinimumWidth(480)
 
@@ -68,7 +69,7 @@ class ErrorDialog(QDialog):
         if self._details:
             self._details_toggle = QToolButton()
             self._details_toggle.setObjectName("ErrorDetailsToggle")
-            self._details_toggle.setText("نمایش جزئیات فنی")
+            self._details_toggle.setText(t("error.details.show"))
             self._details_toggle.setCheckable(True)
             self._details_toggle.setAutoRaise(True)
             self._details_toggle.setToolButtonStyle(
@@ -90,16 +91,16 @@ class ErrorDialog(QDialog):
             lay.addWidget(box)
 
         btns = QDialogButtonBox()
-        close_btn = btns.addButton("بستن", QDialogButtonBox.ButtonRole.AcceptRole)
+        close_btn = btns.addButton(t("btn.close"), QDialogButtonBox.ButtonRole.AcceptRole)
         close_btn.clicked.connect(self.accept)
         if self._details:
             self._copy_btn = btns.addButton(
-                "رونوشت جزئیات", QDialogButtonBox.ButtonRole.ActionRole
+                t("error.copy_details"), QDialogButtonBox.ButtonRole.ActionRole
             )
             self._copy_btn.clicked.connect(self.copy_details)
         if on_open_console is not None:
             oc = btns.addButton(
-                "باز کردن کنسول", QDialogButtonBox.ButtonRole.ActionRole
+                t("error.open_console"), QDialogButtonBox.ButtonRole.ActionRole
             )
             oc.clicked.connect(self.open_console)
         lay.addWidget(btns)
@@ -132,7 +133,7 @@ class ErrorDialog(QDialog):
             self._details_toggle.setChecked(on)
             self._details_toggle.blockSignals(False)
             self._details_toggle.setText(
-                "پنهان‌کردن جزئیات فنی" if on else "نمایش جزئیات فنی"
+                t("error.details.hide") if on else t("error.details.show")
             )
             self._details_toggle.setArrowType(
                 Qt.ArrowType.DownArrow if on else Qt.ArrowType.RightArrow

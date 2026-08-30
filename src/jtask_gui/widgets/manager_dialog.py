@@ -10,6 +10,7 @@ from __future__ import annotations
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QTabWidget, QVBoxLayout, QWidget
 
+from ..i18n import t
 from .config_manager import ConfigManager
 from .context_manager import ContextManager
 from .report_manager import ReportManager
@@ -23,7 +24,7 @@ class ManagerDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ManagerDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("مدیریت Taskwarrior")
+        self.setWindowTitle(t("manage.title"))
         self.resize(760, 560)
 
         lay = QVBoxLayout(self)
@@ -35,17 +36,17 @@ class ManagerDialog(QDialog):
         self.contexts = ContextManager()
         self.udas = UdaManager()
         self.reports = ReportManager()
-        self._tabs.addTab(self.config, "پیکربندی")
-        self._tabs.addTab(self.contexts, "زمینه‌ها")
-        self._tabs.addTab(self.udas, "ویژگی‌های سفارشی")
-        self._tabs.addTab(self.reports, "گزارش‌ها")
+        self._tabs.addTab(self.config, t("manage.tab.config"))
+        self._tabs.addTab(self.contexts, t("manage.tab.contexts"))
+        self._tabs.addTab(self.udas, t("manage.tab.udas"))
+        self._tabs.addTab(self.reports, t("manage.tab.reports"))
         lay.addWidget(self._tabs, 1)
 
         for tab in (self.config, self.contexts, self.udas, self.reports):
             tab.changed.connect(self.changed)
 
         btns = QDialogButtonBox()
-        btns.addButton("بستن", QDialogButtonBox.ButtonRole.AcceptRole).clicked.connect(
+        btns.addButton(t("btn.close"), QDialogButtonBox.ButtonRole.AcceptRole).clicked.connect(
             self.accept
         )
         lay.addWidget(btns)

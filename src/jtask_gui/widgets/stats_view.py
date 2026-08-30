@@ -16,33 +16,26 @@ from PyQt6.QtWidgets import (
 from jtask import jalali, taskwarrior
 
 from .. import fmt
+from ..i18n import t
 from ..workers import submit
 
-_LABEL_FA = {
-    "Pending": "در جریان",
-    "Waiting": "در انتظار",
-    "Recurring": "تکرارشونده",
-    "Completed": "انجام‌شده",
-    "Deleted": "حذف‌شده",
-    "Total": "کل",
-    "Annotations": "یادداشت‌ها",
-    "Unique tags": "برچسب‌های یکتا",
-    "Projects": "پروژه‌ها",
-    "Blocked tasks": "کارهای مسدود",
-    "Blocking tasks": "کارهای بازدارنده",
-    "Undo transactions": "تراکنش‌های واگرد",
-    "Sync backlog transactions": "تراکنش‌های همگام‌سازی معلق",
-    "Tasks tagged": "درصد برچسب‌خورده",
-    "Oldest task": "قدیمی‌ترین کار",
-    "Newest task": "تازه‌ترین کار",
-    "Task used for": "بازهٔ استفاده",
-    "Task added every": "میانگین فاصلهٔ افزودن",
-    "Task completed every": "میانگین فاصلهٔ تکمیل",
-    "Average time pending": "میانگین زمان در انتظار",
-    "Average desc length": "میانگین طول شرح",
+_LABEL_KEY = {
+    "Pending": "stats.Pending", "Waiting": "stats.Waiting", "Recurring": "stats.Recurring",
+    "Completed": "stats.Completed", "Deleted": "stats.Deleted", "Total": "stats.Total",
+    "Annotations": "stats.Annotations", "Unique tags": "stats.UniqueTags",
+    "Projects": "stats.Projects", "Blocked tasks": "stats.BlockedTasks",
+    "Blocking tasks": "stats.BlockingTasks", "Undo transactions": "stats.UndoTransactions",
+    "Sync backlog transactions": "stats.SyncBacklog", "Tasks tagged": "stats.TasksTagged",
+    "Oldest task": "stats.OldestTask", "Newest task": "stats.NewestTask",
+    "Task used for": "stats.TaskUsedFor", "Task added every": "stats.TaskAddedEvery",
+    "Task completed every": "stats.TaskCompletedEvery",
+    "Average time pending": "stats.AvgTimePending", "Average desc length": "stats.AvgDescLength",
 }
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_UNIT_FA = {"characters": "نویسه", "min": "دقیقه", "hours": "ساعت", "days": "روز"}
+_UNIT_KEY = {
+    "characters": "stats.unit.characters", "min": "stats.unit.min",
+    "hours": "stats.unit.hours", "days": "stats.unit.days",
+}
 
 
 def _render_value(raw: str) -> str:
@@ -57,7 +50,7 @@ def _render_value(raw: str) -> str:
         if unit == "%":
             return fmt.pct(val)
         num = fmt.num(val)
-        return f"{num} {_UNIT_FA.get(unit, unit)}".strip()
+        return f"{num} {t(_UNIT_KEY[unit]) if unit in _UNIT_KEY else unit}".strip()
     return fmt.digits(raw)
 
 
@@ -71,7 +64,9 @@ class StatsView(QWidget):
 
         self._table = QTableWidget(0, 2)
         self._table.setObjectName("StatsTable")
-        self._table.setHorizontalHeaderLabels(["دسته", "مقدار"])
+        self._table.setHorizontalHeaderLabels(
+            [t("stats.col.category"), t("stats.col.value")]
+        )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
@@ -93,7 +88,7 @@ class StatsView(QWidget):
     def _render(self, pairs: list[tuple[str, str]]) -> None:
         self._table.setRowCount(len(pairs))
         for r, (cat, val) in enumerate(pairs):
-            label = QTableWidgetItem(_LABEL_FA.get(cat, cat))
+            label = QTableWidgetItem(t(_LABEL_KEY[cat]) if cat in _LABEL_KEY else cat)
             value = QTableWidgetItem(_render_value(val))
             value.setTextAlignment(
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter

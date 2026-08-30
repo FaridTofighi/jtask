@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt, icons
+from ..i18n import t
 
 
 class ConfirmDialog(QDialog):
@@ -37,9 +38,9 @@ class ConfirmDialog(QDialog):
         title: str,
         body: str,
         count: int | None = None,
-        count_noun: str = "کار",
+        count_noun: str = "",
         destructive: bool = False,
-        confirm_label: str = "تأیید",
+        confirm_label: str = "",
         require_phrase: str | None = None,
         details: str | None = None,
         parent: QWidget | None = None,
@@ -63,11 +64,11 @@ class ConfirmDialog(QDialog):
         glyph.setPixmap(icons.icon(name, role).pixmap(24, 24))
         head.addWidget(glyph, 0, Qt.AlignmentFlag.AlignTop)
 
+        noun = count_noun or t("confirm.count_noun")
         text = body
         if count is not None:
-            text = (
-                f"{body}\n\nاین عملیات روی {fmt.num(count)} {count_noun} "
-                "اعمال می‌شود."
+            text = t(
+                "confirm.affects", body=body, count=fmt.num(count), noun=noun
             )
         self._body = QLabel(text)
         self._body.setObjectName("ConfirmBody")
@@ -90,7 +91,7 @@ class ConfirmDialog(QDialog):
 
         self._phrase_edit: QLineEdit | None = None
         if self._require_phrase:
-            hint = QLabel(f"برای تأیید، عبارت «{self._require_phrase}» را بنویسید:")
+            hint = QLabel(t("confirm.phrase_hint", phrase=self._require_phrase))
             hint.setObjectName("Muted")
             lay.addWidget(hint)
             self._phrase_edit = QLineEdit()
@@ -100,11 +101,11 @@ class ConfirmDialog(QDialog):
 
         btns = QDialogButtonBox()
         self._cancel_btn = btns.addButton(
-            "انصراف", QDialogButtonBox.ButtonRole.RejectRole
+            t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole
         )
         self._cancel_btn.clicked.connect(self.reject)
         self._confirm_btn = btns.addButton(
-            confirm_label, QDialogButtonBox.ButtonRole.AcceptRole
+            confirm_label or t("btn.confirm"), QDialogButtonBox.ButtonRole.AcceptRole
         )
         self._confirm_btn.setObjectName("Danger" if destructive else "Primary")
         self._confirm_btn.clicked.connect(self.accept)
@@ -131,9 +132,9 @@ def confirm(
     title: str,
     body: str,
     count: int | None = None,
-    count_noun: str = "کار",
+    count_noun: str = "",
     destructive: bool = False,
-    confirm_label: str = "تأیید",
+    confirm_label: str = "",
     require_phrase: str | None = None,
     details: str | None = None,
 ) -> bool:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ...i18n import t
 from .mpl_base import (
     ThemedChart,
     legend_fa,
@@ -9,7 +10,7 @@ from .mpl_base import (
     set_xticklabels_fa,
 )
 
-_NAMES = ("افزوده", "تکمیل‌شده", "حذف‌شده")
+_NAME_KEYS = ("chart.history.added", "chart.history.completed", "chart.history.deleted")
 
 
 class HistoryChart(ThemedChart):
@@ -51,10 +52,14 @@ class HistoryChart(ThemedChart):
         ax.set_xticks(x[::step])
         set_xticklabels_fa(ax, labels[::step], rotation=45, ha="left",
                            fontfamily=self._family, fontsize=8)
-        title = "گراف تاریخچه" if self._mode == "ghistory" else "تاریخچه"
+        title = (
+            t("chart.history.title_stacked")
+            if self._mode == "ghistory"
+            else t("chart.history.title_grouped")
+        )
         set_title_fa(ax, title, fontfamily=self._family, color=pal["text"],
                      fontsize=13, pad=12)
-        leg = legend_fa(ax, _NAMES, loc="upper left", framealpha=0.0)
-        for t in leg.get_texts():
-            t.set_color(pal["text"])
-            t.set_fontfamily(self._family)
+        leg = legend_fa(ax, [t(k) for k in _NAME_KEYS], loc="upper left", framealpha=0.0)
+        for txt in leg.get_texts():
+            txt.set_color(pal["text"])
+            txt.set_fontfamily(self._family)

@@ -995,4 +995,53 @@ abstraction + shared Gregorian/Jalali grid) · i5 (English catalog + translitera
 + digit/font defaults) · i6 (four-combination hardening + docs). Detail and
 rationale in `docs/i18n-phase0-audit.md`.
 
-**STOP — awaiting approval before implementation.**
+Approved 2026-08-30 with four resolutions (digit-mode override flag; i1
+zero-visible-change snapshot gate; theme-name migration regression test;
+grep-based new-hardcoded-string gate active from i1).
+
+---
+
+## i1 — implementation log (complete)
+
+- **`jtask_gui/i18n/`** — `t(key, **kw)`, `set_language(lang)`, `lang()`,
+  `is_rtl()`, `missing_keys()`. Catalogs are plain Python dict modules
+  (`fa.py` / `en.py`) — flat dotted keys, diff-reviewable, no TOML/YAML parser,
+  no `requires-python` bump. `en.py` seeded from `fa.py` (Resolution 4); i5
+  fills real translations from `docs/i18n-glossary.md`. Missing key → returns
+  the key + logs once (caught by the snapshot test, never crashes).
+- **`Settings.language`** (`fa`/`en`, persisted) — `app.build_application`
+  calls `set_language(settings.language)` before importing `main_window`.
+  Changing it in Settings shows a "restart required" prompt.
+- **`Settings.digit_mode_user_overridden`** (Resolution 1) — a *separate*
+  persisted flag, set the first time the user changes digit mode in Settings;
+  a later language switch never rewrites the digit mode once it is set. Never
+  inferred from the current value.
+- **~48 widget/dialog files migrated** to `t()` — direct literals, f-strings
+  (→ `t("key", n=…)`), and constant label lists whose *keys are already stable*
+  (`_STATUS`, `_PRIORITY`, `_VTAGS`, `_REPORTS`, `_ATTR_FA`→key map, …). Module-
+  level `t()` at import is fine under restart-required.
+- **Deferred to i2** (the label==identity coupling Phase 0 flagged): sidebar
+  quick-view titles, `task_table._EMPTY_MESSAGES` keys, theme names
+  `شب`/`روز` (+ QSettings migration). Held at their current count by the
+  ceiling gate.
+- **`docs/i18n-glossary.md`** — terminology source of truth (fa · en ·
+  Taskwarrior-vocab note), plus the Jalali-in-English transliteration table and
+  the list of wording clean-ups i5 must make.
+
+### Gates (both green, both stay in the suite)
+
+- **`tests/gui/test_i18n_snapshot.py`** (Resolution 2) — renders MainWindow +
+  detail panel + Settings + Add/Bulk/Export/Manager/Tools dialogs, collects
+  every visible Persian *wording* string (dates/counts/names masked), asserts
+  byte-identical to a committed baseline. After the full migration: **0 added /
+  0 removed** vs. the pre-migration capture, except the **2 intended new
+  strings** for the Language selector.
+- **`tests/test_no_new_hardcoded_strings.py`** (Resolution 4) — per-file
+  Persian-literal count ceiling (`tests/_i18n_string_ceiling.json`, 13 files /
+  ~35 literals, all i2-deferred). Counts may only go down.
+
+Full suite: **334 → 336 passing** (2 new gate tests), ruff + mypy clean, no
+regression in the default (fa / Jalali) configuration.
+
+_Next: i2 — decouple identity from labels + theme-name QSettings migration
+(with the Resolution 3 regression test)._

@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QInputDialog, QLineEdit, QToolButton, Q
 from jtask import rewrite, taskwarrior
 
 from .. import icons
+from ..i18n import t
 from .autocomplete import make_token_completer
 from .filter_builder import FilterBuilder
 
@@ -40,7 +41,7 @@ class FilterBar(QWidget):
         row.setSpacing(6)
 
         self._builder_btn = QToolButton()
-        self._builder_btn.setToolTip("سازندهٔ فیلتر بصری")
+        self._builder_btn.setToolTip(t("filterbar.builder_tip"))
         self._builder_btn.clicked.connect(self._open_builder)
         row.addWidget(self._builder_btn)
 
@@ -48,25 +49,25 @@ class FilterBar(QWidget):
         self._edit.setObjectName("FilterEdit")
         self._edit.setClearButtonEnabled(True)
         self._edit.setPlaceholderText(
-            "فیلتر تسک‌وریر: «project:وب +مهم due.before:فردا»"
+            t("filterbar.placeholder")
         )
         self._edit.textChanged.connect(self._on_text)
         self._edit.returnPressed.connect(self._apply)
         row.addWidget(self._edit, 1)
 
         self._apply_btn = QToolButton()
-        self._apply_btn.setToolTip("اعمال فیلتر")
+        self._apply_btn.setToolTip(t("filterbar.apply_tip"))
         self._apply_btn.clicked.connect(self._apply)
         row.addWidget(self._apply_btn)
 
         self._save_btn = QToolButton()
         self._save_btn.setText("★")
-        self._save_btn.setToolTip("ذخیرهٔ این فیلتر")
+        self._save_btn.setToolTip(t("filterbar.save_tip"))
         self._save_btn.clicked.connect(self._save)
         row.addWidget(self._save_btn)
 
         self._clear_btn = QToolButton()
-        self._clear_btn.setToolTip("پاک‌کردن فیلتر")
+        self._clear_btn.setToolTip(t("filterbar.clear_tip"))
         self._clear_btn.clicked.connect(self.clear)
         row.addWidget(self._clear_btn)
 
@@ -91,12 +92,12 @@ class FilterBar(QWidget):
         raw = self._edit.text().strip()
         if not raw:
             return
-        name, ok = QInputDialog.getText(self, "ذخیرهٔ فیلتر", "نام:")
+        name, ok = QInputDialog.getText(self, t("filterbar.save.title"), t("filterbar.save.label"))
         if ok and name.strip():
             self.saveRequested.emit(name.strip(), raw)
 
     def _on_text(self, text: str) -> None:
-        self._edit.setToolTip(text or "فیلتری اعمال نشده است")
+        self._edit.setToolTip(text or t("filterbar.none_applied"))
 
     def refresh_completions(self) -> None:
         try:

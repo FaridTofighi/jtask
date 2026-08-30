@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 from jtask import jalali, reports
 
 from .. import fmt, icons
+from ..i18n import t
 from ..workers import submit
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
 from .task_table import UUID_MIME
@@ -49,7 +50,7 @@ class _DayCell(QFrame):
 
         if count:
             colour = pal["overdue"] if overdue else pal["primary"]
-            dot = QLabel(fmt.digits(f"{count} کار"))
+            dot = QLabel(fmt.digits(t("calendar.n_tasks", count=count)))
             dot.setStyleSheet(f"color:{colour}; font-size:11px;")
             dot.setAlignment(Qt.AlignmentFlag.AlignRight)
             lay.addWidget(dot)
@@ -99,7 +100,7 @@ class CalendarReport(QWidget):
         root.addWidget(self._grid, 3)
 
         side = QVBoxLayout()
-        self._day_title = QLabel("یک روز را انتخاب کنید")
+        self._day_title = QLabel(t("calendar.pick_day"))
         self._day_title.setObjectName("H2")
         side.addWidget(self._day_title)
         self._day_list = QListWidget()
@@ -174,10 +175,13 @@ class CalendarReport(QWidget):
             fmt.digits(f"{d} {jalali.MONTH_NAMES[m - 1]} {y}")
         )
         self._day_list.clear()
-        for t in self._data.get("days", {}).get(key, []):
-            item = QListWidgetItem(f"{t.get('description', '')}")
-            item.setIcon(icons.icon("overdue" if self._is_overdue(t) else "today",
-                                    "overdue" if self._is_overdue(t) else "text_muted"))
+        for task in self._data.get("days", {}).get(key, []):
+            item = QListWidgetItem(f"{task.get('description', '')}")
+            over = self._is_overdue(task)
+            item.setIcon(icons.icon(
+                "overdue" if over else "today",
+                "overdue" if over else "text_muted",
+            ))
             self._day_list.addItem(item)
         if self._day_list.count() == 0:
-            self._day_list.addItem(QListWidgetItem("کاری برای این روز نیست."))
+            self._day_list.addItem(QListWidgetItem(t("calendar.no_tasks_day")))

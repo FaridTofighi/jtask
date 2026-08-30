@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali, timesheet
 
+from ..i18n import t
 from ..workers import submit
 from .jalali_date_picker import JalaliDatePicker
 
@@ -33,8 +34,8 @@ def _hm(d: dt.timedelta) -> str:
     return jalali.to_persian_digits(f"{h}:{m:02d}")
 
 
-def _clock(t: dt.datetime) -> str:
-    return jalali.to_persian_digits(t.strftime("%H:%M"))
+def _clock(moment: dt.datetime) -> str:
+    return jalali.to_persian_digits(moment.strftime("%H:%M"))
 
 
 class TimesheetView(QWidget):
@@ -49,13 +50,13 @@ class TimesheetView(QWidget):
 
         bar = QHBoxLayout()
         bar.setSpacing(6)
-        bar.addWidget(QLabel("از"))
+        bar.addWidget(QLabel(t("word.from")))
         self._from = JalaliDatePicker()
         bar.addWidget(self._from)
-        bar.addWidget(QLabel("تا"))
+        bar.addWidget(QLabel(t("word.to")))
         self._to = JalaliDatePicker()
         bar.addWidget(self._to)
-        self._go = QPushButton("به‌روزرسانی")
+        self._go = QPushButton(t("ts.refresh"))
         self._go.setObjectName("Primary")
         self._go.clicked.connect(self.reload)
         bar.addWidget(self._go)
@@ -70,7 +71,9 @@ class TimesheetView(QWidget):
         self._tree = QTreeWidget()
         self._tree.setObjectName("TimesheetTree")
         self._tree.setColumnCount(3)
-        self._tree.setHeaderLabels(["کار / جلسه", "پروژه", "مدت"])
+        self._tree.setHeaderLabels(
+            [t("ts.col.task_session"), t("ts.col.project"), t("ts.col.duration")]
+        )
         self._tree.header().setStretchLastSection(False)
         self._tree.setColumnWidth(0, 320)
         lay.addWidget(self._tree, 1)
@@ -80,10 +83,8 @@ class TimesheetView(QWidget):
         lay.addWidget(self._summary)
 
         note = (
-            "جلسه‌ها از تاریخچهٔ Taskwarrior بازسازی شده‌اند"
-            + ("  ·  Timewarrior نصب است و می‌تواند منبع دقیق‌تری باشد."
-               if shutil.which("timew")
-               else ".")
+            t("ts.note.base")
+            + (t("ts.note.timew") if shutil.which("timew") else ".")
         )
         self._note = QLabel(note)
         self._note.setObjectName("Muted")
@@ -106,11 +107,11 @@ class TimesheetView(QWidget):
             since = since.date()
         if isinstance(until, dt.datetime):
             until = until.date()
-        self._summary.setText("در حال محاسبه…")
+        self._summary.setText(t("ts.calculating"))
         submit(
             lambda: timesheet.build(self._filter, since, until),
             self._render,
-            lambda _e: self._summary.setText("محاسبه ناموفق بود."),
+            lambda _e: self._summary.setText(t("ts.calc_failed")),
         )
 
     def _render(self, sheet: timesheet.Timesheet) -> None:
@@ -125,7 +126,7 @@ class TimesheetView(QWidget):
             for s in row.sessions:
                 span = (
                     f"{_clock(s.start)} — "
-                    + ("در حال اجرا" if s.running else _clock(s.end))
+                    + (t("ts.running") if s.running else _clock(s.end))
                     if s.end or s.running
                     else _clock(s.start)
                 )
@@ -134,17 +135,17 @@ class TimesheetView(QWidget):
             top.setExpanded(True)
 
         if not sheet.rows:
-            self._summary.setText("در این بازه جلسه‌ای ثبت نشده است.")
+            self._summary.setText(t("ts.empty"))
             return
 
-        projects = "،  ".join(
+        projects = t("list.sep_wide").join(
             f"{p or '—'}: {_hm(d)}" for p, d in sorted(
                 sheet.by_project.items(), key=lambda kv: kv[1], reverse=True
             )
         )
-        extra = "  ·  بریده‌شده (کارهای زیاد)" if sheet.truncated else ""
+        extra = t("ts.truncated") if sheet.truncated else ""
         self._summary.setText(
-            f"جمع کل: {_hm(sheet.total)}   ·   {projects}{extra}"
+            t("ts.summary", total=_hm(sheet.total), projects=projects, extra=extra)
         )
 
     def sizeHint(self):  # noqa: N802

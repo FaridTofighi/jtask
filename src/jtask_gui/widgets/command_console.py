@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import rewrite, taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 
 # Taskwarrior underlines table headers with SGR escapes (\x1b[4m … \x1b[0m)
@@ -62,11 +63,11 @@ class CommandConsole(QWidget):
         lay.addWidget(self._out, 1)
 
         self._in = _HistoryLineEdit()
-        self._in.setPlaceholderText("task …  (تاریخ‌های جلالی بازنویسی می‌شوند)")
+        self._in.setPlaceholderText(t("console.input_placeholder"))
         self._in.returnPressed.connect(self._run)
         lay.addWidget(self._in)
 
-        self._append("» کنسول فرمان — دستور را بدون واژهٔ «task» وارد کنید.\n")
+        self._append(t("console.intro"))
 
     def _append(self, text: str) -> None:
         self._out.appendPlainText(text.rstrip("\n"))
@@ -93,6 +94,6 @@ class CommandConsole(QWidget):
 
     def _done(self, output: object) -> None:
         text = output if isinstance(output, str) else str(output)
-        self._append(strip_ansi(text) or "(بدون خروجی)")
+        self._append(strip_ansi(text) or t("console.no_output"))
         self._in.setEnabled(True)
         self._in.setFocus()

@@ -78,6 +78,11 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
     app.setFont(QFont(family, 10))
 
     settings = Settings()
+
+    from .i18n import set_language
+
+    set_language(settings.language)
+
     qss = render_qss(settings.theme)
     app.setStyleSheet(qss)
     if app.styleSheet():

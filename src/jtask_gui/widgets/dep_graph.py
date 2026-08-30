@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
+from ..i18n import t
 from ..theme import palette
 
 _W, _H, _GAP_X, _GAP_Y = 150, 44, 24, 70
@@ -32,7 +33,7 @@ class DependencyGraph(QGraphicsView):
 
         # empty state is a plain overlay label sized to the viewport — never a
         # scene item scaled by fitInView()
-        self._empty = QLabel("این کار وابستگی‌ای ندارد.", self.viewport())
+        self._empty = QLabel(t("depgraph.empty"), self.viewport())
         self._empty.setObjectName("DepEmpty")
         self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty.setWordWrap(True)
@@ -71,11 +72,11 @@ class DependencyGraph(QGraphicsView):
         scene.clear()
         pal = palette(self._theme)
         task = self._task
-        by_uuid = {t.get("uuid"): t for t in self._all}
+        by_uuid = {x.get("uuid"): x for x in self._all}
 
         deps = _dep_list(task)
         blockers = [by_uuid[d] for d in deps if d in by_uuid]
-        dependents = [t for t in self._all if task.get("uuid") in _dep_list(t)]
+        dependents = [x for x in self._all if task.get("uuid") in _dep_list(x)]
 
         if not blockers and not dependents:
             scene.setSceneRect(QRectF(0, 0, 10, 10))
@@ -93,11 +94,11 @@ class DependencyGraph(QGraphicsView):
         centres: dict[str, QPointF] = {}
         for items, row, colour in rows:
             total = len(items)
-            for i, t in enumerate(items):
+            for i, node in enumerate(items):
                 x = (i - (total - 1) / 2) * (_W + _GAP_X)
                 y = row * (_H + _GAP_Y)
-                self._node(scene, t, x, y, colour, pal)
-                centres[t.get("uuid")] = QPointF(x + _W / 2, y + _H / 2)
+                self._node(scene, node, x, y, colour, pal)
+                centres[node.get("uuid")] = QPointF(x + _W / 2, y + _H / 2)
 
         pen = QPen(QColor(pal["text_muted"]))
         pen.setWidth(2)

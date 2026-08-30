@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 from .segmented import SegmentedControl
 
@@ -38,7 +39,7 @@ class ExportDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ExportDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("خروجی گرفتن از کارها")
+        self.setWindowTitle(t("export.title"))
         self.setMinimumWidth(500)
         self._current_filter = list(current_filter or [])
         self._count_gen = 0
@@ -50,31 +51,35 @@ class ExportDialog(QDialog):
         form.setSpacing(10)
 
         self._scope = SegmentedControl(
-            [("همه", "all"), ("فیلتر فعلی", "current"), ("سفارشی", "custom")]
+            [
+                (t("export.scope.all"), "all"),
+                (t("export.scope.current"), "current"),
+                (t("export.scope.custom"), "custom"),
+            ]
         )
         self._scope.changed.connect(self._on_scope)
-        form.addRow("محدوده", self._scope)
+        form.addRow(t("export.scope"), self._scope)
 
         self._filter_edit = QLineEdit(" ".join(self._current_filter))
-        self._filter_edit.setPlaceholderText("مثال: project:خانه +مهم status:pending")
+        self._filter_edit.setPlaceholderText(t("export.filter.placeholder"))
         self._filter_edit.textChanged.connect(self._recount)
         self._filter_edit.setEnabled(False)
-        form.addRow("فیلتر", self._filter_edit)
+        form.addRow(t("export.filter"), self._filter_edit)
 
         self._format = SegmentedControl(
-            [("آرایهٔ JSON", "array"), ("خطوط JSON", "lines")]
+            [(t("export.format.array"), "array"), (t("export.format.lines"), "lines")]
         )
-        form.addRow("قالب", self._format)
+        form.addRow(t("export.format"), self._format)
 
         dest_row = QHBoxLayout()
         self._path = QLineEdit(self._default_path())
         dest_row.addWidget(self._path, 1)
-        browse = QPushButton("انتخاب…")
+        browse = QPushButton(t("btn.choose"))
         browse.clicked.connect(self._browse)
         dest_row.addWidget(browse)
         dw = QWidget()
         dw.setLayout(dest_row)
-        form.addRow("مقصد", dw)
+        form.addRow(t("export.destination"), dw)
 
         root.addLayout(form)
 
@@ -83,11 +88,11 @@ class ExportDialog(QDialog):
         root.addWidget(self._count)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
         self._ok = btns.addButton(
-            "خروجی گرفتن", QDialogButtonBox.ButtonRole.AcceptRole
+            t("export.ok"), QDialogButtonBox.ButtonRole.AcceptRole
         )
         self._ok.setObjectName("Primary")
         self._ok.clicked.connect(self.accept)
@@ -112,24 +117,24 @@ class ExportDialog(QDialog):
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, "ذخیرهٔ خروجی", self._path.text(), "JSON (*.json);;همه (*)"
+            self, t("export.save_dialog"), self._path.text(), t("export.file_filter")
         )
         if path:
             self._path.setText(path)
 
     def _recount(self, *_a: object) -> None:
         flt = self.filter_tokens()
-        self._count.setText("در حال شمارش…")
+        self._count.setText(t("export.counting"))
         self._count_gen += 1
         gen = self._count_gen
 
         def ok(n: int) -> None:
             if gen == self._count_gen:
-                self._count.setText(f"{_fa(n)} کار برای خروجی")
+                self._count.setText(t("export.count", n=_fa(n)))
 
         def err(_e: object) -> None:
             if gen == self._count_gen:
-                self._count.setText("شمارش ناموفق بود")
+                self._count.setText(t("export.count_failed"))
 
         submit(lambda: len(taskwarrior.export(flt or None)), ok, err)
 

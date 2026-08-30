@@ -22,18 +22,19 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
 
 _GROUPS = [
-    ("همه", ""),
-    ("عمومی", "general"),
-    ("تاریخ و تقویم", "date"),
-    ("گزارش‌ها", "report"),
-    ("ویژگی‌های سفارشی", "uda"),
-    ("زمینه‌ها", "context"),
-    ("همگام‌سازی", "sync"),
-    ("رنگ‌ها", "color"),
+    ("cfg.group.all", ""),
+    ("cfg.group.general", "general"),
+    ("cfg.group.date", "date"),
+    ("cfg.group.report", "report"),
+    ("cfg.group.uda", "uda"),
+    ("cfg.group.context", "context"),
+    ("cfg.group.sync", "sync"),
+    ("cfg.group.color", "color"),
 ]
 _DATE_PREFIXES = ("date", "weekstart", "due", "calendar")
 
@@ -63,19 +64,21 @@ class ConfigManager(QWidget):
 
         bar = QHBoxLayout()
         self._search = QLineEdit()
-        self._search.setPlaceholderText("جست‌وجوی نام متغیر…")
+        self._search.setPlaceholderText(t("cfg.search"))
         self._search.textChanged.connect(self._apply_filter)
         bar.addWidget(self._search, 1)
         self._group = QComboBox()
-        for label, key in _GROUPS:
-            self._group.addItem(label, key)
+        for label_key, key in _GROUPS:
+            self._group.addItem(t(label_key), key)
         self._group.currentIndexChanged.connect(self._apply_filter)
         bar.addWidget(self._group)
         lay.addLayout(bar)
 
         self._table = QTableWidget(0, 3)
         self._table.setObjectName("ConfigTable")
-        self._table.setHorizontalHeaderLabels(["نام", "مقدار فعلی", "پیش‌فرض"])
+        self._table.setHorizontalHeaderLabels(
+            [t("cfg.col.name"), t("cfg.col.current"), t("cfg.col.default")]
+        )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -88,7 +91,7 @@ class ConfigManager(QWidget):
         hh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         lay.addWidget(self._table, 1)
 
-        self._hint = QLabel("برای ویرایش روی یک ردیف دوبار کلیک کنید.")
+        self._hint = QLabel(t("cfg.hint"))
         self._hint.setObjectName("Muted")
         lay.addWidget(self._hint)
 
@@ -124,7 +127,7 @@ class ConfigManager(QWidget):
         for i, (name, val, default, overridden) in enumerate(shown):
             n = QTableWidgetItem(name)
             if overridden:
-                n.setData(Qt.ItemDataRole.ToolTipRole, "بازنویسی‌شده در ‎~/.taskrc")
+                n.setData(Qt.ItemDataRole.ToolTipRole, t("cfg.overridden_tip"))
                 f = n.font()
                 f.setBold(True)
                 n.setFont(f)
@@ -151,8 +154,8 @@ class ConfigManager(QWidget):
     def _write(self, name: str, value: str, *, reset: bool = False) -> None:
         if reset and not confirm(
             self,
-            title="بازگردانی به پیش‌فرض",
-            body=f"متغیر «{name}» از ‎~/.taskrc حذف و به مقدار پیش‌فرض بازگردانده می‌شود.",
+            title=t("cfg.reset.title"),
+            body=t("cfg.reset.body", name=name),
         ):
             return
         submit(
@@ -166,7 +169,7 @@ class _EditDialog(QDialog):
     def __init__(self, name: str, value: str, default: str, parent=None) -> None:
         super().__init__(parent)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("ویرایش متغیر پیکربندی")
+        self.setWindowTitle(t("cfg.edit.title"))
         self.setMinimumWidth(440)
         self._action = "cancel"
 
@@ -175,22 +178,22 @@ class _EditDialog(QDialog):
         lay.setSpacing(8)
         lay.addWidget(QLabel(f"<b>{name}</b>"))
         if default:
-            d = QLabel(f"پیش‌فرض: {default}")
+            d = QLabel(t("cfg.edit.default", default=default))
             d.setObjectName("Muted")
             lay.addWidget(d)
         self._edit = QLineEdit(value)
         lay.addWidget(self._edit)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
         if default:
             reset = btns.addButton(
-                "بازگردانی به پیش‌فرض", QDialogButtonBox.ButtonRole.ResetRole
+                t("cfg.reset.title"), QDialogButtonBox.ButtonRole.ResetRole
             )
             reset.clicked.connect(self._do_reset)
-        save = btns.addButton("ذخیره", QDialogButtonBox.ButtonRole.AcceptRole)
+        save = btns.addButton(t("btn.save"), QDialogButtonBox.ButtonRole.AcceptRole)
         save.setObjectName("Primary")
         save.clicked.connect(self._do_save)
         lay.addWidget(btns)

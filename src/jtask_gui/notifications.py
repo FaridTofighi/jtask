@@ -10,13 +10,14 @@ from PyQt6.QtWidgets import QSystemTrayIcon
 from jtask import jalali, reports
 
 from . import fmt
+from .i18n import t
 from .settings import Settings
 from .workers import submit
 
 _STATE_LABELS = {
-    "overdue": "عقب‌افتاده",
-    "today": "سررسید امروز",
-    "soon": "نزدیک سررسید",
+    "overdue": t("notify.state.overdue"),
+    "today": t("notify.state.today"),
+    "soon": t("notify.state.soon"),
 }
 
 
@@ -98,34 +99,34 @@ class NotificationManager(QObject):
         soon = self._settings.due_soon_days
         fresh: list[tuple[str, dict]] = []
         current = set()
-        for t in tasks:
-            uuid = t.get("uuid")
-            state = _classify(t, soon)
+        for task in tasks:
+            uuid = task.get("uuid")
+            state = _classify(task, soon)
             if not uuid or state is None:
                 continue
             current.add(uuid)
             if state in enabled and self._seen.get(uuid) != state:
                 self._seen[uuid] = state
-                fresh.append((state, t))
+                fresh.append((state, task))
         # forget tasks that are no longer due, so they re-notify if they recur
         self._seen = {u: s for u, s in self._seen.items() if u in current}
 
         if not fresh:
             return
         if len(fresh) == 1:
-            state, t = fresh[0]
+            state, task = fresh[0]
             self._tray.showMessage(
                 _STATE_LABELS[state],
-                t.get("description", ""),
+                task.get("description", ""),
                 QSystemTrayIcon.MessageIcon.Warning
                 if state == "overdue" else QSystemTrayIcon.MessageIcon.Information,
                 8000,
             )
         else:
-            titles = "، ".join(t.get("description", "") for _, t in fresh[:3])
-            more = f" و {fmt.num(len(fresh) - 3)} مورد دیگر" if len(fresh) > 3 else ""
+            titles = t("list.sep").join(x.get("description", "") for _, x in fresh[:3])
+            more = t("notify.more", n=fmt.num(len(fresh) - 3)) if len(fresh) > 3 else ""
             self._tray.showMessage(
-                f"{fmt.num(len(fresh))} کار نیازمند توجه",
+                t("notify.title", n=fmt.num(len(fresh))),
                 titles + more,
                 QSystemTrayIcon.MessageIcon.Information,
                 8000,

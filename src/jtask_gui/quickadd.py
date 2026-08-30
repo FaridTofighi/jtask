@@ -19,8 +19,10 @@ import jdatetime
 from jtask import jalali, rewrite
 from jtask.rewrite import DATE_ATTRS
 
+from .i18n import t
+
 _PRIORITY_ALIASES = {"pri": "priority"}
-_PRIORITY_LABEL = {"H": "زیاد", "M": "متوسط", "L": "کم"}
+_PRIORITY_KEY = {"H": "quickadd.priority.h", "M": "quickadd.priority.m", "L": "quickadd.priority.l"}
 
 
 @dataclass
@@ -144,17 +146,30 @@ def _extract_relative(
 def preview_text(parsed: ParsedQuickAdd) -> str:
     """A short Persian one-liner describing what will be created."""
     if not parsed.description:
-        return "برای افزودن، شرح کار را بنویسید…"
+        return t("quickadd.prompt")
     bits = [f"«{parsed.description}»"]
     if parsed.project:
-        bits.append(f"پروژه: {parsed.project}")
+        bits.append(t("quickadd.preview.project", project=parsed.project))
     if parsed.tags:
-        bits.append("برچسب: " + " ".join(f"#{t}" for t in parsed.tags))
+        joined = " ".join(f"#{x}" for x in parsed.tags)
+        bits.append(t("quickadd.preview.tags") + joined)
     if parsed.priority:
-        bits.append("اولویت: " + _PRIORITY_LABEL.get(parsed.priority, parsed.priority))
+        pl = (
+            t(_PRIORITY_KEY[parsed.priority])
+            if parsed.priority in _PRIORITY_KEY
+            else parsed.priority
+        )
+        bits.append(t("quickadd.preview.priority") + pl)
     for attr, shown in parsed.dates.items():
-        label = {"due": "سررسید", "scheduled": "زمان‌بندی", "wait": "انتظار"}.get(attr, attr)
+        label = {
+            "due": t("quickadd.preview.due"),
+            "scheduled": t("quickadd.preview.scheduled"),
+            "wait": t("quickadd.preview.wait"),
+        }.get(attr, attr)
         bits.append(f"{label}: {shown}")
     if parsed.errors:
-        bits.append("⚠ " + "؛ ".join(parsed.errors))
+        bits.append(
+            t("quickadd.preview.error_prefix")
+            + t("quickadd.preview.error_sep").join(parsed.errors)
+        )
     return "  •  ".join(bits)

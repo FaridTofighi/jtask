@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..i18n import t
+
 
 def _clean(task: dict) -> dict:
     """Drop jtask's derived ``*_gregorian`` helper keys — show only real data."""
@@ -30,8 +32,8 @@ class RawDataView(QWidget):
         lay.setSpacing(8)
 
         top = QHBoxLayout()
-        top.addWidget(QLabel("دادهٔ خام Taskwarrior (JSON)"), 1)
-        self._copy = QPushButton("رونوشت")
+        top.addWidget(QLabel(t("raw.title")), 1)
+        self._copy = QPushButton(t("btn.copy"))
         self._copy.clicked.connect(self._copy_json)
         top.addWidget(self._copy)
         lay.addLayout(top)

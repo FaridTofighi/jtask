@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ... import fmt
+from ...i18n import t
 
 
 class SummaryView(QScrollArea):
@@ -44,13 +45,17 @@ class SummaryView(QScrollArea):
                 item.widget().deleteLater()
 
         if not self._rows:
-            lbl = QLabel("هنوز پروژه‌ای با کار وجود ندارد.")
+            lbl = QLabel(t("chart.summary.empty"))
             lbl.setObjectName("Muted")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._grid.addWidget(lbl, 0, 0, 1, 3)
             return
 
-        header = ("پروژه", "پیشرفت", "باز / عقب‌افتاده")
+        header = (
+            t("chart.summary.col.project"),
+            t("chart.summary.col.progress"),
+            t("chart.summary.col.open_overdue"),
+        )
         for c, text in enumerate(header):
             h = QLabel(text)
             h.setObjectName("Section")
@@ -69,8 +74,8 @@ class SummaryView(QScrollArea):
             self._grid.addWidget(bar, i, 1)
 
             counts = QLabel(
-                f"{fmt.num(row.get('open', 0))} باز"
-                + (f"  ·  {fmt.num(row['overdue'])} عقب‌افتاده"
+                t("chart.summary.open", n=fmt.num(row.get("open", 0)))
+                + (t("chart.summary.overdue", n=fmt.num(row["overdue"]))
                    if row.get("overdue") else "")
             )
             counts.setObjectName("Muted")

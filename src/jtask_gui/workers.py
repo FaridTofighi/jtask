@@ -20,6 +20,8 @@ from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 
 from jtask.errors import JtaskError
 
+from .i18n import t
+
 log = logging.getLogger("jtask_gui.workers")
 
 _pool = QThreadPool.globalInstance()
@@ -52,7 +54,7 @@ class TaskRunnable(QRunnable):
         except Exception as exc:  # pragma: no cover - defensive
             log.error("background task failed:\n%s", traceback.format_exc())
             self.signals.failed.emit(
-                JtaskError(f"خطای غیرمنتظره: {exc}\n(جزئیات در فایل لاگ ثبت شد.)")
+                JtaskError(t("worker.unexpected", exc=exc))
             )
         else:
             self.signals.finished.emit(result)

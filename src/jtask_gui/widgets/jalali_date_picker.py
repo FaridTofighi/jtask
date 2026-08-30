@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali
 
+from ..i18n import t
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
 
 
@@ -73,7 +74,7 @@ class JalaliDatePicker(QWidget):
         row.setSpacing(4)
 
         self._edit = QLineEdit()
-        self._edit.setPlaceholderText("۱۴۰۳-۰۷-۱۰ یا «فردا»")
+        self._edit.setPlaceholderText(t("datepicker.placeholder"))
         self._edit.setClearButtonEnabled(True)
         self._edit.setMinimumWidth(120)
         self._edit.editingFinished.connect(self._parse_text)
@@ -91,7 +92,7 @@ class JalaliDatePicker(QWidget):
 
         self._btn = QToolButton()
         self._btn.setIcon(icons.icon("calendar", "text_muted"))
-        self._btn.setToolTip("انتخاب از تقویم جلالی")
+        self._btn.setToolTip(t("datepicker.calendar_tip"))
         self._btn.clicked.connect(self._open_popup)
         row.addWidget(self._btn)
 

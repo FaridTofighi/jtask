@@ -5,7 +5,12 @@ from __future__ import annotations
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QSpinBox, QWidget
 
-_UNITS = [("روز", "d"), ("هفته", "weekly"), ("ماه", "monthly"), ("سال", "yearly")]
+from ..i18n import t
+
+_UNITS = [
+    ("recur.unit.day", "d"), ("recur.unit.week", "weekly"),
+    ("recur.unit.month", "monthly"), ("recur.unit.year", "yearly"),
+]
 _NAMED = {"daily": (1, 0), "weekly": (1, 1), "monthly": (1, 2), "yearly": (1, 3)}
 
 
@@ -21,7 +26,7 @@ class RecurrenceBuilder(QWidget):
         row.setSpacing(6)
 
         self._enabled = QComboBox()
-        self._enabled.addItems(["بدون تکرار", "هر…"])
+        self._enabled.addItems([t("recur.none"), t("recur.every")])
         self._enabled.currentIndexChanged.connect(self._on_mode)
         row.addWidget(self._enabled)
 
@@ -32,8 +37,8 @@ class RecurrenceBuilder(QWidget):
         row.addWidget(self._n)
 
         self._unit = QComboBox()
-        for label, _ in _UNITS:
-            self._unit.addItem(label)
+        for label_key, _ in _UNITS:
+            self._unit.addItem(t(label_key))
         self._unit.currentIndexChanged.connect(self._changed)
         row.addWidget(self._unit)
         row.addStretch(1)

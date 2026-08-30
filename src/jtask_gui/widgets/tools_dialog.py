@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali, taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 
 
@@ -40,18 +41,18 @@ class _DiagnosticsTab(QWidget):
         lay.addWidget(self._text, 1)
         row = QHBoxLayout()
         row.addStretch(1)
-        copy = QPushButton("رونوشت")
+        copy = QPushButton(t("btn.copy"))
         copy.clicked.connect(
             lambda: QApplication.clipboard().setText(self._text.toPlainText())
         )
         row.addWidget(copy)
-        save = QPushButton("ذخیره در فایل…")
+        save = QPushButton(t("tools.save_to_file"))
         save.clicked.connect(self._save)
         row.addWidget(save)
         lay.addLayout(row)
 
     def load(self) -> None:
-        self._text.setPlainText("در حال دریافت…")
+        self._text.setPlainText(t("tools.fetching"))
         submit(
             taskwarrior.diagnostics,
             self._text.setPlainText,
@@ -60,7 +61,7 @@ class _DiagnosticsTab(QWidget):
 
     def _save(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
-            self, "ذخیرهٔ تشخیص", "task-diagnostics.txt", "متن (*.txt);;همه (*)"
+            self, t("tools.save_diag"), "task-diagnostics.txt", t("tools.txt_filter")
         )
         if path:
             with open(path, "w", encoding="utf-8") as fh:
@@ -74,12 +75,14 @@ class _HelpTab(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(6)
         self._search = QLineEdit()
-        self._search.setPlaceholderText("جست‌وجو در فرمان‌ها…")
+        self._search.setPlaceholderText(t("tools.help.search"))
         self._search.textChanged.connect(self._filter)
         lay.addWidget(self._search)
         self._table = QTableWidget(0, 2)
         self._table.setObjectName("HelpTable")
-        self._table.setHorizontalHeaderLabels(["فرمان", "توضیح"])
+        self._table.setHorizontalHeaderLabels(
+            [t("tools.help.col.command"), t("tools.help.col.description")]
+        )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setShowGrid(False)
@@ -112,13 +115,13 @@ class _CalcTab(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)
-        lay.addWidget(QLabel("عبارت را وارد کنید — دستور و تاریخ هر دو پشتیبانی می‌شوند."))
+        lay.addWidget(QLabel(t("tools.calc.hint")))
         row = QHBoxLayout()
         self._in = QLineEdit()
-        self._in.setPlaceholderText("مثال: 3 * (4 + 2)  یا  now + 3d")
+        self._in.setPlaceholderText(t("tools.calc.placeholder"))
         self._in.returnPressed.connect(self._go)
         row.addWidget(self._in, 1)
-        btn = QPushButton("محاسبه")
+        btn = QPushButton(t("tools.calc.run"))
         btn.setObjectName("Primary")
         btn.clicked.connect(self._go)
         row.addWidget(btn)
@@ -149,7 +152,7 @@ class _CalcTab(QWidget):
         self._out.setText(f"= {result}{extra}")
 
     def _err(self, err: object) -> None:
-        self._out.setText(f"خطا: {err}")
+        self._out.setText(t("tools.calc.error", err=err))
 
 
 class ToolsDialog(QDialog):
@@ -157,7 +160,7 @@ class ToolsDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ToolsDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("تشخیص و ابزارها")
+        self.setWindowTitle(t("tools.title"))
         self.resize(720, 540)
 
         lay = QVBoxLayout(self)
@@ -167,13 +170,13 @@ class ToolsDialog(QDialog):
         self.diagnostics = _DiagnosticsTab()
         self.help = _HelpTab()
         self.calc = _CalcTab()
-        tabs.addTab(self.diagnostics, "تشخیص")
-        tabs.addTab(self.help, "راهنمای فرمان‌ها")
-        tabs.addTab(self.calc, "ماشین‌حساب")
+        tabs.addTab(self.diagnostics, t("tools.tab.diagnostics"))
+        tabs.addTab(self.help, t("tools.tab.help"))
+        tabs.addTab(self.calc, t("tools.tab.calc"))
         lay.addWidget(tabs, 1)
 
         btns = QDialogButtonBox()
-        btns.addButton("بستن", QDialogButtonBox.ButtonRole.AcceptRole).clicked.connect(
+        btns.addButton(t("btn.close"), QDialogButtonBox.ButtonRole.AcceptRole).clicked.connect(
             self.accept
         )
         lay.addWidget(btns)

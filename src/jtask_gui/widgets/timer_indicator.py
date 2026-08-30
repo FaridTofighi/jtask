@@ -14,6 +14,8 @@ from PyQt6.QtWidgets import QLabel, QWidget
 
 from jtask import jalali
 
+from ..i18n import t
+
 
 def _elapsed(since: dt.datetime, now: dt.datetime) -> str:
     total = max(0, int((now - since).total_seconds()))
@@ -35,10 +37,10 @@ class TimerIndicator(QLabel):
         self._tick.setInterval(1000)
         self._tick.timeout.connect(self._refresh_text)
         self.setVisible(False)
-        self.setToolTip("برای توقف زمان‌سنجی کلیک کنید")
+        self.setToolTip(t("timer.stop_tip"))
 
     def set_active_tasks(self, tasks: list[dict]) -> None:
-        self._active = [t for t in tasks if t.get("start")]
+        self._active = [x for x in tasks if x.get("start")]
         if not self._active:
             self._uuid = None
             self._start = None
@@ -64,7 +66,7 @@ class TimerIndicator(QLabel):
         else:
             n = jalali.to_persian_digits(str(len(self._active)))
             el = _elapsed(self._start, now) if self._start else "—"
-            self.setText(f"▶ {n} کار فعال  ({el})")
+            self.setText(t("timer.n_active", n=n, el=el))
 
     def mousePressEvent(self, ev) -> None:  # noqa: N802
         if self._uuid:

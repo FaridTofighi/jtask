@@ -19,9 +19,10 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali, taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 
-_KIND_FA = {"remote": "کارساز راه‌دور", "local": "کارساز محلی"}
+_KIND_KEY = {"remote": "sync.kind.remote", "local": "sync.kind.local"}
 
 
 class SyncManagerDialog(QDialog):
@@ -32,7 +33,7 @@ class SyncManagerDialog(QDialog):
         self._settings = settings
         self.setObjectName("SyncDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("مدیریت همگام‌سازی")
+        self.setWindowTitle(t("sync.title"))
         self.setMinimumWidth(440)
         self._running = False
 
@@ -40,7 +41,7 @@ class SyncManagerDialog(QDialog):
         root.setContentsMargins(18, 16, 18, 14)
         root.setSpacing(10)
 
-        self._status = QLabel("در حال بررسی پیکربندی…")
+        self._status = QLabel(t("sync.checking"))
         self._status.setObjectName("H2")
         self._status.setWordWrap(True)
         root.addWidget(self._status)
@@ -61,11 +62,11 @@ class SyncManagerDialog(QDialog):
 
         self._btns = QDialogButtonBox()
         self._close = self._btns.addButton(
-            "بستن", QDialogButtonBox.ButtonRole.RejectRole
+            t("btn.close"), QDialogButtonBox.ButtonRole.RejectRole
         )
         self._close.clicked.connect(self.reject)
         self._go = self._btns.addButton(
-            "همگام‌سازی", QDialogButtonBox.ButtonRole.ActionRole
+            t("sync.run"), QDialogButtonBox.ButtonRole.ActionRole
         )
         self._go.setObjectName("Primary")
         self._go.clicked.connect(self._run)
@@ -83,24 +84,21 @@ class SyncManagerDialog(QDialog):
             try:
                 d = dt.datetime.fromisoformat(raw)
                 shown = jalali.from_local(d.strftime("%Y-%m-%d %H:%M:%S"), "long")
-                self._last.setText(f"آخرین همگام‌سازی موفق: {shown}")
+                self._last.setText(t("sync.last_success", shown=shown))
                 return
             except ValueError:
                 pass
-        self._last.setText("تا کنون همگام‌سازی موفقی ثبت نشده است.")
+        self._last.setText(t("sync.never"))
 
     def _show_status(self, st: dict) -> None:
         if not st.get("configured"):
-            self._status.setText("همگام‌سازی پیکربندی نشده است.")
-            self._detail.setText(
-                "برای فعال‌سازی، تنظیمات «rc.sync.*» را در «مدیریت پیکربندی» "
-                "(به‌زودی در M8) یا با فرمان «task config» تعیین کنید."
-            )
+            self._status.setText(t("sync.not_configured"))
+            self._detail.setText(t("sync.not_configured.detail"))
             self._go.setEnabled(False)
             return
-        self._status.setText("همگام‌سازی آمادهٔ اجراست.")
+        self._status.setText(t("sync.ready"))
         self._detail.setText(
-            f"{_KIND_FA.get(st['kind'], st['kind'])}: {st['target']}"
+            f"{t(_KIND_KEY.get(st['kind'], st['kind']))}: {st['target']}"
         )
         self._go.setEnabled(True)
 
@@ -109,22 +107,22 @@ class SyncManagerDialog(QDialog):
             return
         self._running = True
         self._go.setEnabled(False)
-        self._go.setText("در حال همگام‌سازی…")
+        self._go.setText(t("sync.running"))
         self._out.setText("")
 
         def done(text: str) -> None:
             self._running = False
-            self._go.setText("همگام‌سازی")
+            self._go.setText(t("sync.run"))
             self._go.setEnabled(True)
-            self._out.setText(text or "همگام‌سازی کامل شد.")
+            self._out.setText(text or t("sync.done"))
             self._settings.last_sync = dt.datetime.now().isoformat(timespec="seconds")
             self._refresh_last()
             self.synced.emit()
 
         def failed(err: object) -> None:
             self._running = False
-            self._go.setText("همگام‌سازی")
+            self._go.setText(t("sync.run"))
             self._go.setEnabled(True)
-            self._out.setText(f"همگام‌سازی ناموفق بود: {err}")
+            self._out.setText(t("sync.failed", err=err))
 
         submit(taskwarrior.synchronize, done, failed)

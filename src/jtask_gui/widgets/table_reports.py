@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from ..i18n import t
 
 
 class _NumItem(QTableWidgetItem):
@@ -59,7 +60,11 @@ class _BaseTableReport(QTableWidget):
 
 
 class ProjectsReport(_BaseTableReport):
-    headers = ["پروژه", "باز", "در انتظار", "عقب‌افتاده", "٪ تکمیل"]
+    headers = [
+        t("table_reports.col.project"), t("table_reports.col.open"),
+        t("table_reports.col.waiting"), t("table_reports.col.overdue"),
+        t("table_reports.col.percent_done"),
+    ]
 
     def set_data(self, rows: list[dict]) -> None:
         self.setSortingEnabled(False)
@@ -79,7 +84,7 @@ class ProjectsReport(_BaseTableReport):
 
 
 class TagsReport(_BaseTableReport):
-    headers = ["برچسب", "تعداد"]
+    headers = [t("table_reports.col.tag"), t("table_reports.col.count")]
 
     def set_data(self, rows: list[dict]) -> None:
         self.setSortingEnabled(False)

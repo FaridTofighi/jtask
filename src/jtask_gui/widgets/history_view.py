@@ -17,30 +17,24 @@ from PyQt6.QtWidgets import (
 
 from jtask import history, jalali, taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 
-_ATTR_FA = {
-    "Priority": "اولویت",
-    "Project": "پروژه",
-    "Due": "سررسید",
-    "Scheduled": "زمان‌بندی",
-    "Wait": "تاریخ انتظار",
-    "Until": "مهلت",
-    "Start": "شروع زمان‌سنجی",
-    "End": "پایان",
-    "Entry": "ایجاد",
-    "Status": "وضعیت",
-    "Description": "شرح",
-    "Recur": "تکرار",
-    "Modified": "آخرین ویرایش",
+_ATTR_KEYS = frozenset({
+    "Priority", "Project", "Due", "Scheduled", "Wait", "Until", "Start", "End",
+    "Entry", "Status", "Description", "Recur", "Modified",
+})
+_STATUS_KEY = {
+    "pending": "status.pending", "completed": "status.completed",
+    "deleted": "status.deleted", "waiting": "status.waiting",
+    "recurring": "status.recurring",
 }
-_STATUS_FA = {
-    "pending": "در جریان",
-    "completed": "انجام‌شده",
-    "deleted": "حذف‌شده",
-    "waiting": "در انتظار",
-    "recurring": "تکرارشونده",
-}
+
+
+def _attr_fa(attr: str) -> str:
+    return t(f"hist.attr.{attr}") if attr in _ATTR_KEYS else attr
+
+
 _DATE_ATTRS = {"Due", "Scheduled", "Wait", "Until", "Start", "End", "Entry", "Modified"}
 
 
@@ -48,7 +42,7 @@ def _val(attr: str, raw: str) -> str:
     if attr in _DATE_ATTRS:
         return jalali.from_local(raw, "datetime")
     if attr == "Status":
-        return _STATUS_FA.get(raw, raw)
+        return t(_STATUS_KEY[raw]) if raw in _STATUS_KEY else raw
     return raw
 
 
@@ -62,31 +56,32 @@ def _fa_duration(d: dt.timedelta) -> str:
 
 
 def describe(ch: history.ChangeEntry) -> str:
-    attr = _ATTR_FA.get(ch.attr, ch.attr)
+    attr = _attr_fa(ch.attr)
     if ch.kind == "annotation_added":
-        return f"یادداشت «{ch.new}» افزوده شد"
+        return t("hist.annotation_added", v=ch.new)
     if ch.kind == "annotation_deleted":
-        return f"یادداشت «{ch.new}» حذف شد"
+        return t("hist.annotation_deleted", v=ch.new)
     if ch.kind == "tag_added":
-        return f"برچسب «{ch.new}» افزوده شد"
+        return t("hist.tag_added", v=ch.new)
     if ch.kind == "tag_deleted":
-        return f"برچسب «{ch.old}» حذف شد"
+        return t("hist.tag_deleted", v=ch.old)
     if ch.attr == "Start":
         if ch.kind == "set":
-            return f"زمان‌سنجی آغاز شد ({jalali.from_local(ch.new or '', 'datetime')})"
+            return t("hist.start_set", when=jalali.from_local(ch.new or "", "datetime"))
         if ch.kind == "deleted":
-            dur = f" — مدت {_fa_duration(ch.duration)}" if ch.duration is not None else ""
-            return f"زمان‌سنجی متوقف شد{dur}"
+            if ch.duration is not None:
+                return t("hist.start_stopped_dur", dur=_fa_duration(ch.duration))
+            return t("hist.start_stopped")
     if ch.kind == "changed":
         old_v = _val(ch.attr, ch.old or "")
         new_v = _val(ch.attr, ch.new or "")
-        return f"{attr} از «{old_v}» به «{new_v}» تغییر کرد"
+        return t("hist.changed", attr=attr, old=old_v, new=new_v)
     if ch.kind == "set":
-        return f"{attr}: «{_val(ch.attr, ch.new or '')}»"
+        return t("hist.set", attr=attr, value=_val(ch.attr, ch.new or ""))
     if ch.kind == "deleted":
         if ch.duration is not None:
-            return f"{attr} پایان یافت (مدت: {_fa_duration(ch.duration)})"
-        return f"{attr} پاک شد"
+            return t("hist.deleted_dur", attr=attr, dur=_fa_duration(ch.duration))
+        return t("hist.deleted", attr=attr)
     return ch.raw
 
 
@@ -106,13 +101,13 @@ class TaskHistoryView(QWidget):
         self._tree = QTreeWidget()
         self._tree.setObjectName("HistoryTree")
         self._tree.setColumnCount(2)
-        self._tree.setHeaderLabels(["زمان", "تغییر"])
+        self._tree.setHeaderLabels([t("hist.col.time"), t("hist.col.change")])
         self._tree.setRootIsDecorated(True)
         self._tree.setAlternatingRowColors(False)
         self._tree.header().setStretchLastSection(True)
         lay.addWidget(self._tree, 1)
 
-        self._empty = QLabel("تاریخچه‌ای برای این کار ثبت نشده است.")
+        self._empty = QLabel(t("hist.empty"))
         self._empty.setObjectName("EmptyState")
         self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty.setVisible(False)
@@ -144,9 +139,9 @@ class TaskHistoryView(QWidget):
 
         anchors = []
         for keys, label in (
-            (("Entered", "Entry"), "ایجاد"),
-            (("Last modified", "Modified"), "آخرین ویرایش"),
-            (("End", "Ended"), "پایان"),
+            (("Entered", "Entry"), t("hist.anchor.entry")),
+            (("Last modified", "Modified"), t("hist.anchor.modified")),
+            (("End", "Ended"), t("hist.anchor.end")),
         ):
             raw = next((rep.attributes[k] for k in keys if rep.attributes.get(k)), "")
             if raw:
@@ -166,8 +161,8 @@ class TaskHistoryView(QWidget):
             self._tree.addTopLevelItem(head)
             head.setExpanded(True)
             for ch in entries:
-                t = jalali.to_persian_digits(ch.when.strftime("%H:%M"))
-                row = QTreeWidgetItem([t, describe(ch)])
+                clock = jalali.to_persian_digits(ch.when.strftime("%H:%M"))
+                row = QTreeWidgetItem([clock, describe(ch)])
                 row.setToolTip(1, ch.raw)
                 head.addChild(row)
         self._tree.expandAll()

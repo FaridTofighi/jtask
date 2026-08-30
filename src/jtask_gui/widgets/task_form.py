@@ -24,17 +24,18 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
 from .recurrence_builder import RecurrenceBuilder
 from .segmented import SegmentedControl
 
-_PRIORITY = [("بدون", ""), ("بحرانی", "H"), ("متوسط", "M"), ("پایین", "L")]
+_PRIORITY = [("priority.none", ""), ("priority.h", "H"), ("priority.m", "M"), ("priority.l", "L")]
 _DATES = [
-    ("due", "سررسید", True),
-    ("scheduled", "زمان‌بندی", True),
-    ("wait", "تاریخ انتظار", False),
-    ("until", "مهلت", False),
+    ("due", "word.due", True),
+    ("scheduled", "word.scheduled", True),
+    ("wait", "word.wait", False),
+    ("until", "word.until", False),
 ]
 
 
@@ -45,9 +46,9 @@ class _DependsField(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
         self._edit = QLineEdit()
-        self._edit.setPlaceholderText("شناسه یا UUID، با کاما")
+        self._edit.setPlaceholderText(t("form.deps.placeholder"))
         row.addWidget(self._edit, 1)
-        btn = QPushButton("افزودن…")
+        btn = QPushButton(t("btn.add_ellipsis"))
         btn.clicked.connect(self._pick)
         row.addWidget(btn)
 
@@ -66,7 +67,7 @@ class _DependsField(QWidget):
             if not labels:
                 return
             text, ok = QInputDialog.getItem(
-                self, "افزودن وابستگی", "کار:", labels, 0, False
+                self, t("form.deps.pick.title"), t("form.deps.pick.label"), labels, 0, False
             )
             if ok and text:
                 tid = text.split(" — ")[0]
@@ -93,7 +94,7 @@ class TaskFormDialog(QDialog):
         self.mode = mode
         self.setObjectName("TaskFormDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("افزودن کار" if mode == "add" else "ثبت کار انجام‌شده")
+        self.setWindowTitle(t("form.title.add") if mode == "add" else t("form.title.log"))
         self.setMinimumWidth(500)
 
         root = QVBoxLayout(self)
@@ -105,38 +106,40 @@ class TaskFormDialog(QDialog):
         form.setSpacing(10)
 
         self._description = QLineEdit()
-        self._description.setPlaceholderText("شرح کار (الزامی)")
+        self._description.setPlaceholderText(t("form.description.placeholder"))
         self._description.textChanged.connect(self._revalidate)
-        form.addRow("شرح", self._description)
+        form.addRow(t("word.description"), self._description)
 
         self._project = QComboBox()
         self._project.setEditable(True)
         self._project.addItem("")
         for p in projects or []:
             self._project.addItem(p)
-        form.addRow("پروژه", self._project)
+        form.addRow(t("word.project"), self._project)
 
         self._tags = TagChipEditor()
         self._tags.set_completions(tags or [])
-        form.addRow("برچسب‌ها", self._tags)
+        form.addRow(t("word.tags"), self._tags)
 
-        self._priority = SegmentedControl([(lbl, val) for lbl, val in _PRIORITY])
-        form.addRow("اولویت", self._priority)
+        self._priority = SegmentedControl(
+            [(t(lbl), val) for lbl, val in _PRIORITY]
+        )
+        form.addRow(t("word.priority"), self._priority)
 
         self._dates: dict[str, JalaliDatePicker] = {}
         for key, label, with_time in _DATES:
             picker = JalaliDatePicker(with_time=with_time)
             self._dates[key] = picker
-            form.addRow(label, picker)
+            form.addRow(t(label), picker)
             if key == "due":
                 picker.dateChanged.connect(self._revalidate)
 
         self._recur = RecurrenceBuilder()
         self._recur.recurrenceChanged.connect(self._revalidate)
-        form.addRow("تکرار", self._recur)
+        form.addRow(t("word.recurrence"), self._recur)
 
         self._depends = _DependsField()
-        form.addRow("وابستگی‌ها", self._depends)
+        form.addRow(t("word.dependencies"), self._depends)
 
         if mode == "log":
             # a task logged as already-done cannot meaningfully recur
@@ -151,11 +154,12 @@ class TaskFormDialog(QDialog):
         root.addWidget(self._hint)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
         self._ok = btns.addButton(
-            "افزودن" if mode == "add" else "ثبت", QDialogButtonBox.ButtonRole.AcceptRole
+            t("form.ok.add") if mode == "add" else t("form.ok.log"),
+            QDialogButtonBox.ButtonRole.AcceptRole,
         )
         self._ok.setObjectName("Primary")
         self._ok.clicked.connect(self.accept)
@@ -168,9 +172,9 @@ class TaskFormDialog(QDialog):
     def _revalidate(self, *_a: object) -> None:
         problems: list[str] = []
         if not self._description.text().strip():
-            problems.append("شرح کار الزامی است.")
+            problems.append(t("form.err.description_required"))
         if self._recur.value() and not self._dates["due"].gregorian_string():
-            problems.append("برای کار تکرارشونده باید «سررسید» تعیین شود.")
+            problems.append(t("form.err.recur_needs_due"))
         self._ok.setEnabled(not problems)
         self._hint.setText(" ".join(problems))
         self._hint.setVisible(bool(problems))
@@ -184,8 +188,8 @@ class TaskFormDialog(QDialog):
         if proj:
             out.append(f"project:{proj}")
 
-        for t in self._tags.tags():
-            out.append(f"+{t}")
+        for tag in self._tags.tags():
+            out.append(f"+{tag}")
 
         pri = self._priority.value()
         if pri:

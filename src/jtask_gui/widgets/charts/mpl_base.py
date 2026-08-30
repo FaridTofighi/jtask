@@ -17,6 +17,8 @@ from importlib import resources
 import matplotlib
 from PyQt6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
+from ...i18n import t
+
 matplotlib.use("QtAgg")
 import matplotlib.font_manager as fm  # noqa: E402
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg  # noqa: E402
@@ -138,7 +140,7 @@ class ThemedChart(QWidget):
         ax = self._figure.add_subplot(111)
         self._style_axes(ax, pal)
         if not self._has_data():
-            text_fa(ax, 0.5, 0.5, "داده کافی برای این نمودار وجود ندارد.",
+            text_fa(ax, 0.5, 0.5, t("chart.no_data"),
                     ha="center", va="center", color=pal["text_muted"],
                     fontsize=13, fontfamily=self._family)
             ax.set_xticks([])

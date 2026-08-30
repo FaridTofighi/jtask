@@ -50,6 +50,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
 "src/jtask/fonts.py" = ["E501"]  # copy-pasteable setup snippets
+"src/jtask_gui/i18n/*.py" = ["E501"]  # translation catalogs — long message strings
 "src/jtask_gui/**" = ["N802", "N815", "N803", "B008"]  # Qt idioms
 
 [tool.mypy]

@@ -23,15 +23,15 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from ..i18n import t
 from .jalali_date_picker import JalaliDatePicker
 from .segmented import SegmentedControl
 
-_NOCHANGE = "— بدون تغییر —"
 _TAG_SPLIT = re.compile(r"[\s,، ]+")
 
 
 def _tags(text: str) -> list[str]:
-    return [t.lstrip("+-#") for t in _TAG_SPLIT.split(text.strip()) if t.lstrip("+-#")]
+    return [x.lstrip("+-#") for x in _TAG_SPLIT.split(text.strip()) if x.lstrip("+-#")]
 
 
 class BulkEditDialog(QDialog):
@@ -45,7 +45,7 @@ class BulkEditDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("BulkEditDialog")
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("ویرایش گروهی")
+        self.setWindowTitle(t("bulk.title"))
         self.setMinimumWidth(460)
         self._count = count
 
@@ -59,45 +59,45 @@ class BulkEditDialog(QDialog):
 
         self._priority = SegmentedControl(
             [
-                (_NOCHANGE, None),
-                ("بحرانی", "H"),
-                ("متوسط", "M"),
-                ("پایین", "L"),
-                ("حذف", "__clear__"),
+                (t("bulk.no_change"), None),
+                (t("priority.h"), "H"),
+                (t("priority.m"), "M"),
+                (t("priority.l"), "L"),
+                (t("bulk.priority.clear"), "__clear__"),
             ]
         )
-        form.addRow("اولویت", self._priority)
+        form.addRow(t("word.priority"), self._priority)
 
         self._project = QComboBox()
         self._project.setEditable(True)
-        self._project.addItem(_NOCHANGE)
+        self._project.addItem(t("bulk.no_change"))
         for p in projects or []:
             self._project.addItem(p)
         self._project.setCurrentIndex(0)
-        form.addRow("پروژه", self._project)
+        form.addRow(t("word.project"), self._project)
 
         self._add_tags = QLineEdit()
-        self._add_tags.setPlaceholderText("برچسب‌های جداشده با فاصله برای افزودن")
-        form.addRow("افزودن برچسب", self._add_tags)
+        self._add_tags.setPlaceholderText(t("bulk.add_tags.placeholder"))
+        form.addRow(t("bulk.add_tags"), self._add_tags)
 
         self._del_tags = QLineEdit()
-        self._del_tags.setPlaceholderText("برچسب‌ها برای حذف")
-        form.addRow("حذف برچسب", self._del_tags)
+        self._del_tags.setPlaceholderText(t("bulk.del_tags.placeholder"))
+        form.addRow(t("bulk.del_tags"), self._del_tags)
 
         self._due = _DateRow()
-        form.addRow("سررسید", self._due)
+        form.addRow(t("word.due"), self._due)
         self._scheduled = _DateRow()
-        form.addRow("زمان‌بندی", self._scheduled)
+        form.addRow(t("word.scheduled"), self._scheduled)
         self._wait = _DateRow()
-        form.addRow("تاریخ انتظار", self._wait)
+        form.addRow(t("word.wait"), self._wait)
 
         root.addLayout(form)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
-        ok = btns.addButton("اعمال", QDialogButtonBox.ButtonRole.AcceptRole)
+        ok = btns.addButton(t("btn.apply"), QDialogButtonBox.ButtonRole.AcceptRole)
         ok.setObjectName("Primary")
         ok.clicked.connect(self.accept)
         root.addWidget(btns)
@@ -114,15 +114,15 @@ class BulkEditDialog(QDialog):
             out.append(f"priority:{pri}")
 
         proj = self._project.currentText().strip()
-        if proj and proj != _NOCHANGE:
+        if proj and proj != t("bulk.no_change"):
             out.append(f"project:{proj}")
         elif self._project.currentIndex() != 0 and not proj:
             out.append("project:")
 
-        for t in _tags(self._add_tags.text()):
-            out.append(f"+{t}")
-        for t in _tags(self._del_tags.text()):
-            out.append(f"-{t}")
+        for tag in _tags(self._add_tags.text()):
+            out.append(f"+{tag}")
+        for tag in _tags(self._del_tags.text()):
+            out.append(f"-{tag}")
 
         for attr, row in (
             ("due", self._due),
@@ -137,8 +137,8 @@ class BulkEditDialog(QDialog):
 
     def summary(self) -> str:
         m = self.mods()
-        head = f"روی {fmt.num(self._count)} کار:"
-        return head + "\n" + (" ".join(m) if m else "(بدون تغییر)")
+        head = t("bulk.summary.head", count=fmt.num(self._count))
+        return head + "\n" + (" ".join(m) if m else t("bulk.summary.none"))
 
 
 class _DateRow(QWidget):
@@ -153,7 +153,7 @@ class _DateRow(QWidget):
         row.setSpacing(6)
         self._picker = JalaliDatePicker()
         row.addWidget(self._picker, 1)
-        self._clear = QCheckBox("پاک‌کردن")
+        self._clear = QCheckBox(t("bulk.date.clear"))
         self._clear.toggled.connect(lambda on: self._picker.setDisabled(on))
         row.addWidget(self._clear)
 

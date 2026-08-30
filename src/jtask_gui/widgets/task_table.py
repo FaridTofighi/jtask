@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QTableView,
 )
 
+from ..i18n import t
 from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
 
 UUID_MIME = "application/x-jtask-uuids"
@@ -130,7 +131,7 @@ class TaskTable(QTableView):
             self._empty.hide()
             return
         self._empty.setText(
-            _EMPTY_MESSAGES.get(view_title, "موردی برای نمایش نیست.")
+            _EMPTY_MESSAGES.get(view_title, t("table.empty.generic"))
         )
         self._position_empty()
         self._empty.show()
@@ -150,7 +151,7 @@ class TaskTable(QTableView):
             return
         mime = QMimeData()
         mime.setData(UUID_MIME, " ".join(uuids).encode())
-        mime.setText("، ".join(uuids))
+        mime.setText(t("list.sep").join(uuids))
         drag = QDrag(self)
         drag.setMimeData(mime)
         drag.exec(Qt.DropAction.MoveAction)
@@ -209,20 +210,20 @@ class TaskTable(QTableView):
         deleted = [t["uuid"] for t in tasks if t.get("status") == "deleted"]
 
         menu = QMenu(self)
-        act_done = menu.addAction(f"انجام‌شده ({n})")
-        act_del = menu.addAction(f"حذف ({n})")
-        act_dup = menu.addAction(f"تکثیر ({n})")
+        act_done = menu.addAction(t("table.menu.done", n=n))
+        act_del = menu.addAction(t("table.menu.delete", n=n))
+        act_dup = menu.addAction(t("table.menu.duplicate", n=n))
         menu.addSeparator()
-        act_bulk = menu.addAction(f"ویرایش گروهی… ({n})")
-        act_append = menu.addAction("افزودن به شرح…")
-        act_prepend = menu.addAction("پیش‌افزودن به شرح…")
+        act_bulk = menu.addAction(t("table.menu.bulk_edit", n=n))
+        act_append = menu.addAction(t("table.menu.append"))
+        act_prepend = menu.addAction(t("table.menu.prepend"))
         menu.addSeparator()
-        act_start = menu.addAction("شروع زمان‌سنجی")
-        act_stop = menu.addAction("توقف زمان‌سنجی")
+        act_start = menu.addAction(t("table.menu.start"))
+        act_stop = menu.addAction(t("table.menu.stop"))
         act_purge = None
         if deleted:
             menu.addSeparator()
-            act_purge = menu.addAction(f"پاک‌سازی برای همیشه… ({len(deleted)})")
+            act_purge = menu.addAction(t("table.menu.purge", n=len(deleted)))
 
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
         if chosen is None:

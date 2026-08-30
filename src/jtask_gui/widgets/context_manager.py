@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
 
@@ -37,7 +38,7 @@ class ContextManager(QWidget):
         self._table = QTableWidget(0, 4)
         self._table.setObjectName("ContextTable")
         self._table.setHorizontalHeaderLabels(
-            ["نام", "فیلتر خواندن", "فیلتر نوشتن", "فعال"]
+            [t("ctx.col.name"), t("ctx.col.read"), t("ctx.col.write"), t("ctx.col.active")]
         )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -50,17 +51,17 @@ class ContextManager(QWidget):
         lay.addWidget(self._table, 1)
 
         row = QHBoxLayout()
-        add = QPushButton("افزودن زمینه…")
+        add = QPushButton(t("ctx.add"))
         add.setObjectName("Primary")
         add.clicked.connect(self._add)
         row.addWidget(add)
-        self._activate = QPushButton("فعال‌سازی انتخاب‌شده")
+        self._activate = QPushButton(t("ctx.activate_selected"))
         self._activate.clicked.connect(self._activate_selected)
         row.addWidget(self._activate)
-        self._deactivate = QPushButton("غیرفعال‌سازی زمینه")
+        self._deactivate = QPushButton(t("ctx.deactivate"))
         self._deactivate.clicked.connect(lambda: self._set_active(None))
         row.addWidget(self._deactivate)
-        self._delete = QPushButton("حذف انتخاب‌شده")
+        self._delete = QPushButton(t("ctx.delete_selected"))
         self._delete.clicked.connect(self._delete_selected)
         row.addWidget(self._delete)
         row.addStretch(1)
@@ -118,10 +119,10 @@ class ContextManager(QWidget):
             return
         if not confirm(
             self,
-            title="حذف زمینه",
-            body=f"زمینهٔ «{name}» حذف می‌شود. کارها بی‌تغییر می‌مانند.",
+            title=t("ctx.delete.title"),
+            body=t("ctx.delete.body", name=name),
             destructive=True,
-            confirm_label="حذف",
+            confirm_label=t("btn.delete"),
         ):
             return
         self._apply(lambda: taskwarrior.context_delete(name))
@@ -138,7 +139,7 @@ class _ContextDialog(QDialog):
     def __init__(self, parent=None, *, name="", read="", write="") -> None:
         super().__init__(parent)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("زمینه" if name else "زمینهٔ جدید")
+        self.setWindowTitle(t("ctx.dialog.title") if name else t("ctx.dialog.title_new"))
         self.setMinimumWidth(420)
 
         lay = QVBoxLayout(self)
@@ -146,28 +147,25 @@ class _ContextDialog(QDialog):
         form = QFormLayout()
         self._name = QLineEdit(name)
         self._name.setReadOnly(bool(name))
-        form.addRow("نام", self._name)
+        form.addRow(t("word.name"), self._name)
         self._read = QLineEdit(read)
-        self._read.setPlaceholderText("مثال: project:کار or +فعال")
-        form.addRow("فیلتر خواندن", self._read)
+        self._read.setPlaceholderText(t("ctx.read.placeholder"))
+        form.addRow(t("ctx.col.read"), self._read)
         self._write = QLineEdit(write)
-        self._write.setPlaceholderText("خالی = مانند فیلتر خواندن")
-        form.addRow("فیلتر نوشتن", self._write)
+        self._write.setPlaceholderText(t("ctx.write.placeholder"))
+        form.addRow(t("ctx.col.write"), self._write)
         lay.addLayout(form)
 
-        note = QLabel(
-            "فیلتر نوشتن جداگانه در همهٔ نسخه‌های Taskwarrior پشتیبانی نمی‌شود؛ "
-            "در صورت نبود، همان فیلتر خواندن اعمال می‌شود."
-        )
+        note = QLabel(t("ctx.write.note"))
         note.setObjectName("Muted")
         note.setWordWrap(True)
         lay.addWidget(note)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
-        ok = btns.addButton("ذخیره", QDialogButtonBox.ButtonRole.AcceptRole)
+        ok = btns.addButton(t("btn.save"), QDialogButtonBox.ButtonRole.AcceptRole)
         ok.setObjectName("Primary")
         ok.clicked.connect(self.accept)
         lay.addWidget(btns)

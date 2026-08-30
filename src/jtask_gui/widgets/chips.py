@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..i18n import t
+
 
 class _Chip(QFrame):
     removed = pyqtSignal(str)
@@ -45,7 +47,7 @@ class TagChipEditor(QWidget):
         self._row.setSpacing(4)
 
         self._input = QLineEdit()
-        self._input.setPlaceholderText("افزودن برچسب…")
+        self._input.setPlaceholderText(t("chips.placeholder"))
         self._input.returnPressed.connect(self._commit_input)
         self._row.addWidget(self._input, 1)
 
@@ -61,8 +63,8 @@ class TagChipEditor(QWidget):
             chip.setParent(None)
             chip.deleteLater()
         self._tags = []
-        for t in tags:
-            self._add(t, silent=True)
+        for tag in tags:
+            self._add(tag, silent=True)
         self.tagsChanged.emit(list(self._tags))
 
     def tags(self) -> list[str]:

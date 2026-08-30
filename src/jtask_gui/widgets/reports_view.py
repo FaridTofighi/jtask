@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from jtask import reports
 
 from .. import icons
+from ..i18n import t
 from ..workers import submit
 from .calendar_report import CalendarReport
 from .charts.burndown_chart import BurndownChart
@@ -33,17 +34,20 @@ from .table_reports import ProjectsReport, TagsReport
 from .timesheet_view import TimesheetView
 
 _REPORTS = [
-    ("burndown", "نمودار سوختن", "reports"),
-    ("ghistory", "گراف تاریخچه", "reports"),
-    ("history", "تاریخچه", "reports"),
-    ("summary", "خلاصهٔ پروژه‌ها", "projects"),
-    ("calendar", "تقویم جلالی", "calendar"),
-    ("projects", "گزارش پروژه‌ها", "project"),
-    ("tags", "گزارش برچسب‌ها", "tag"),
-    ("timesheet", "برگهٔ زمان", "waiting"),
-    ("stats", "آمار", "reports"),
+    ("burndown", "reports.burndown", "reports"),
+    ("ghistory", "reports.ghistory", "reports"),
+    ("history", "reports.history", "reports"),
+    ("summary", "reports.summary", "projects"),
+    ("calendar", "reports.calendar", "calendar"),
+    ("projects", "reports.projects", "project"),
+    ("tags", "reports.tags", "tag"),
+    ("timesheet", "reports.timesheet", "waiting"),
+    ("stats", "reports.stats", "reports"),
 ]
-_PERIODS = [("روزانه", "daily"), ("هفتگی", "weekly"), ("ماهانه", "monthly")]
+_PERIODS = [
+    ("reports.period.daily", "daily"), ("reports.period.weekly", "weekly"),
+    ("reports.period.monthly", "monthly"),
+]
 _PERIOD_REPORTS = {"burndown", "ghistory", "history"}
 _MPL_REPORTS = {"burndown", "ghistory", "history"}
 
@@ -67,8 +71,8 @@ class ReportsView(QWidget):
         self._rail = QListWidget()
         self._rail.setObjectName("Sidebar")
         self._rail.setFixedWidth(190)
-        for key, label, glyph in _REPORTS:
-            item = QListWidgetItem(label)
+        for key, label_key, glyph in _REPORTS:
+            item = QListWidgetItem(t(label_key))
             item.setData(Qt.ItemDataRole.UserRole, key)
             item.setData(Qt.ItemDataRole.UserRole + 5, glyph)
             self._rail.addItem(item)
@@ -80,21 +84,21 @@ class ReportsView(QWidget):
         content.setSpacing(10)
 
         bar = QHBoxLayout()
-        self._title = QLabel("نمودار سوختن")
+        self._title = QLabel(t("reports.burndown"))
         self._title.setObjectName("H1")
         bar.addWidget(self._title, 1)
 
-        self._period_seg = SegmentedControl(_PERIODS)
+        self._period_seg = SegmentedControl([(t(k), v) for k, v in _PERIODS])
         self._period_seg.changed.connect(self._on_period)
         bar.addWidget(self._period_seg)
 
         self._hist_seg = SegmentedControl(
-            [("انباشته", "ghistory"), ("گروهی", "history")]
+            [(t("reports.hist.stacked"), "ghistory"), (t("reports.hist.grouped"), "history")]
         )
         self._hist_seg.changed.connect(self._on_hist_mode)
         bar.addWidget(self._hist_seg)
 
-        self._export_btn = QPushButton("خروجی PNG")
+        self._export_btn = QPushButton(t("reports.export_png"))
         self._export_btn.setIcon(icons.icon("reports"))
         self._export_btn.clicked.connect(self._export)
         bar.addWidget(self._export_btn)
@@ -268,7 +272,7 @@ class ReportsView(QWidget):
         if not hasattr(widget, "export_png"):
             return
         default = f"{tempfile.gettempdir()}/{self._active}.png"
-        path, _ = QFileDialog.getSaveFileName(self, "ذخیرهٔ نمودار", default, "PNG (*.png)")
+        path, _ = QFileDialog.getSaveFileName(self, t("reports.save_chart"), default, "PNG (*.png)")
         if path:
             widget.export_png(path)
 

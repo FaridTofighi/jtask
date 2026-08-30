@@ -25,16 +25,17 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
 
 _FIELDS = [
-    ("description", "توضیح"),
-    ("columns", "ستون‌ها"),
-    ("labels", "برچسب ستون‌ها"),
-    ("sort", "مرتب‌سازی"),
-    ("filter", "فیلتر"),
-    ("dateformat", "قالب تاریخ"),
+    ("description", "rep.field.description"),
+    ("columns", "rep.field.columns"),
+    ("labels", "rep.field.labels"),
+    ("sort", "rep.field.sort"),
+    ("filter", "rep.field.filter"),
+    ("dateformat", "rep.field.dateformat"),
 ]
 
 
@@ -50,7 +51,9 @@ class ReportManager(QWidget):
 
         self._table = QTableWidget(0, 4)
         self._table.setObjectName("ReportTable")
-        self._table.setHorizontalHeaderLabels(["نام", "نوع", "ستون‌ها", "فیلتر"])
+        self._table.setHorizontalHeaderLabels(
+            [t("rep.col.name"), t("rep.col.type"), t("rep.col.columns"), t("rep.col.filter")]
+        )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -62,12 +65,12 @@ class ReportManager(QWidget):
         lay.addWidget(self._table, 1)
 
         row = QHBoxLayout()
-        add = QPushButton("گزارش سفارشی جدید…")
+        add = QPushButton(t("rep.add"))
         add.setObjectName("Primary")
         add.clicked.connect(self._add)
         row.addWidget(add)
         row.addStretch(1)
-        self._hint = QLabel("گزارش‌های داخلی فقط‌خواندنی‌اند؛ برای ویرایش دوبار کلیک کنید.")
+        self._hint = QLabel(t("rep.hint"))
         self._hint.setObjectName("Muted")
         row.addWidget(self._hint)
         lay.addLayout(row)
@@ -86,7 +89,7 @@ class ReportManager(QWidget):
             builtin = name in taskwarrior.BUILTIN_REPORTS
             self._table.setItem(i, 0, QTableWidgetItem(name))
             self._table.setItem(
-                i, 1, QTableWidgetItem("داخلی" if builtin else "سفارشی")
+                i, 1, QTableWidgetItem(t("rep.type.builtin") if builtin else t("rep.type.custom"))
             )
             self._table.setItem(i, 2, QTableWidgetItem(spec.get("columns", "")))
             self._table.setItem(i, 3, QTableWidgetItem(spec.get("filter", "")))
@@ -111,12 +114,8 @@ class ReportManager(QWidget):
             return
         if builtin and not confirm(
             self,
-            title="بازتعریف گزارش داخلی",
-            body=(
-                f"گزارش داخلی «{name}» با یک تعریف سفارشی هم‌نام بازنویسی می‌شود. "
-                "تعریف اصلی Taskwarrior دست‌نخورده می‌ماند و با حذف این متغیرها "
-                "بازمی‌گردد."
-            ),
+            title=t("rep.override.title"),
+            body=t("rep.override.body", name=name),
         ):
             return
         self._save(name, dlg.fields(), is_new=False)
@@ -126,8 +125,8 @@ class ReportManager(QWidget):
             return
         if is_new and name in self._specs and not confirm(
             self,
-            title="گزارش موجود",
-            body=f"گزارشی به نام «{name}» از قبل هست و بازنویسی می‌شود.",
+            title=t("rep.exists.title"),
+            body=t("rep.exists.body", name=name),
         ):
             return
 
@@ -150,7 +149,7 @@ class _ReportDialog(QDialog):
         super().__init__(parent)
         spec = spec or {}
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("گزارش" if name else "گزارش سفارشی جدید")
+        self.setWindowTitle(t("rep.dialog.title") if name else t("rep.dialog.title_new"))
         self.setMinimumWidth(480)
 
         lay = QVBoxLayout(self)
@@ -158,26 +157,26 @@ class _ReportDialog(QDialog):
         form = QFormLayout()
         self._name = QLineEdit(name)
         self._name.setReadOnly(bool(name))
-        self._name.setPlaceholderText("مثال: امروز")
-        form.addRow("نام", self._name)
+        self._name.setPlaceholderText(t("rep.name.placeholder"))
+        form.addRow(t("word.name"), self._name)
         self._fields: dict[str, QLineEdit] = {}
-        for key, label in _FIELDS:
+        for key, label_key in _FIELDS:
             e = QLineEdit(spec.get(key, ""))
             self._fields[key] = e
-            form.addRow(label, e)
+            form.addRow(t(label_key), e)
         lay.addLayout(form)
 
         if builtin:
-            w = QLabel("این یک گزارش داخلی است؛ ذخیره یک تعریف سفارشی هم‌نام می‌سازد.")
+            w = QLabel(t("rep.builtin.note"))
             w.setObjectName("FormHint")
             w.setWordWrap(True)
             lay.addWidget(w)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
-        ok = btns.addButton("ذخیره", QDialogButtonBox.ButtonRole.AcceptRole)
+        ok = btns.addButton(t("btn.save"), QDialogButtonBox.ButtonRole.AcceptRole)
         ok.setObjectName("Primary")
         ok.clicked.connect(self.accept)
         lay.addWidget(btns)

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
 from jtask import jalali
 
 from .. import icons
+from ..i18n import t
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
@@ -69,7 +70,7 @@ class Sidebar(QTreeWidget):
         self.customContextMenuRequested.connect(self._context_menu)
         self.itemClicked.connect(self._on_click)
 
-        self._quick = self._section("نماهای سریع")
+        self._quick = self._section(t("sidebar.section.quick"))
         for label, glyph, spec in QUICK_VIEWS:
             self._leaf(self._quick, label, spec, glyph)
 
@@ -79,7 +80,7 @@ class Sidebar(QTreeWidget):
         self.addTopLevelItem(gap)
 
         self._reports = self._leaf(
-            None, "  گزارش‌ها و نمودارها", {"kind": "reports"}, "reports"
+            None, t("sidebar.reports_and_charts"), {"kind": "reports"}, "reports"
         )
         f = self._reports.font(0)
         f.setBold(True)
@@ -92,10 +93,10 @@ class Sidebar(QTreeWidget):
         gap2.setSizeHint(0, QSize(1, 6))
         self.addTopLevelItem(gap2)
 
-        self._saved = self._section("فیلترهای ذخیره‌شده")
-        self._projects = self._section("پروژه‌ها")
-        self._tags = self._section("برچسب‌ها")
-        self._contexts = self._section("زمینه‌ها")
+        self._saved = self._section(t("sidebar.section.saved"))
+        self._projects = self._section(t("sidebar.section.projects"))
+        self._tags = self._section(t("sidebar.section.tags"))
+        self._contexts = self._section(t("sidebar.section.contexts"))
 
         self.expandAll()
         self.retint()
@@ -166,7 +167,7 @@ class Sidebar(QTreeWidget):
 
     def populate_contexts(self, names: list[str], active: str | None) -> None:
         self._contexts.takeChildren()
-        none_item = QTreeWidgetItem(["بدون زمینه" + ("  ●" if not active else "")])
+        none_item = QTreeWidgetItem([t("sidebar.no_context") + ("  ●" if not active else "")])
         none_item.setData(0, _SPEC_ROLE, {"kind": "context", "name": ""})
         none_item.setData(0, _ICON_ROLE, "context")
         self._contexts.addChild(none_item)
@@ -181,7 +182,7 @@ class Sidebar(QTreeWidget):
     def populate_saved_filters(self, filters: dict[str, str]) -> None:
         self._saved.takeChildren()
         if not filters:
-            hint = QTreeWidgetItem(["(با دکمهٔ ★ کنار نوار فیلتر ذخیره کنید)"])
+            hint = QTreeWidgetItem([t("sidebar.saved.hint")])
             hint.setFlags(Qt.ItemFlag.ItemIsEnabled)
             hint.setForeground(0, self.palette().brush(self.foregroundRole()))
             self._saved.addChild(hint)
@@ -231,17 +232,19 @@ class Sidebar(QTreeWidget):
             return
         name = spec["name"]
         menu = QMenu(self)
-        act_rename = menu.addAction("تغییر نام")
-        act_delete = menu.addAction("حذف")
+        act_rename = menu.addAction(t("sidebar.menu.rename"))
+        act_delete = menu.addAction(t("sidebar.menu.delete"))
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
         if chosen == act_rename:
-            new, ok = QInputDialog.getText(self, "تغییر نام فیلتر", "نام تازه:", text=name)
+            new, ok = QInputDialog.getText(
+                self, t("sidebar.rename.title"), t("sidebar.rename.label"), text=name
+            )
             if ok and new.strip() and new.strip() != name:
                 self.savedFilterRenameRequested.emit(name, new.strip())
         elif chosen == act_delete:
             confirm = QMessageBox.question(
-                self, "حذف فیلتر",
-                f"فیلتر «{name}» حذف شود؟",
+                self, t("sidebar.delete.title"),
+                t("sidebar.delete.body", name=name),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )

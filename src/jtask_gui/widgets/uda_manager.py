@@ -20,16 +20,17 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
 
 _TYPES = [
-    ("رشته", "string"),
-    ("عددی", "numeric"),
-    ("تاریخ", "date"),
-    ("مدت", "duration"),
+    ("uda.type.string", "string"),
+    ("uda.type.numeric", "numeric"),
+    ("uda.type.date", "date"),
+    ("uda.type.duration", "duration"),
 ]
-_TYPE_FA = {v: k for k, v in _TYPES}
+_TYPE_FA = {v: t(k) for k, v in _TYPES}
 
 
 class UdaManager(QWidget):
@@ -44,7 +45,9 @@ class UdaManager(QWidget):
 
         self._table = QTableWidget(0, 4)
         self._table.setObjectName("UdaTable")
-        self._table.setHorizontalHeaderLabels(["نام", "برچسب", "نوع", "مقادیر مجاز"])
+        self._table.setHorizontalHeaderLabels(
+            [t("uda.col.name"), t("uda.col.label"), t("uda.col.type"), t("uda.col.values")]
+        )
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -56,11 +59,11 @@ class UdaManager(QWidget):
         lay.addWidget(self._table, 1)
 
         row = QHBoxLayout()
-        add = QPushButton("افزودن ویژگی…")
+        add = QPushButton(t("uda.add"))
         add.setObjectName("Primary")
         add.clicked.connect(self._add)
         row.addWidget(add)
-        rm = QPushButton("حذف انتخاب‌شده")
+        rm = QPushButton(t("uda.delete_selected"))
         rm.clicked.connect(self._delete)
         row.addWidget(rm)
         row.addStretch(1)
@@ -121,13 +124,10 @@ class UdaManager(QWidget):
             return
         if not confirm(
             self,
-            title="حذف ویژگی سفارشی",
-            body=(
-                f"تعریف «{name}» حذف می‌شود. دادهٔ ذخیره‌شده روی کارها باقی می‌ماند "
-                "اما دیگر نمایش داده نمی‌شود."
-            ),
+            title=t("uda.delete.title"),
+            body=t("uda.delete.body", name=name),
             destructive=True,
-            confirm_label="حذف",
+            confirm_label=t("btn.delete"),
         ):
             return
         self._apply(lambda: taskwarrior.uda_delete(name))
@@ -145,7 +145,7 @@ class _UdaDialog(QDialog):
         super().__init__(parent)
         spec = spec or {}
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.setWindowTitle("ویژگی سفارشی" if name else "ویژگی سفارشی جدید")
+        self.setWindowTitle(t("uda.dialog.title") if name else t("uda.dialog.title_new"))
         self.setMinimumWidth(420)
 
         lay = QVBoxLayout(self)
@@ -153,30 +153,30 @@ class _UdaDialog(QDialog):
         form = QFormLayout()
         self._name = QLineEdit(name)
         self._name.setReadOnly(bool(name))
-        self._name.setPlaceholderText("مثال: effort")
-        form.addRow("نام", self._name)
+        self._name.setPlaceholderText(t("uda.name.placeholder"))
+        form.addRow(t("word.name"), self._name)
         self._label = QLineEdit(spec.get("label", ""))
-        form.addRow("برچسب", self._label)
+        form.addRow(t("uda.col.label"), self._label)
         self._type = QComboBox()
         for lbl, val in _TYPES:
-            self._type.addItem(lbl, val)
+            self._type.addItem(t(lbl), val)
         cur = spec.get("type", "string")
         self._type.setCurrentIndex(
             next((i for i, (_, v) in enumerate(_TYPES) if v == cur), 0)
         )
-        form.addRow("نوع", self._type)
+        form.addRow(t("uda.col.type"), self._type)
         self._values = QLineEdit(spec.get("values", ""))
-        self._values.setPlaceholderText("فهرست مجاز، با کاما (اختیاری)")
-        form.addRow("مقادیر مجاز", self._values)
+        self._values.setPlaceholderText(t("uda.values.placeholder"))
+        form.addRow(t("uda.col.values"), self._values)
         self._default = QLineEdit(spec.get("default", ""))
-        form.addRow("مقدار پیش‌فرض", self._default)
+        form.addRow(t("uda.field.default"), self._default)
         lay.addLayout(form)
 
         btns = QDialogButtonBox()
-        btns.addButton("انصراف", QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
+        btns.addButton(t("btn.cancel"), QDialogButtonBox.ButtonRole.RejectRole).clicked.connect(
             self.reject
         )
-        ok = btns.addButton("ذخیره", QDialogButtonBox.ButtonRole.AcceptRole)
+        ok = btns.addButton(t("btn.save"), QDialogButtonBox.ButtonRole.AcceptRole)
         ok.setObjectName("Primary")
         ok.clicked.connect(self.accept)
         lay.addWidget(btns)

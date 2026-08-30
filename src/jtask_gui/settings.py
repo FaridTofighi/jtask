@@ -33,6 +33,17 @@ class Settings:
     def theme(self, name: str) -> None:
         self._s.setValue("theme", name)
 
+    # --- language ---
+    @property
+    def language(self) -> str:
+        v = self._s.value("language", "fa", str)
+        return v if v in ("fa", "en") else "fa"
+
+    @language.setter
+    def language(self, value: str) -> None:
+        self._s.setValue("language", value if value in ("fa", "en") else "fa")
+        self._s.sync()
+
     # --- digits ---
     @property
     def persian_digits(self) -> bool:
@@ -42,6 +53,20 @@ class Settings:
     @persian_digits.setter
     def persian_digits(self, value: bool) -> None:
         self._s.setValue("persian_digits", bool(value))
+
+    @property
+    def digit_mode_user_overridden(self) -> bool:
+        """True once the user has explicitly chosen a digit mode in Settings.
+
+        A separate flag (Resolution 1) — never inferred from the stored value,
+        since an explicit choice can coincide with a language's default.
+        """
+        return self._s.value("digit_mode_user_overridden", False, bool)
+
+    @digit_mode_user_overridden.setter
+    def digit_mode_user_overridden(self, value: bool) -> None:
+        self._s.setValue("digit_mode_user_overridden", bool(value))
+        self._s.sync()
 
     # --- colour-coding threshold ---
     @property

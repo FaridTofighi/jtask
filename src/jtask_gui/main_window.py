@@ -24,6 +24,7 @@ from jtask.errors import TaskCommandError
 from jtask.rtl import set_digit_mode
 
 from . import fmt, icons
+from .i18n import t
 from .models.task_model import TaskTableModel
 from .settings import Settings
 from .theme import other_theme, render_qss
@@ -55,7 +56,7 @@ class MainWindow(QMainWindow):
         self.settings = settings or Settings()
         icons.set_theme(self.settings.theme)
         set_digit_mode(self.settings.persian_digits)
-        self.setWindowTitle("jtask — مدیریت کارها")
+        self.setWindowTitle(t("win.title"))
         self.setMinimumSize(_MIN_SIZE)
         self.resize(1240, 800)
 
@@ -105,9 +106,9 @@ class MainWindow(QMainWindow):
         self._detail_host = QTabWidget()
         self._detail_host.setObjectName("DetailTabs")
         self._detail_host.setDocumentMode(True)
-        self._detail_host.addTab(self._detail, "ویرایش")
-        self._detail_host.addTab(self._history_view, "تاریخچه")
-        self._detail_host.addTab(self._raw_view, "دادهٔ خام")
+        self._detail_host.addTab(self._detail, t("detail.tab.edit"))
+        self._detail_host.addTab(self._history_view, t("detail.tab.history"))
+        self._detail_host.addTab(self._raw_view, t("detail.tab.raw"))
 
         self._split = QSplitter(Qt.Orientation.Horizontal)
         self._split.setObjectName("MainSplit")
@@ -141,13 +142,13 @@ class MainWindow(QMainWindow):
 
     def _build_toolbars(self) -> None:
         # ---- row one: quick-add ----
-        row1 = QToolBar("افزودن")
+        row1 = QToolBar(t("toolbar.add"))
         row1.setObjectName("RowOne")
         row1.setMovable(False)
         row1.setIconSize(QSize(18, 18))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row1)
 
-        add_lbl = QLabel("افزودن سریع")
+        add_lbl = QLabel(t("toolbar.quick_add"))
         add_lbl.setObjectName("ToolLabel")
         row1.addWidget(add_lbl)
         self._quick_add = QuickAddBar()
@@ -157,13 +158,13 @@ class MainWindow(QMainWindow):
         self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
 
         # ---- row two: filter + actions ----
-        row2 = QToolBar("ابزار")
+        row2 = QToolBar(t("toolbar.tools"))
         row2.setObjectName("RowTwo")
         row2.setMovable(False)
         row2.setIconSize(QSize(18, 18))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row2)
 
-        flt_lbl = QLabel("فیلتر")
+        flt_lbl = QLabel(t("toolbar.filter"))
         flt_lbl.setObjectName("ToolLabel")
         row2.addWidget(flt_lbl)
         self._filter_bar = FilterBar()
@@ -173,36 +174,39 @@ class MainWindow(QMainWindow):
 
         row2.addSeparator()
 
-        grp_lbl = QLabel("گروه‌بندی بر اساس")
+        grp_lbl = QLabel(t("toolbar.group_by"))
         grp_lbl.setObjectName("ToolLabel")
         row2.addWidget(grp_lbl)
         self._group_combo = QComboBox()
-        for label, key in [("بدون گروه", "none"), ("پروژه", "project"),
-                           ("اولویت", "priority"), ("هفتهٔ سررسید", "due"), ("وضعیت", "status")]:
+        for label, key in [
+            (t("group.none"), "none"), (t("group.project"), "project"),
+            (t("group.priority"), "priority"), (t("group.due_week"), "due"),
+            (t("group.status"), "status"),
+        ]:
             self._group_combo.addItem(label, key)
-        self._group_combo.setToolTip("گروه‌بندی فهرست کارها")
+        self._group_combo.setToolTip(t("toolbar.group.tip"))
         self._group_combo.currentIndexChanged.connect(
             lambda: self._table.set_group_key(self._group_combo.currentData())
         )
         row2.addWidget(self._group_combo)
         row2.addSeparator()
 
-        self._add_full_action = QAction(icons.icon("add"), "افزودن کار…", self)
+        self._add_full_action = QAction(icons.icon("add"), t("action.add_full"), self)
         self._add_full_action.setShortcut("Ctrl+Shift+N")
-        self._add_full_action.setToolTip("افزودن کار با همهٔ فیلدها (Ctrl+Shift+N)")
+        self._add_full_action.setToolTip(t("action.add_full.tip"))
         self._add_full_action.triggered.connect(lambda: self._open_task_form("add"))
         row2.addAction(self._add_full_action)
 
-        self._log_action = QAction(icons.icon("completed"), "ثبت کار انجام‌شده…", self)
-        self._log_action.setToolTip("ثبت کاری که همین حالا انجام شده است (task log)")
+        self._log_action = QAction(icons.icon("completed"), t("action.log"), self)
+        self._log_action.setToolTip(t("action.log.tip"))
         self._log_action.triggered.connect(lambda: self._open_task_form("log"))
         row2.addAction(self._log_action)
 
         row2.addSeparator()
 
-        self._undo_action = QAction(icons.icon("undo"), "واگرد آخرین عملیات", self)
+        self._undo_action = QAction(icons.icon("undo"), t("action.undo"), self)
         self._undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        self._undo_action.setToolTip("واگرد آخرین عملیات (Ctrl+Z)")
+        self._undo_action.setToolTip(t("action.undo.tip"))
         self._undo_action.triggered.connect(self._undo)
         row2.addAction(self._undo_action)
 
@@ -212,20 +216,20 @@ class MainWindow(QMainWindow):
 
         self._data_btn = QToolButton()
         self._data_btn.setIcon(icons.icon("data"))
-        self._data_btn.setText("داده")
-        self._data_btn.setToolTip("خروجی / ورود / همگام‌سازی")
+        self._data_btn.setText(t("action.data"))
+        self._data_btn.setToolTip(t("action.data.tip"))
         self._data_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         data_menu = QMenu(self._data_btn)
         self._export_action = data_menu.addAction(
-            icons.icon("export"), "خروجی گرفتن…"
+            icons.icon("export"), t("action.export")
         )
         self._export_action.triggered.connect(self._open_export)
         self._import_action = data_menu.addAction(
-            icons.icon("import"), "ورود از فایل…"
+            icons.icon("import"), t("action.import")
         )
         self._import_action.triggered.connect(self._open_import)
         data_menu.addSeparator()
-        self._sync_action = data_menu.addAction(icons.icon("sync"), "همگام‌سازی…")
+        self._sync_action = data_menu.addAction(icons.icon("sync"), t("action.sync"))
         self._sync_action.triggered.connect(self._open_sync)
         self._data_btn.setMenu(data_menu)
         row2.addWidget(self._data_btn)
@@ -238,27 +242,27 @@ class MainWindow(QMainWindow):
         row2.addAction(self._theme_action)
 
         self._manage_action = QAction(
-            icons.icon("manage"), "مدیریت Taskwarrior…", self
+            icons.icon("manage"), t("action.manage"), self
         )
         self._manage_action.setToolTip(
-            "پیکربندی · زمینه‌ها · ویژگی‌های سفارشی · گزارش‌ها"
+            t("action.manage.tip")
         )
         self._manage_action.triggered.connect(self._open_manager)
         row2.addAction(self._manage_action)
 
-        self._settings_action = QAction(icons.icon("settings"), "تنظیمات", self)
-        self._settings_action.setToolTip("تنظیمات")
+        self._settings_action = QAction(icons.icon("settings"), t("action.settings"), self)
+        self._settings_action.setToolTip(t("action.settings"))
         self._settings_action.triggered.connect(self._open_settings)
         row2.addAction(self._settings_action)
 
-        self._console_action = QAction(icons.icon("console"), "کنسول فرمان", self)
-        self._console_action.setToolTip("کنسول فرمان خام (task …)")
+        self._console_action = QAction(icons.icon("console"), t("action.console"), self)
+        self._console_action.setToolTip(t("action.console.tip"))
         self._console_action.setCheckable(True)
         self._console_action.toggled.connect(self._toggle_console)
         row2.addAction(self._console_action)
 
-        self._tools_action = QAction(icons.icon("tools"), "تشخیص و ابزارها…", self)
-        self._tools_action.setToolTip("تشخیص · راهنمای فرمان‌ها · ماشین‌حساب")
+        self._tools_action = QAction(icons.icon("tools"), t("action.tools"), self)
+        self._tools_action.setToolTip(t("action.tools.tip"))
         self._tools_action.triggered.connect(self._open_tools)
         row2.addAction(self._tools_action)
 
@@ -271,7 +275,7 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self) -> None:
         self._sidebar = Sidebar()
-        dock = QDockWidget("پیمایش", self)
+        dock = QDockWidget(t("dock.navigation"), self)
         dock.setObjectName("SidebarDock")
         dock.setWidget(self._sidebar)
         dock.setFeatures(
@@ -285,7 +289,7 @@ class MainWindow(QMainWindow):
 
     def _build_console(self) -> None:
         self._console = CommandConsole()
-        dock = QDockWidget("کنسول فرمان", self)
+        dock = QDockWidget(t("dock.console"), self)
         dock.setObjectName("ConsoleDock")
         dock.setWidget(self._console)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
@@ -301,12 +305,12 @@ class MainWindow(QMainWindow):
         self._tray = QSystemTrayIcon(app_icon(), self)
         self._tray.setToolTip("jtask")
         menu = QMenu(self)
-        act_show = menu.addAction("نمایش / پنهان‌کردن پنجره")
+        act_show = menu.addAction(t("tray.toggle_window"))
         act_show.triggered.connect(self._toggle_window)
-        act_add = menu.addAction("افزودن سریع")
+        act_add = menu.addAction(t("tray.quick_add"))
         act_add.triggered.connect(self._focus_quick_add_from_tray)
         menu.addSeparator()
-        act_quit = menu.addAction("خروج")
+        act_quit = menu.addAction(t("tray.quit"))
         act_quit.triggered.connect(self._quit)
         self._tray.setContextMenu(menu)
         self._tray.activated.connect(self._on_tray_activated)
@@ -353,14 +357,14 @@ class MainWindow(QMainWindow):
         ok = _has_task()
         self._status_binary.setObjectName("StatusOk" if ok else "StatusBad")
         self._status_binary.setText(
-            "Taskwarrior آماده است" if ok else "Taskwarrior یافت نشد"
+            t("status.tw_ready") if ok else t("status.tw_missing")
         )
         sb.addWidget(self._status_binary)
         if ok:
             submit(
                 taskwarrior.version,
                 lambda v: self._status_binary.setText(
-                    f"Taskwarrior {v}" if v else "Taskwarrior آماده است"
+                    t("status.tw_version", v=v) if v else t("status.tw_ready")
                 ),
                 lambda _e: None,
             )
@@ -380,15 +384,15 @@ class MainWindow(QMainWindow):
         self._filter_bar.filterChanged.connect(self._on_filter_changed)
         self._table.taskActivated.connect(self._show_detail)
         self._table.doneRequested.connect(
-            lambda uuids: self._bulk(uuids, "done", "کارها انجام‌شده شدند")
+            lambda uuids: self._bulk(uuids, "done", t("msg.tasks_done"))
         )
         self._table.deleteRequested.connect(self._delete)
         self._table.duplicateRequested.connect(self._duplicate)
         self._table.appendRequested.connect(
-            lambda uuids: self._append_like(uuids, "append", "افزودن به شرح")
+            lambda uuids: self._append_like(uuids, "append", t("verb.append"))
         )
         self._table.prependRequested.connect(
-            lambda uuids: self._append_like(uuids, "prepend", "پیش‌افزودن به شرح")
+            lambda uuids: self._append_like(uuids, "prepend", t("verb.prepend"))
         )
         self._table.purgeRequested.connect(self._purge)
         self._table.bulkEditRequested.connect(self._bulk_edit)
@@ -405,13 +409,13 @@ class MainWindow(QMainWindow):
         self._detail.annotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "annotate", [text]),
-                "یادداشت افزوده شد",
+                t("msg.note_added"),
             )
         )
         self._detail.denotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "denotate", [text]),
-                "یادداشت حذف شد",
+                t("msg.note_removed"),
             )
         )
 
@@ -453,13 +457,13 @@ class MainWindow(QMainWindow):
     def _reassign_project(self, uuids: list[str], project: str) -> None:
         self._write(
             functools.partial(taskwarrior.command, uuids, "modify", [f"project:{project}"]),
-            f"به پروژهٔ «{project}» منتقل شد",
+            t("msg.moved_to_project", project=project),
         )
 
     def _reschedule(self, uuids: list[str], gregorian: str) -> None:
         self._write(
             functools.partial(taskwarrior.command, uuids, "modify", [f"due:{gregorian}"]),
-            "سررسید به‌روزرسانی شد",
+            t("msg.due_updated"),
         )
 
     def _save_filter(self, name: str, raw: str) -> None:
@@ -506,7 +510,7 @@ class MainWindow(QMainWindow):
         spec = self._view_spec
         if spec.get("kind") == "reports":
             self._content.setCurrentIndex(1)
-            self._status_count.setText("گزارش‌ها و نمودارها")
+            self._status_count.setText(t("status.reports"))
             self._reports.set_filter(self._extra_filter)
             return
         self._content.setCurrentIndex(0)
@@ -520,7 +524,7 @@ class MainWindow(QMainWindow):
         else:
             fetch = functools.partial(reports.report_list, base_filter + extra)
 
-        self._begin_busy("در حال بارگذاری…")
+        self._begin_busy(t("status.loading"))
         submit(fetch, self._populate_table, self._on_load_error)
 
     def _populate_table(self, tasks: list[dict]) -> None:
@@ -529,11 +533,11 @@ class MainWindow(QMainWindow):
         self._detail.set_all_tasks(tasks)
         self._table.show_empty_state(self._view_spec.get("title", ""), len(tasks) == 0)
         title = self._view_spec.get("title", "کارها")
-        self._status_count.setText(f"{fmt.num(len(tasks))} کار · {title}")
+        self._status_count.setText(t("status.count", n=fmt.num(len(tasks)), title=title))
 
     def _on_load_error(self, err: object) -> None:
         self._end_busy()
-        self._op_status.failed("بارگذاری ناموفق بود")
+        self._op_status.failed(t("op.load_failed"))
         self._error(err)
 
     # --- events --------------------------------------------
@@ -554,7 +558,7 @@ class MainWindow(QMainWindow):
         self._load_current_view()
 
     def _add_task(self, args: list[str]) -> None:
-        self._write(functools.partial(taskwarrior.add, args), "کار افزوده شد")
+        self._write(functools.partial(taskwarrior.add, args), t("msg.task_added"))
 
     # --- M7 data safety: export / import / sync -----------
 
@@ -566,15 +570,15 @@ class MainWindow(QMainWindow):
             return
         spec = dlg.spec()
         if not spec["path"]:
-            self.statusBar().showMessage("مسیر مقصد مشخص نشده است.", 2500)
+            self.statusBar().showMessage(t("msg.export.no_path"), 2500)
             return
-        self._begin_busy("در حال خروجی‌گیری…")
+        self._begin_busy(t("op.exporting"))
 
         def done(res: dict) -> None:
             self._end_busy()
-            self._op_status.success("خروجی گرفته شد")
+            self._op_status.success(t("msg.export.done"))
             self.statusBar().showMessage(
-                f"{fmt.num(res['count'])} کار در «{res['path']}» ذخیره شد", 5000
+                t("msg.export.saved", n=fmt.num(res["count"]), path=res["path"]), 5000
             )
 
         submit(functools.partial(write_export, spec), done, self._op_failed)
@@ -586,14 +590,14 @@ class MainWindow(QMainWindow):
         if not dlg.exec():
             return
         path = dlg.path()
-        self._begin_busy("در حال ورود…")
+        self._begin_busy(t("op.importing"))
 
         def done(res: dict) -> None:
             self._end_busy()
-            self._op_status.success("ورود انجام شد")
+            self._op_status.success(t("msg.import.done"))
             self.statusBar().showMessage(
-                f"{fmt.num(res['added'])} کار افزوده، "
-                f"{fmt.num(res['modified'])} به‌روزرسانی شد",
+                t("msg.import.summary", added=fmt.num(res["added"]),
+                  modified=fmt.num(res["modified"])),
                 5000,
             )
             self.refresh_all()
@@ -631,7 +635,7 @@ class MainWindow(QMainWindow):
         verb = taskwarrior.log if mode == "log" else taskwarrior.add
         self._write(
             functools.partial(verb, args),
-            "کار انجام‌شده ثبت شد" if mode == "log" else "کار افزوده شد",
+            t("msg.log_added") if mode == "log" else t("msg.task_added"),
         )
 
     def _bulk(self, uuids: list[str], verb: str, msg: str) -> None:
@@ -646,30 +650,29 @@ class MainWindow(QMainWindow):
             return
         if not confirm(
             self,
-            title="حذف کارها",
+            title=t("confirm.delete.title"),
             body=(
-                "کارهای انتخاب‌شده حذف می‌شوند. با «واگرد» یا از نمای "
-                "«تکمیل‌شده» قابل بازیابی‌اند."
+                t("confirm.delete.body")
             ),
             count=len(uuids),
             destructive=True,
-            confirm_label="حذف",
+            confirm_label=t("confirm.delete.ok"),
         ):
             return
-        self._bulk(uuids, "delete", "کارها حذف شدند")
+        self._bulk(uuids, "delete", t("msg.tasks_deleted"))
 
     def _duplicate(self, uuids: list[str]) -> None:
         if not uuids:
             return
         if len(uuids) == 1:
-            self._begin_busy("در حال تکثیر…")
+            self._begin_busy(t("op.duplicating"))
 
             def done(res: dict) -> None:
                 self._end_busy()
-                self._op_status.success("کار تکثیر شد")
+                self._op_status.success(t("msg.duplicated"))
                 new = res.get("id") or res.get("uuid") or ""
                 self.statusBar().showMessage(
-                    f"کار تکثیر شد ({new})" if new else "کار تکثیر شد", 3000
+                    t("msg.duplicated_id", new=new) if new else t("msg.duplicated"), 3000
                 )
                 self.refresh_all()
 
@@ -679,7 +682,7 @@ class MainWindow(QMainWindow):
         else:
             self._write(
                 functools.partial(taskwarrior.command, uuids, "duplicate"),
-                "کارها تکثیر شدند",
+                t("msg.duplicated_many"),
             )
 
     def _append_like(self, uuids: list[str], verb: str, title: str) -> None:
@@ -687,20 +690,20 @@ class MainWindow(QMainWindow):
             return
         from PyQt6.QtWidgets import QInputDialog
 
-        text, ok = QInputDialog.getText(self, title, "متن:")
+        text, ok = QInputDialog.getText(self, title, t("prompt.append.label"))
         text = text.strip()
         if not ok or not text:
             return
         if len(uuids) > 1 and not confirm(
             self,
             title=title,
-            body=f"«{text}» به شرح کارهای انتخاب‌شده {title} می‌شود.",
+            body=t("confirm.append.body", text=text, verb=title),
             count=len(uuids),
         ):
             return
         self._write(
             functools.partial(taskwarrior.command, uuids, verb, [text]),
-            "شرح به‌روزرسانی شد",
+            t("msg.description_updated"),
         )
 
     def _purge(self, uuids: list[str]) -> None:
@@ -708,19 +711,18 @@ class MainWindow(QMainWindow):
             return
         if not confirm(
             self,
-            title="پاک‌سازی برای همیشه",
+            title=t("confirm.purge.title"),
             body=(
-                "این کارهای حذف‌شده برای همیشه از پایگاه‌دادهٔ Taskwarrior پاک "
-                "می‌شوند و دیگر با «واگرد» بازیابی نمی‌شوند."
+                t("confirm.purge.body")
             ),
             count=len(uuids),
             destructive=True,
-            confirm_label="پاک‌سازی برای همیشه",
-            require_phrase="پاک‌سازی",
+            confirm_label=t("confirm.purge.ok"),
+            require_phrase=t("confirm.purge.phrase"),
         ):
             return
         self._write(
-            functools.partial(taskwarrior.purge, uuids), "کارهای حذف‌شده پاک شدند"
+            functools.partial(taskwarrior.purge, uuids), t("msg.purged")
         )
 
     def _bulk_edit(self, uuids: list[str]) -> None:
@@ -738,24 +740,24 @@ class MainWindow(QMainWindow):
             return
         mods = dlg.mods()
         if not mods:
-            self.statusBar().showMessage("تغییری انتخاب نشد.", 2000)
+            self.statusBar().showMessage(t("msg.no_change_selected"), 2000)
             return
         if len(uuids) > 1 and not confirm(
             self,
-            title="ویرایش گروهی",
-            body="تغییرات زیر اعمال می‌شود:\n" + " ".join(mods),
+            title=t("confirm.bulk.title"),
+            body=t("confirm.bulk.body", mods=" ".join(mods)),
             count=len(uuids),
         ):
             return
         self._write(
             functools.partial(taskwarrior.command, uuids, "modify", mods),
-            "کارها به‌روزرسانی شدند",
+            t("msg.tasks_updated"),
         )
 
     def _start_stop(self, uuid: str, start: bool) -> None:
         self._write(
             functools.partial(taskwarrior.command, [uuid], "start" if start else "stop"),
-            "زمان‌سنجی به‌روزرسانی شد",
+            t("msg.timer_updated"),
         )
 
     def _save_task(self, uuid: str, mods: list[str]) -> None:
@@ -764,41 +766,40 @@ class MainWindow(QMainWindow):
         # through rewrite_args again (that would reject the Gregorian dates).
         self._write(
             functools.partial(taskwarrior.command, [uuid], "modify", mods),
-            "کار به‌روزرسانی شد",
+            t("msg.task_updated"),
         )
 
     def _undo(self) -> None:
         """Show what the last transaction reverts, then confirm before applying."""
-        self._begin_busy("در حال آماده‌سازی واگرد…")
+        self._begin_busy(t("op.undo_preparing"))
         submit(taskwarrior.undo_preview, self._confirm_undo, self._on_load_error)
 
     def _confirm_undo(self, preview: dict) -> None:
         self._end_busy()
         if preview.get("empty"):
             self._op_status.idle()
-            self.statusBar().showMessage("چیزی برای واگرد وجود ندارد.", 2500)
+            self.statusBar().showMessage(t("msg.nothing_to_undo"), 2500)
             return
         ok = confirm(
             self,
-            title="واگرد آخرین تغییر",
+            title=t("confirm.undo.title"),
             body=(
-                "آخرین تراکنش Taskwarrior به وضعیت پیش از آن بازگردانده می‌شود.\n"
-                "این عمل بازگشت‌پذیر نیست."
+                t("confirm.undo.body")
             ),
             count=preview.get("count"),
-            count_noun="عملیات",
+            count_noun=t("confirm.undo.noun"),
             destructive=True,
-            confirm_label="واگرد",
+            confirm_label=t("confirm.undo.ok"),
             details=preview.get("text"),
         )
         if ok:
             self._write(
-                functools.partial(taskwarrior.run, ["undo"]), "واگرد انجام شد"
+                functools.partial(taskwarrior.run, ["undo"]), t("msg.undo_done")
             )
 
     def _change_context(self, name: str) -> None:
         verb = ["context", "none"] if not name else ["context", name]
-        self._write(functools.partial(taskwarrior.run, verb), "زمینه تغییر کرد")
+        self._write(functools.partial(taskwarrior.run, verb), t("msg.context_changed"))
 
     # --- theme --------------------------------------------
 
@@ -806,8 +807,8 @@ class MainWindow(QMainWindow):
         nxt = other_theme(self.settings.theme)
         glyph = "theme_light" if nxt == "روز" else "theme_dark"
         self._theme_action.setIcon(icons.icon(glyph))
-        self._theme_action.setText(f"پوستهٔ {nxt}")
-        self._theme_action.setToolTip(f"تغییر پوسته به «{nxt}»")
+        self._theme_action.setText(t("theme.switch_label", name=nxt))
+        self._theme_action.setToolTip(t("theme.switch_tip", name=nxt))
 
     def _toggle_theme(self) -> None:
         self._apply_theme(other_theme(self.settings.theme))
@@ -869,7 +870,7 @@ class MainWindow(QMainWindow):
             self._op_status.idle()
 
     def _write(self, fn, success_msg: str) -> None:
-        self._begin_busy("در حال اعمال…")
+        self._begin_busy(t("op.applying"))
 
         def done(_result):
             self._end_busy()
@@ -881,7 +882,7 @@ class MainWindow(QMainWindow):
 
     def _op_failed(self, err: object) -> None:
         self._end_busy()
-        self._op_status.failed("عملیات ناموفق بود")
+        self._op_status.failed(t("op.failed"))
         self._error(err)
 
     def _error(self, err: object) -> None:
@@ -922,7 +923,7 @@ class MainWindow(QMainWindow):
             event.ignore()
             self.hide()
             self._tray.showMessage(
-                "jtask", "برنامه در نوار وظیفه فعال است.",
+                "jtask", t("tray.background"),
                 self._tray.MessageIcon.Information, 3000,
             )
             return

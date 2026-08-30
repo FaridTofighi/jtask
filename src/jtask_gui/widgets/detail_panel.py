@@ -22,17 +22,21 @@ from jtask import jalali, taskwarrior
 from jtask.rtl import bidi_isolate
 
 from .. import fmt
+from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
 from .recurrence_builder import RecurrenceBuilder
 
-_PRIORITIES = [("بدون", ""), ("زیاد", "H"), ("متوسط", "M"), ("کم", "L")]
-_STATUS_FA = {
-    "pending": "در جریان", "completed": "انجام‌شده", "waiting": "در انتظار",
-    "deleted": "حذف‌شده", "recurring": "تکرارشونده",
+_PRIORITIES = [
+    ("detail.priority.none", ""), ("detail.priority.h", "H"),
+    ("detail.priority.m", "M"), ("detail.priority.l", "L"),
+]
+_STATUS_KEY = {
+    "pending": "status.pending", "completed": "status.completed", "waiting": "status.waiting",
+    "deleted": "status.deleted", "recurring": "status.recurring",
 }
-_DATE_FIELDS = [("due", "سررسید", True), ("scheduled", "زمان‌بندی", True),
-                ("wait", "انتظار", False), ("until", "مهلت", False)]
+_DATE_FIELDS = [("due", "word.due", True), ("scheduled", "word.scheduled", True),
+                ("wait", "detail.date.wait", False), ("until", "word.until", False)]
 
 
 class DetailPanel(QScrollArea):
@@ -59,9 +63,9 @@ class DetailPanel(QScrollArea):
         outer.setSpacing(10)
 
         top = QHBoxLayout()
-        self._title = QLabel("جزئیات کار")
+        self._title = QLabel(t("detail.title"))
         self._title.setObjectName("H2")
-        close = QPushButton("بستن")
+        close = QPushButton(t("btn.close"))
         close.clicked.connect(self.hide_panel)
         top.addWidget(self._title, 1)
         top.addWidget(close)
@@ -75,55 +79,55 @@ class DetailPanel(QScrollArea):
         outer.addLayout(form)
 
         self._description = QLineEdit()
-        form.addRow("شرح", self._description)
+        form.addRow(t("word.description"), self._description)
 
         self._project = QComboBox()
         self._project.setEditable(True)
-        form.addRow("پروژه", self._project)
+        form.addRow(t("word.project"), self._project)
 
         self._tags = TagChipEditor()
-        form.addRow("برچسب‌ها", self._tags)
+        form.addRow(t("word.tags"), self._tags)
 
         self._priority = QComboBox()
-        for label, _ in _PRIORITIES:
-            self._priority.addItem(label)
-        form.addRow("اولویت", self._priority)
+        for label_key, _ in _PRIORITIES:
+            self._priority.addItem(t(label_key))
+        form.addRow(t("word.priority"), self._priority)
 
         self._status = QLabel("—")
-        form.addRow("وضعیت", self._status)
+        form.addRow(t("word.status"), self._status)
 
         self._dates: dict[str, JalaliDatePicker] = {}
-        for key, label, with_time in _DATE_FIELDS:
+        for key, label_key, with_time in _DATE_FIELDS:
             picker = JalaliDatePicker(with_time=with_time)
             picker.dateChanged.connect(lambda _v, k=key: self._dirty_dates.add(k))
             self._dates[key] = picker
-            form.addRow(label, picker)
+            form.addRow(t(label_key), picker)
 
         self._recur = RecurrenceBuilder()
-        form.addRow("تکرار", self._recur)
+        form.addRow(t("detail.field.recurrence"), self._recur)
 
         self._depends = QLineEdit()
-        self._depends.setPlaceholderText("شناسه‌ها با کاما، مثلاً 3,7")
+        self._depends.setPlaceholderText(t("detail.deps.placeholder"))
         dep_row = QHBoxLayout()
         dep_row.addWidget(self._depends, 1)
-        dep_btn = QPushButton("افزودن…")
+        dep_btn = QPushButton(t("btn.add_ellipsis"))
         dep_btn.clicked.connect(self._pick_dependency)
         dep_row.addWidget(dep_btn)
         dep_wrap = QWidget()
         dep_wrap.setLayout(dep_row)
-        form.addRow("وابستگی‌ها", dep_wrap)
+        form.addRow(t("word.dependencies"), dep_wrap)
 
         # annotations
-        outer.addWidget(QLabel("یادداشت‌ها"))
+        outer.addWidget(QLabel(t("detail.annotations")))
         self._annotations = QListWidget()
         self._annotations.setMaximumHeight(140)
         outer.addWidget(self._annotations)
         ann_row = QHBoxLayout()
         self._ann_input = QLineEdit()
-        self._ann_input.setPlaceholderText("یادداشت جدید…")
-        ann_add = QPushButton("افزودن")
+        self._ann_input.setPlaceholderText(t("detail.annotation.new"))
+        ann_add = QPushButton(t("btn.add"))
         ann_add.clicked.connect(self._add_annotation)
-        ann_del = QPushButton("حذف انتخاب‌شده")
+        ann_del = QPushButton(t("detail.annotation.delete"))
         ann_del.clicked.connect(self._del_annotation)
         ann_row.addWidget(self._ann_input, 1)
         ann_row.addWidget(ann_add)
@@ -133,7 +137,7 @@ class DetailPanel(QScrollArea):
         # UDAs
         self._uda_form = QFormLayout()
         self._uda_widgets: dict[str, QWidget] = {}
-        outer.addWidget(QLabel("ویژگی‌های سفارشی (UDA)"))
+        outer.addWidget(QLabel(t("detail.udas")))
         uda_wrap = QWidget()
         uda_wrap.setLayout(self._uda_form)
         outer.addWidget(uda_wrap)
@@ -141,7 +145,7 @@ class DetailPanel(QScrollArea):
         # dependency graph
         from .dep_graph import DependencyGraph
 
-        self._dep_label = QLabel("گراف وابستگی")
+        self._dep_label = QLabel(t("detail.dep_graph"))
         outer.addWidget(self._dep_label)
         self._dep_graph = DependencyGraph()
         outer.addWidget(self._dep_graph)
@@ -150,7 +154,7 @@ class DetailPanel(QScrollArea):
         urg_row = QHBoxLayout()
         self._urgency = QLabel("—")
         urg_row.addWidget(self._urgency, 1)
-        self._why_btn = QPushButton("چرا؟")
+        self._why_btn = QPushButton(t("detail.why"))
         self._why_btn.setCheckable(True)
         self._why_btn.toggled.connect(self._toggle_why)
         urg_row.addWidget(self._why_btn)
@@ -158,7 +162,7 @@ class DetailPanel(QScrollArea):
         urg_wrap.setLayout(urg_row)
 
         form_bottom = QFormLayout()
-        form_bottom.addRow("فوریت", urg_wrap)
+        form_bottom.addRow(t("detail.urgency"), urg_wrap)
         self._why = QLabel("")
         self._why.setObjectName("Muted")
         self._why.setWordWrap(True)
@@ -166,10 +170,10 @@ class DetailPanel(QScrollArea):
         form_bottom.addRow("", self._why)
         self._audit = QLabel("")
         self._audit.setObjectName("Muted")
-        form_bottom.addRow("سوابق", self._audit)
+        form_bottom.addRow(t("detail.audit"), self._audit)
         outer.addLayout(form_bottom)
 
-        save = QPushButton("ذخیرهٔ تغییرات")
+        save = QPushButton(t("detail.save"))
         save.setObjectName("Primary")
         save.clicked.connect(self._save)
         outer.addWidget(save)
@@ -214,7 +218,7 @@ class DetailPanel(QScrollArea):
 
     def _show_why(self, terms: list[dict]) -> None:
         if not terms:
-            self._why.setText("تفکیک فوریت در دسترس نیست.")
+            self._why.setText(t("detail.why.unavailable"))
             return
         lines = [
             f"{t['label']}:  {fmt.num(round(float(t['value']), 1), isolate=True)}"
@@ -225,7 +229,7 @@ class DetailPanel(QScrollArea):
     def load_task(self, task: dict) -> None:
         self._task = task
         self._dirty_dates.clear()
-        self._title.setText(f"کار #{task.get('id', '—')}")
+        self._title.setText(t("detail.task_number", id=task.get("id", "—")))
         self._description.setText(task.get("description", ""))
         self._project.setCurrentText(task.get("project", ""))
         self._tags.set_tags([t for t in (task.get("tags") or []) if not t.isupper()])
@@ -233,7 +237,8 @@ class DetailPanel(QScrollArea):
         self._priority.setCurrentIndex(
             next((i for i, (_, v) in enumerate(_PRIORITIES) if v == pri), 0)
         )
-        self._status.setText(_STATUS_FA.get(task.get("status", ""), task.get("status", "—")))
+        st = task.get("status", "")
+        self._status.setText(t(_STATUS_KEY[st]) if st in _STATUS_KEY else (st or "—"))
         for key, picker in self._dates.items():
             picker.set_from_taskwarrior(task.get(f"{key}_gregorian") or task.get(key) or "")
         self._dirty_dates.clear()
@@ -253,7 +258,12 @@ class DetailPanel(QScrollArea):
 
     def _audit_text(self, task: dict) -> str:
         parts = []
-        for key, label in (("entry", "ایجاد"), ("modified", "ویرایش"), ("end", "پایان")):
+        anchors = (
+            ("entry", t("detail.anchor.entry")),
+            ("modified", t("detail.anchor.modified")),
+            ("end", t("detail.anchor.end")),
+        )
+        for key, label in anchors:
             raw = task.get(f"{key}_gregorian") or task.get(key)
             if raw:
                 shown = bidi_isolate(jalali.from_taskwarrior(raw, fmt="short"))
@@ -301,8 +311,11 @@ class DetailPanel(QScrollArea):
             return reports.report_next()
 
         def choose(tasks):
-            labels = [f"{t.get('id')} — {t.get('description')}" for t in tasks]
-            text, ok = QInputDialog.getItem(self, "افزودن وابستگی", "کار:", labels, 0, False)
+            labels = [f"{x.get('id')} — {x.get('description')}" for x in tasks]
+            text, ok = QInputDialog.getItem(
+                self, t("form.deps.pick.title"), t("form.deps.pick.label"),
+                labels, 0, False,
+            )
             if ok and text:
                 tid = text.split(" — ")[0]
                 cur = [x for x in self._depends.text().split(",") if x]

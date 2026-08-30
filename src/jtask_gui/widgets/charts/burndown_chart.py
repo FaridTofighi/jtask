@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ...i18n import t
 from .mpl_base import (
     ThemedChart,
     legend_fa,
@@ -10,7 +11,7 @@ from .mpl_base import (
     set_ylabel_fa,
 )
 
-_SERIES = ("انجام‌شده", "در حال انجام", "باز")
+_SERIES_KEYS = ("chart.burndown.completed", "chart.burndown.in_progress", "chart.burndown.open")
 
 
 class BurndownChart(ThemedChart):
@@ -31,13 +32,16 @@ class BurndownChart(ThemedChart):
         ax.set_xticks(list(x)[::step])
         set_xticklabels_fa(ax, labels[::step], rotation=45, ha="left",
                            fontfamily=self._family, fontsize=8)
-        set_ylabel_fa(ax, "تعداد کار", fontfamily=self._family, color=pal["text_muted"])
-        set_title_fa(ax, "نمودار سوختن (Burndown)", fontfamily=self._family,
+        set_ylabel_fa(
+            ax, t("chart.burndown.ylabel"),
+            fontfamily=self._family, color=pal["text_muted"],
+        )
+        set_title_fa(ax, t("chart.burndown.title"), fontfamily=self._family,
                      color=pal["text"], fontsize=13, pad=12)
-        leg = legend_fa(ax, _SERIES, loc="upper right", framealpha=0.0)
-        for t in leg.get_texts():
-            t.set_color(pal["text"])
-            t.set_fontfamily(self._family)
+        leg = legend_fa(ax, [t(k) for k in _SERIES_KEYS], loc="upper right", framealpha=0.0)
+        for txt in leg.get_texts():
+            txt.set_color(pal["text"])
+            txt.set_fontfamily(self._family)
 
 
 def _axis_label(raw: str) -> str:

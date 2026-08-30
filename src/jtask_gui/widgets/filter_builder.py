@@ -22,17 +22,26 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
 
-_STATUS = [("همه", ""), ("در جریان", "pending"), ("در انتظار", "waiting"),
-           ("تکمیل‌شده", "completed"), ("حذف‌شده", "deleted")]
-_PRIORITY = [("همه", ""), ("زیاد", "H"), ("متوسط", "M"), ("کم", "L"), ("بدون", "")]
+_STATUS = [
+    ("fb.status.all", ""), ("status.pending", "pending"),
+    ("status.waiting", "waiting"), ("status.completed", "completed"),
+    ("status.deleted", "deleted"),
+]
+_PRIORITY = [
+    ("fb.priority.all", ""), ("fb.priority.h", "H"), ("fb.priority.m", "M"),
+    ("fb.priority.l", "L"), ("fb.priority.none", ""),
+]
 # common virtual tags worth a one-click toggle
 _VTAGS = [
-    ("معوق", "OVERDUE"), ("سررسید امروز", "DUE"), ("آماده", "READY"),
-    ("فعال", "ACTIVE"), ("مسدود", "BLOCKED"), ("بازدارنده", "BLOCKING"),
-    ("در انتظار", "WAITING"), ("برچسب‌دار", "TAGGED"), ("یادداشت‌دار", "ANNOTATED"),
+    ("fb.vtag.OVERDUE", "OVERDUE"), ("fb.vtag.DUE", "DUE"),
+    ("fb.vtag.READY", "READY"), ("fb.vtag.ACTIVE", "ACTIVE"),
+    ("fb.vtag.BLOCKED", "BLOCKED"), ("fb.vtag.BLOCKING", "BLOCKING"),
+    ("fb.vtag.WAITING", "WAITING"), ("fb.vtag.TAGGED", "TAGGED"),
+    ("fb.vtag.ANNOTATED", "ANNOTATED"),
 ]
 
 
@@ -41,7 +50,7 @@ class FilterBuilder(QDialog):
 
     def __init__(self, initial_raw: str = "", parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("سازندهٔ فیلتر")
+        self.setWindowTitle(t("fb.title"))
         self.setMinimumWidth(440)
         root = QVBoxLayout(self)
 
@@ -56,7 +65,7 @@ class FilterBuilder(QDialog):
         except Exception:  # noqa: BLE001
             pass
         self._project.currentTextChanged.connect(self._update)
-        form.addRow("پروژه", self._project)
+        form.addRow(t("word.project"), self._project)
 
         self._tags_inc = TagChipEditor()
         self._tags_exc = TagChipEditor()
@@ -66,37 +75,37 @@ class FilterBuilder(QDialog):
             except Exception:  # noqa: BLE001
                 pass
             chips.tagsChanged.connect(self._update)
-        form.addRow("برچسب‌های شامل (+)", self._tags_inc)
-        form.addRow("برچسب‌های مستثنا (-)", self._tags_exc)
+        form.addRow(t("fb.tags_include"), self._tags_inc)
+        form.addRow(t("fb.tags_exclude"), self._tags_exc)
 
         self._status = QComboBox()
-        for label, val in _STATUS:
-            self._status.addItem(label, val)
+        for label_key, val in _STATUS:
+            self._status.addItem(t(label_key), val)
         self._status.currentIndexChanged.connect(self._update)
-        form.addRow("وضعیت", self._status)
+        form.addRow(t("word.status"), self._status)
 
         self._priority = QComboBox()
-        for label, val in _PRIORITY[:4]:
-            self._priority.addItem(label, val)
+        for label_key, val in _PRIORITY[:4]:
+            self._priority.addItem(t(label_key), val)
         self._priority.currentIndexChanged.connect(self._update)
-        form.addRow("اولویت", self._priority)
+        form.addRow(t("word.priority"), self._priority)
 
         self._due_after = JalaliDatePicker()
         self._due_before = JalaliDatePicker()
         for p in (self._due_after, self._due_before):
             p.dateChanged.connect(self._update)
-        form.addRow("سررسید بعد از", self._due_after)
-        form.addRow("سررسید پیش از", self._due_before)
+        form.addRow(t("fb.due_after"), self._due_after)
+        form.addRow(t("fb.due_before"), self._due_before)
 
         self._ids = QLineEdit()
-        self._ids.setPlaceholderText("مثال: 1,3-5  یا  یک UUID")
+        self._ids.setPlaceholderText(t("fb.ids.placeholder"))
         self._ids.textChanged.connect(self._update)
-        form.addRow("شناسه / UUID", self._ids)
+        form.addRow(t("fb.ids"), self._ids)
 
         self._regex = QLineEdit()
-        self._regex.setPlaceholderText("عبارت باقاعده روی شرح، بدون «/»")
+        self._regex.setPlaceholderText(t("fb.regex.placeholder"))
         self._regex.textChanged.connect(self._update)
-        form.addRow("الگوی شرح", self._regex)
+        form.addRow(t("fb.regex"), self._regex)
 
         from PyQt6.QtWidgets import QGridLayout, QToolButton
 
@@ -105,28 +114,28 @@ class FilterBuilder(QDialog):
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setSpacing(3)
         self._vtags: list[QToolButton] = []
-        for i, (label, tag) in enumerate(_VTAGS):
+        for i, (label_key, tag) in enumerate(_VTAGS):
             b = QToolButton()
-            b.setText(label)
+            b.setText(t(label_key))
             b.setCheckable(True)
             b.setProperty("vtag", tag)
             b.toggled.connect(self._update)
             grid.addWidget(b, i // 3, i % 3)
             self._vtags.append(b)
-        form.addRow("برچسب‌های مجازی", vt_wrap)
+        form.addRow(t("fb.vtags"), vt_wrap)
 
         self._extra = QLineEdit()
-        self._extra.setPlaceholderText("توکن‌های خام اضافی (منطق and/or/xor، پرانتز، …)")
+        self._extra.setPlaceholderText(t("fb.extra.placeholder"))
         self._extra.textChanged.connect(self._update)
-        form.addRow("افزودهٔ خام", self._extra)
+        form.addRow(t("fb.extra"), self._extra)
 
         raw_row = QHBoxLayout()
         self._raw = QLabel("—")
         self._raw.setObjectName("Muted")
         self._raw.setWordWrap(True)
-        raw_row.addWidget(QLabel("معادل خام:"))
+        raw_row.addWidget(QLabel(t("fb.raw_equiv")))
         raw_row.addWidget(self._raw, 1)
-        copy = QPushButton("رونوشت")
+        copy = QPushButton(t("btn.copy"))
         copy.clicked.connect(self._copy)
         raw_row.addWidget(copy)
         root.addLayout(raw_row)
@@ -135,10 +144,10 @@ class FilterBuilder(QDialog):
             QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel
         )
         apply_btn = buttons.button(QDialogButtonBox.StandardButton.Apply)
-        apply_btn.setText("اعمال")
+        apply_btn.setText(t("btn.apply"))
         apply_btn.setObjectName("Primary")
         apply_btn.clicked.connect(self._emit)
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("انصراف")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(t("btn.cancel"))
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
@@ -153,10 +162,10 @@ class FilterBuilder(QDialog):
         proj = self._project.currentText().strip()
         if proj:
             tokens.append(f"project:{proj}")
-        for t in self._tags_inc.tags():
-            tokens.append(f"+{t}")
-        for t in self._tags_exc.tags():
-            tokens.append(f"-{t}")
+        for tag in self._tags_inc.tags():
+            tokens.append(f"+{tag}")
+        for tag in self._tags_exc.tags():
+            tokens.append(f"-{tag}")
         status = self._status.currentData()
         if status:
             tokens.append(f"status:{status}")
@@ -182,7 +191,7 @@ class FilterBuilder(QDialog):
 
     def _update(self) -> None:
         raw = " ".join(self._raw_tokens())
-        self._raw.setText(raw or "(بدون فیلتر)")
+        self._raw.setText(raw or t("fb.no_filter"))
 
     def _copy(self) -> None:
         from PyQt6.QtWidgets import QApplication
