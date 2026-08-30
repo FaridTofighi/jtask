@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -33,7 +34,7 @@ class _DiagnosticsTab(QWidget):
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(6)
+        lay.setSpacing(tok.SP_6)
         self._text = QPlainTextEdit()
         self._text.setObjectName("DiagText")
         self._text.setReadOnly(True)
@@ -74,7 +75,7 @@ class _HelpTab(QWidget):
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(6)
+        lay.setSpacing(tok.SP_6)
         self._search = QLineEdit()
         self._search.setPlaceholderText(t("tools.help.search"))
         self._search.textChanged.connect(self._filter)
@@ -115,7 +116,7 @@ class _CalcTab(QWidget):
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
+        lay.setSpacing(tok.SP_8)
         lay.addWidget(QLabel(t("tools.calc.hint")))
         row = QHBoxLayout()
         self._in = QLineEdit()
@@ -164,8 +165,8 @@ class ToolsDialog(QDialog):
         self.resize(720, 540)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(14, 12, 14, 12)
-        lay.setSpacing(10)
+        lay.setContentsMargins(*tok.INSET_PANEL)
+        lay.setSpacing(tok.SP_10)
         tabs = QTabWidget()
         self.diagnostics = _DiagnosticsTab()
         self.help = _HelpTab()

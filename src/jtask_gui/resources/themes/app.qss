@@ -22,8 +22,26 @@ QWidget {
     font-family: "Vazirmatn";
     font-size: @fs_body@;
 }
-QMainWindow, QDialog { background-color: @bg@; }
+QMainWindow { background-color: @bg@; }
 QMainWindow::separator { background: @border@; width: 1px; height: 1px; }
+
+/* elevation: a dialog is a raised surface — @elevated@ fill (a visible lift off
+   the window background in dark; neutral in light, which leans on the OS window
+   frame). Popovers (QMenu, item views, tooltip) already carry the @surface@ +
+   border treatment further down. Inputs/buttons keep their own fills so they
+   still read as controls on the raised surface. */
+QDialog { background-color: @elevated@; }
+QDialog > QWidget, QDialog QFrame, QDialog QScrollArea,
+QDialog QScrollArea > QWidget > QWidget { background-color: @elevated@; }
+QDialog QLineEdit, QDialog QTextEdit, QDialog QPlainTextEdit, QDialog QComboBox,
+QDialog QSpinBox, QDialog QDoubleSpinBox, QDialog QTimeEdit,
+QDialog QAbstractItemView {
+    background-color: @field@;
+}
+QDialog QPushButton { background-color: @surface@; }
+QDialog QPushButton#Primary { background-color: @primary@; }
+QDialog QPushButton#Primary:hover { background-color: @primary_hi@; }
+QDialog QPushButton#Danger  { background-color: @overdue@; }
 
 QLabel { background: transparent; }
 QLabel#H1     { font-size: @fs_h1@; font-weight: 700; }
@@ -81,6 +99,8 @@ QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QTimeEdit:focus {
     background-color: @field_focus@;
 }
 QLineEdit:disabled { color: @text_muted@; background: @bg_alt@; }
+QLineEdit[invalid="true"] { border: 1px solid @overdue@; }
+QLineEdit[invalid="true"]:focus { border: 1px solid @overdue@; }
 QLineEdit#QuickAdd { font-size: @fs_lg@; padding: @sp_8@ @sp_14@; }
 QLineEdit#FilterEdit { font-family: "Vazirmatn"; }
 
@@ -158,7 +178,7 @@ QFrame#Chip {
 }
 QFrame#Chip QLabel { color: @chip_fg@; font-size: @fs_xs@; font-weight: 700; }
 QFrame#Chip QToolButton { padding: 1px; color: @chip_fg@; }
-QFrame#Chip QToolButton:hover { background-color: @overdue@; color: #fff; border-radius: @r_md@; }
+QFrame#Chip QToolButton:hover { background-color: @overdue@; color: @on_danger@; border-radius: @r_md@; }
 
 /* ============================ panels ======================= */
 QScrollArea#DetailScroll { border: none; background-color: @bg_alt@; }
@@ -300,7 +320,7 @@ QPlainTextEdit#ConfirmDetails {
     background-color: @bg@; border: 1px solid @border@; border-radius: @r_md@;
 }
 QPushButton#Danger {
-    background-color: @overdue@; color: #fff; border: 1px solid @overdue@;
+    background-color: @overdue@; color: @on_danger@; border: 1px solid @overdue@;
     font-weight: 700;
 }
 QPushButton#Danger:hover   { background-color: @blocked@; border-color: @blocked@; }
@@ -336,7 +356,7 @@ QLabel#TimerIndicator {
     color: @primary_fg@; background-color: @primary@;
     border-radius: @r_pill@; padding: 1px @sp_8@; font-weight: 700;
 }
-QLabel#TimerIndicator:hover { background-color: @overdue@; color: #fff; }
+QLabel#TimerIndicator:hover { background-color: @overdue@; color: @on_danger@; }
 
 QTabWidget#DetailTabs::pane { border: none; }
 QTabWidget#DetailTabs QTabBar::tab {

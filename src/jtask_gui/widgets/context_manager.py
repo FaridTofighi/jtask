@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
@@ -33,7 +34,7 @@ class ContextManager(QWidget):
         self.setObjectName("ContextManager")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
+        lay.setSpacing(tok.SP_8)
 
         self._table = QTableWidget(0, 4)
         self._table.setObjectName("ContextTable")
@@ -142,7 +143,7 @@ class _ContextDialog(QDialog):
         self.setMinimumWidth(420)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 14, 16, 12)
+        lay.setContentsMargins(*tok.INSET_DIALOG)
         form = QFormLayout()
         self._name = QLineEdit(name)
         self._name.setReadOnly(bool(name))

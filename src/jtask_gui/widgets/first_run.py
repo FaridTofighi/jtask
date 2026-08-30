@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import fonts
 
+from .. import tokens as tok
 from ..i18n import t
 from ..settings import Settings
 from ..theme import THEMES
@@ -29,7 +30,7 @@ class FirstRunWizard(QDialog):
         self.setWindowTitle(t("firstrun.title"))
         self.setMinimumWidth(460)
         root = QVBoxLayout(self)
-        root.setSpacing(14)
+        root.setSpacing(tok.SP_14)
 
         title = QLabel(t("firstrun.heading"))
         title.setObjectName("H1")

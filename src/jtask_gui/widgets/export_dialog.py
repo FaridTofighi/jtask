@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 from .segmented import SegmentedControl
@@ -43,10 +44,10 @@ class ExportDialog(QDialog):
         self._count_gen = 0
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(12)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_12)
         form = QFormLayout()
-        form.setSpacing(10)
+        form.setSpacing(tok.SP_10)
 
         self._scope = SegmentedControl(
             [

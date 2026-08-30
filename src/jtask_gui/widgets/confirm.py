@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt, icons
+from .. import tokens as tok
 from ..i18n import t
 
 
@@ -52,11 +53,11 @@ class ConfirmDialog(QDialog):
         self._require_phrase = (require_phrase or "").strip() or None
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(18, 16, 18, 14)
-        lay.setSpacing(12)
+        lay.setContentsMargins(*tok.INSET_DIALOG)
+        lay.setSpacing(tok.SP_12)
 
         head = QHBoxLayout()
-        head.setSpacing(10)
+        head.setSpacing(tok.SP_10)
         glyph = QLabel()
         role = "overdue" if destructive else "due_soon"
         name = "delete" if destructive else "overdue"

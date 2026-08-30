@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
@@ -112,7 +113,7 @@ class FilterBuilder(QDialog):
         vt_wrap = QWidget()
         grid = QGridLayout(vt_wrap)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setSpacing(3)
+        grid.setSpacing(tok.SP_2)
         self._vtags: list[QToolButton] = []
         for i, (label_key, tag) in enumerate(_VTAGS):
             b = QToolButton()

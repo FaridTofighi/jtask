@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import icons
+from .. import tokens as tok
 from ..i18n import t
 
 
@@ -48,11 +49,11 @@ class ErrorDialog(QDialog):
         self._copy_btn: QPushButton | None = None
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(18, 16, 18, 14)
-        lay.setSpacing(10)
+        lay.setContentsMargins(*tok.INSET_DIALOG)
+        lay.setSpacing(tok.SP_10)
 
         head = QHBoxLayout()
-        head.setSpacing(10)
+        head.setSpacing(tok.SP_10)
         glyph = QLabel()
         glyph.setPixmap(icons.icon("overdue", "overdue").pixmap(26, 26))
         head.addWidget(glyph, 0, Qt.AlignmentFlag.AlignTop)

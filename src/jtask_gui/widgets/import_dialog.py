@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from .. import tokens as tok
 from ..i18n import t
 
 
@@ -75,8 +76,8 @@ class ImportDialog(QDialog):
         self.setMinimumWidth(500)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(10)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_10)
 
         pick = QHBoxLayout()
         self._path = QLineEdit()

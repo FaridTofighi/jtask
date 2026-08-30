@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
@@ -44,7 +45,7 @@ class _DependsField(QWidget):
         super().__init__(parent)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
+        row.setSpacing(tok.SP_6)
         self._edit = QLineEdit()
         self._edit.setPlaceholderText(t("form.deps.placeholder"))
         row.addWidget(self._edit, 1)
@@ -97,12 +98,12 @@ class TaskFormDialog(QDialog):
         self.setMinimumWidth(500)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(10)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_10)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        form.setSpacing(10)
+        form.setSpacing(tok.SP_10)
 
         self._description = QLineEdit()
         self._description.setPlaceholderText(t("form.description.placeholder"))

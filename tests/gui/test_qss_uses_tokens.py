@@ -80,6 +80,14 @@ def test_every_dimension_token_is_used():
     assert not unused, f"declared but unused dimension tokens: {sorted(unused)}"
 
 
+def test_no_hardcoded_colours_in_template():
+    """Every colour in the QSS comes from the palette via a ``@token@`` — no
+    literal hex / rgb (``#fff`` for on-danger text was tokenised in d2)."""
+    body = re.sub(r"/\*.*?\*/", "", theme.template_text(), flags=re.S)
+    hex_lits = re.findall(r"#[0-9a-fA-F]{3,8}\b", body)
+    assert not hex_lits, f"hardcoded colours in app.qss: {hex_lits}"
+
+
 def test_rendered_dimension_values_are_on_scale():
     allowed = {v for v in tokens.qss_tokens().values()} | _ALLOWED_BARE
     for name in theme.THEMES:

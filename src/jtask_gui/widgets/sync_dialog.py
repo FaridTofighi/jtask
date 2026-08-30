@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali, taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 
@@ -37,8 +38,8 @@ class SyncManagerDialog(QDialog):
         self._running = False
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(10)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_10)
 
         self._status = QLabel(t("sync.checking"))
         self._status.setObjectName("H2")

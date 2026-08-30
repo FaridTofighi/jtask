@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from .. import tokens as tok
 from ..i18n import t
 from .jalali_date_picker import JalaliDatePicker
 from .segmented import SegmentedControl
@@ -49,12 +50,12 @@ class BulkEditDialog(QDialog):
         self._count = count
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(12)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_12)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        form.setSpacing(10)
+        form.setSpacing(tok.SP_10)
 
         self._priority = SegmentedControl(
             [
@@ -149,7 +150,7 @@ class _DateRow(QWidget):
 
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
+        row.setSpacing(tok.SP_6)
         self._picker = JalaliDatePicker()
         row.addWidget(self._picker, 1)
         self._clear = QCheckBox(t("bulk.date.clear"))

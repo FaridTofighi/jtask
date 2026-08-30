@@ -113,9 +113,20 @@ class JalaliDatePicker(QWidget):
         row.addWidget(self._btn)
 
     def _maybe_cleared(self, text: str) -> None:
+        if not text.strip():
+            self._set_invalid(False)
         if not text.strip() and self._value is not None:
             self._value = None
             self.dateChanged.emit(None)
+
+    def _set_invalid(self, bad: bool) -> None:
+        """Flag unresolvable input via a QSS state property (styled from the
+        token palette), not an inline colour."""
+        if self._edit.property("invalid") == bad:
+            return
+        self._edit.setProperty("invalid", bad)
+        self._edit.style().unpolish(self._edit)
+        self._edit.style().polish(self._edit)
 
     # --- value API -------------------------------------------------
 
@@ -182,10 +193,9 @@ class JalaliDatePicker(QWidget):
             return
         tw = self._cal.to_taskwarrior(text)
         parsed = _parse_tw_string(tw)
+        self._set_invalid(parsed is None)
         if parsed is None:
-            self._edit.setStyleSheet("border: 1px solid #d1242f;")
             return
-        self._edit.setStyleSheet("")
         if self._with_time and not isinstance(parsed, _dt.datetime):
             time = self._time.time()
             parsed = _dt.datetime(

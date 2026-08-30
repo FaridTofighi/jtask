@@ -1385,3 +1385,43 @@ shell+detail, toolbar, Sync / Settings / Error / first-run / Purge / Add-Task.
 
 _Next: d2 — Python layout sweep (~118 call sites / ~32 files) + elevation
 application; split d2a/d2b with per-half evidence (Resolution 2)._
+
+## d2 — implementation log (complete)
+
+Every `setContentsMargins` / `setSpacing` in the GUI now references
+`jtask_gui.tokens` (imported as `tok`), and dialogs are a distinct raised
+surface.
+
+### d2a — shell + views + small widgets (commit `bf16c1d`)
+15 non-dialog widget files converted: `SP_*` consts + the semantic tuples
+`INSET_NONE / INSET_TIGHT (8) / INSET_PANEL (14) / INSET_DIALOG (16)`.
+`calendar_report` day-cell dot `font-size 11→12` via `FS_XS`. Zero-value
+margins stay literal `0, 0, 0, 0`. No elevation (the shell isn't "raised").
+Shell / detail / reports pixel-unchanged.
+
+### d2b — dialogs + elevation + colour tokens
+- **Sweep:** 17 dialog / manager files converted. Dialog root margins
+  `(18,16,18,14)` / `(16,14,16,12)` → `INSET_DIALOG` (uniform 16); a few
+  `(14,12,14,12)` → `INSET_PANEL`.
+- **Elevation (the one chosen approach — surface + border, not shadow):** new
+  palette role `elevated` (dark `#1e222a`, a visible lift off the `#16181d`
+  window; light `#ffffff`, neutral — leans on the OS window frame). `QDialog`
+  and its plain container widgets paint `@elevated@`; inputs keep `@field@`
+  (now reads as a recessed well) and buttons keep `@surface@` (reads as
+  raised). `tokens.shadow()` helper stays defined for future free-floating
+  overlays but nothing applies it yet. Documented follow-up: a deeper
+  light-theme lift needs a base-tone shift.
+- **Colour tokens:** `#fff` ×3 in `app.qss` → new `on_danger` role (white on
+  the red danger/chip surfaces, both themes). The date-picker's inline
+  `#d1242f` invalid border → a QSS state rule `QLineEdit[invalid="true"]
+  { border-color: @overdue@ }` toggled via `_set_invalid()` + repolish. **No
+  hardcoded colour remains anywhere** outside `theme.py` (new guard test).
+
+### Tests
+`test_qss_uses_tokens.py` gains `test_no_hardcoded_colours_in_template`.
+Full suite **408 passing** (407 + 1), ruff + mypy clean. Dialog screenshots
+(both themes): Add-Task, Sync, Settings, Delete-confirm, Manager, Export —
+inputs/controls now layer correctly on the raised dialog surface.
+
+_Next: d3 — dialog sizing guard test; first-run `QFormLayout`; validation-timing
+helper (no validation on a pristine dialog); `#Danger:disabled` tint._

@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 from .confirm import confirm
@@ -58,7 +59,7 @@ class ConfigManager(QWidget):
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
+        lay.setSpacing(tok.SP_8)
 
         from PyQt6.QtWidgets import QHBoxLayout
 
@@ -173,8 +174,8 @@ class _EditDialog(QDialog):
         self._action = "cancel"
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 14, 16, 12)
-        lay.setSpacing(8)
+        lay.setContentsMargins(*tok.INSET_DIALOG)
+        lay.setSpacing(tok.SP_8)
         lay.addWidget(QLabel(f"<b>{name}</b>"))
         if default:
             d = QLabel(t("cfg.edit.default", default=default))

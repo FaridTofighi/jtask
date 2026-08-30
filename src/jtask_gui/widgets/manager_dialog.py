@@ -10,6 +10,7 @@ from __future__ import annotations
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QTabWidget, QVBoxLayout, QWidget
 
+from .. import tokens as tok
 from ..i18n import t
 from .config_manager import ConfigManager
 from .context_manager import ContextManager
@@ -27,8 +28,8 @@ class ManagerDialog(QDialog):
         self.resize(760, 560)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(14, 12, 14, 12)
-        lay.setSpacing(10)
+        lay.setContentsMargins(*tok.INSET_PANEL)
+        lay.setSpacing(tok.SP_10)
 
         self._tabs = QTabWidget()
         self.config = ConfigManager()
