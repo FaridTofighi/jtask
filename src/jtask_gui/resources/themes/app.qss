@@ -356,7 +356,22 @@ QTableWidget#UdaTable::item, QTableWidget#ReportTable::item { padding: 4px 8px; 
 QTableWidget#ConfigTable QHeaderView::section,
 QTableWidget#ContextTable QHeaderView::section,
 QTableWidget#UdaTable QHeaderView::section,
-QTableWidget#ReportTable QHeaderView::section {
+QTableWidget#ReportTable QHeaderView::section,
+QTableWidget#HelpTable QHeaderView::section {
     background-color: @bg_alt@; color: @text_muted@; border: none;
     border-bottom: 1px solid @border@; padding: 5px 6px; font-weight: 700;
+}
+
+/* ============================ M9 — diagnostics / help / calc ========== */
+QPlainTextEdit#DiagText {
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace; font-size: 12px;
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QTableWidget#HelpTable {
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QTableWidget#HelpTable::item { padding: 3px 8px; }
+QLabel#CalcResult {
+    font-size: 16px; font-weight: 700; color: @primary@;
+    padding: 8px 2px;
 }

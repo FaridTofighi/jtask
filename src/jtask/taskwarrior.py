@@ -43,6 +43,10 @@ __all__ = [
     "uda_set",
     "uda_delete",
     "report_set",
+    "version",
+    "diagnostics",
+    "calc",
+    "command_reference",
     "passthrough",
     "date_uda_names",
 ]
@@ -259,6 +263,41 @@ def undo_preview() -> dict:
 def information(spec: str) -> str:
     """Raw ``task <spec> information`` text (id or uuid). Local-time rendered."""
     return run([spec, "information"], quiet=True).stdout
+
+
+@lru_cache(maxsize=1)
+def version() -> str:
+    """Installed Taskwarrior version string, e.g. ``3.5.0`` (``""`` if unknown)."""
+    try:
+        out = run(["_version"], quiet=True).stdout.strip()
+        return out or run(["--version"], check=False).stdout.strip()
+    except JtaskError:
+        return ""
+
+
+def diagnostics() -> str:
+    """Full ``task diagnostics`` text."""
+    return run(["diagnostics"], quiet=True).stdout.strip()
+
+
+def calc(expression: str) -> str:
+    """``task calc <expression>`` — raises :class:`TaskCommandError` on a bad expr."""
+    return run(["calc", expression], quiet=True).stdout.strip()
+
+
+@lru_cache(maxsize=1)
+def command_reference() -> list[tuple[str, str]]:
+    """``[(invocation, description)]`` parsed from ``task help``."""
+    out = run(["help"], quiet=True).stdout
+    rows: list[tuple[str, str]] = []
+    for line in out.splitlines():
+        m = re.match(r"^\s{2,}(task\s+\S.*?)\s{2,}(\S.*)$", line)
+        if m:
+            rows.append((m.group(1).strip(), m.group(2).strip()))
+        elif rows and re.match(r"^\s{20,}\S", line):  # wrapped description
+            prev_inv, prev_desc = rows[-1]
+            rows[-1] = (prev_inv, f"{prev_desc} {line.strip()}")
+    return rows
 
 
 def stats(filter_args: list[str] | None = None) -> list[tuple[str, str]]:
@@ -544,6 +583,7 @@ def refresh_lookups() -> None:
     for fn in (
         _show_config, uda_definitions, list_projects, list_tags,
         list_contexts, list_reports, report_specs, config_names, config_defaults,
+        version, command_reference,
     ):
         clear = getattr(fn, "cache_clear", None)
         if callable(clear):

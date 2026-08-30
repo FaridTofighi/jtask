@@ -28,6 +28,12 @@ from .jalali_date_picker import JalaliDatePicker
 _STATUS = [("همه", ""), ("در جریان", "pending"), ("در انتظار", "waiting"),
            ("تکمیل‌شده", "completed"), ("حذف‌شده", "deleted")]
 _PRIORITY = [("همه", ""), ("زیاد", "H"), ("متوسط", "M"), ("کم", "L"), ("بدون", "")]
+# common virtual tags worth a one-click toggle
+_VTAGS = [
+    ("معوق", "OVERDUE"), ("سررسید امروز", "DUE"), ("آماده", "READY"),
+    ("فعال", "ACTIVE"), ("مسدود", "BLOCKED"), ("بازدارنده", "BLOCKING"),
+    ("در انتظار", "WAITING"), ("برچسب‌دار", "TAGGED"), ("یادداشت‌دار", "ANNOTATED"),
+]
 
 
 class FilterBuilder(QDialog):
@@ -82,8 +88,35 @@ class FilterBuilder(QDialog):
         form.addRow("سررسید بعد از", self._due_after)
         form.addRow("سررسید پیش از", self._due_before)
 
+        self._ids = QLineEdit()
+        self._ids.setPlaceholderText("مثال: 1,3-5  یا  یک UUID")
+        self._ids.textChanged.connect(self._update)
+        form.addRow("شناسه / UUID", self._ids)
+
+        self._regex = QLineEdit()
+        self._regex.setPlaceholderText("عبارت باقاعده روی شرح، بدون «/»")
+        self._regex.textChanged.connect(self._update)
+        form.addRow("الگوی شرح", self._regex)
+
+        from PyQt6.QtWidgets import QGridLayout, QToolButton
+
+        vt_wrap = QWidget()
+        grid = QGridLayout(vt_wrap)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(3)
+        self._vtags: list[QToolButton] = []
+        for i, (label, tag) in enumerate(_VTAGS):
+            b = QToolButton()
+            b.setText(label)
+            b.setCheckable(True)
+            b.setProperty("vtag", tag)
+            b.toggled.connect(self._update)
+            grid.addWidget(b, i // 3, i % 3)
+            self._vtags.append(b)
+        form.addRow("برچسب‌های مجازی", vt_wrap)
+
         self._extra = QLineEdit()
-        self._extra.setPlaceholderText("توکن‌های خام اضافی…")
+        self._extra.setPlaceholderText("توکن‌های خام اضافی (منطق and/or/xor، پرانتز، …)")
         self._extra.textChanged.connect(self._update)
         form.addRow("افزودهٔ خام", self._extra)
 
@@ -134,6 +167,15 @@ class FilterBuilder(QDialog):
             tokens.append(f"due.after:{self._due_after.gregorian_string()}")
         if self._due_before.value() is not None:
             tokens.append(f"due.before:{self._due_before.gregorian_string()}")
+        ids = self._ids.text().strip()
+        if ids:
+            tokens.append(ids)
+        rx = self._regex.text().strip()
+        if rx:
+            tokens.append(f"/{rx.strip('/')}/")
+        for b in self._vtags:
+            if b.isChecked():
+                tokens.append(f"+{b.property('vtag')}")
         if self._extra.text().strip():
             tokens.extend(self._extra.text().split())
         return tokens

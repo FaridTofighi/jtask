@@ -904,3 +904,49 @@ touched.
 
 Configuration Manager · Context Manager · UDA Manager · Reports Manager — all
 landed with tests + screenshots.
+
+---
+
+## M9 — implementation log (complete)
+
+### Core (`taskwarrior.py`)
+
+- `version()` (lru) — `task _version`, shown in the status bar and Diagnostics.
+- `diagnostics()` — full `task diagnostics` text.
+- `calc(expr)` — `task calc`, raises `TaskCommandError` on a bad expression.
+- `command_reference()` (lru) — `[(invocation, description)]` parsed from
+  `task help` (wrapped continuation lines re-joined).
+
+### GUI
+
+- **`widgets/tools_dialog.py`** — `ToolsDialog` (toolbar "؟" action) with three
+  tabs: **تشخیص** (monospace `task diagnostics`, copy + save-to-file),
+  **راهنمای فرمان‌ها** (searchable table from `task help`), **ماشین‌حساب**
+  (wraps `task calc`; an ISO date result is annotated with its Jalali long form).
+- **Status bar** now shows the detected version ("Taskwarrior 3.5.0").
+- **`widgets/filter_builder.py`** extended: a "شناسه / UUID" field, an
+  "الگوی شرح" regex field (wrapped in `/…/`), and a one-click **virtual-tag
+  picker** (9 common tags: OVERDUE / DUE / READY / ACTIVE / BLOCKED / BLOCKING /
+  WAITING / TAGGED / ANNOTATED). The raw-extras box is relabelled to say it
+  takes `and`/`or`/`xor` and parentheses verbatim.
+
+### Date-grammar regression sweep
+
+`tests/test_date_grammar.py` (39 cases) exercises `rewrite.rewrite_args`
+end-to-end: absolute Jalali (every separator + Persian digits), time-of-day,
+Esfand-30 leap boundary, Persian relatives + offsets, date-math tails,
+English-keyword pass-through, every `DATE_ATTRS` entry, every date modifier,
+recurrence durations left untouched, description-with-colon, date UDAs
+(convert only when declared), the Gregorian-mistake guard, and Jalali→Greg→Jalali
+round-trip losslessness.
+
+### M9 scope — complete
+
+Diagnostics · Command reference · Calculator · filter-builder extensions ·
+date-grammar sweep — all landed with tests + screenshots.
+
+---
+
+## Mission complete — M5–M9
+
+See `docs/feature-parity-status.md` for the final report.

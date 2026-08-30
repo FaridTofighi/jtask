@@ -35,6 +35,7 @@ _MAP = {
     "console": "mdi.console-line",
     "data": "mdi.database-outline",
     "manage": "mdi.tune-variant",
+    "tools": "mdi.help-circle-outline",
     "export": "mdi.database-export-outline",
     "import": "mdi.database-import-outline",
     "sync": "mdi.sync",

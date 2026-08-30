@@ -77,10 +77,8 @@ def test_status_count_is_pure_persian_with_persian_digits(win):
 
 
 def test_status_binary_label_is_readable(win):
-    assert win._status_binary.text() in (
-        "Taskwarrior آماده است",
-        "Taskwarrior یافت نشد",
-    )
+    text = win._status_binary.text()
+    assert text.startswith("Taskwarrior")  # "… آماده است" / "… یافت نشد" / "… 3.5.0"
 
 
 def test_busy_indicator_clears_after_load(win, qapp):

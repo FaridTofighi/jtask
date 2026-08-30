@@ -35,13 +35,13 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `synchronize` / `sync` | ✅ Sync Manager — detects config (`rc.sync.*`), server/kind shown, last-sync time (Jalali, persisted), async run with visible state, no concurrent runs, refresh after; unconfigured → points at Config Manager (M7) | ✅ | — | Implemented |
 | `config` | ✅ Configuration Manager — every `rc.*` (searchable, grouped), current / default / overridden, edit + "reset to default" via `task config` (never `.taskrc` text) (M8) | ✅ | — | Implemented |
 | `context` | ✅ Context Manager — list / create / edit / delete / activate, read+write filters shown; sidebar switch stays (M8) | ✅ | separate write-filter form is version-dependent (documented) | Implemented |
-| `calc` | ❌ | ✅ | Calc panel wrapping `task calc` → **M9** | Console-only |
+| `calc` | ✅ Calculator tab in «تشخیص و ابزارها» — wraps `task calc`; date results annotated with a Jalali rendering (M9) | ✅ | — | Implemented |
 | `count` | ✅ used internally (status bar counts) | ✅ | — | Implemented |
 | `stats` | ✅ "آمار" report — `task stats` parsed, Persian labels, Jalali dates, Persian digits, respects the active filter (M6) | ✅ | — | Implemented |
-| `diagnostics` | ❌ | ✅ | Diagnostics view (readable, copyable, exportable) → **M9** | Console-only |
+| `diagnostics` | ✅ Diagnostics tab — full `task diagnostics`, copy + save-to-file (M9) | ✅ | — | Implemented |
 | `information` / `task <id>` | ✅ detail panel + **History tab** (modification log → Jalali/Persian, raw line kept) + **Raw Data tab** (stored JSON) (M6) | ✅ | — | Implemented |
-| `version` | 🟡 shown in status bar ("Taskwarrior آماده") | ✅ | show detected version in Diagnostics + startup → **M9** | Partial |
-| `help` | ❌ | ✅ | Command Browser/Help (from installed `task help`) → **M9** | Console-only |
+| `version` | ✅ detected version in the status bar ("Taskwarrior 3.5.0") + Diagnostics tab (M9) | ✅ | — | Implemented |
+| `help` | ✅ "راهنمای فرمان‌ها" tab — searchable table parsed from `task help` (M9) | ✅ | send-to-console shortcut → later | Implemented |
 | `news` | ❌ | ✅ | (low value) console-only, documented | Console-only |
 | `execute` | ❌ | ✅ | intentionally console-only (arbitrary shell) | Console-only |
 | `calendar` | 🟡 CLI has it; GUI has its own Jalali calendar report (M2) | ✅ | GUI calendar is better; TW `calendar` stays console | Implemented |
@@ -71,7 +71,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | start | ✅ start/stop + **live timer indicator** with elapsed (M6) | ✅ status bar | — |
 | uuid / id / parent | ✅ shown + **Raw Data tab** (M6) | ✅ | — |
 | template | ❌ | ❌ | rare; console-only, documented |
-| UDAs (any) | ✅ dynamic widgets in detail (M1) + **UDA Manager** CRUD of definitions (M8) | ✅ (if a column) | UDA **filters** in the builder → M9 |
+| UDAs (any) | ✅ dynamic widgets in detail (M1) + **UDA Manager** CRUD of definitions (M8) | ✅ (if a column) | typed UDA rows in the filter builder → later |
 
 ## C. Filtering grammar
 
@@ -79,12 +79,12 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 |---|---|---|---|
 | `attr:value` (project, status, priority, …) | ✅ | ✅ | — |
 | `+tag` / `-tag` | ✅ | ✅ | — |
-| `attr.before:` / `.after:` (dates) | ✅ (Jalali pickers) | ✅ | more modifiers (`.is`, `.isnt`, `.has`, `.startswith`, `.over`, `.under`, `.none`, `.any`) → M9 |
-| id / id-range / uuid | 🟡 (raw extras) | ✅ | dedicated field → M9 |
-| `/regex/` | ❌ | ✅ | builder support → M9 |
-| `and` / `or` / `xor` / parentheses | ❌ | ✅ | builder support (or clearly document the raw box handles it) → M9 |
-| virtual tags (`+OVERDUE`, `+BLOCKED`, …) | 🟡 (quick views use them) | ✅ | picker → M9 |
-| UDA filters | ❌ | ✅ | builder support → M9 |
+| `attr.before:` / `.after:` (dates) | ✅ (Jalali pickers) | ✅ | `rewrite_args` already converts every date modifier (`.is` `.isnt` `.not` `.under` `.over` `.by` too — see `tests/test_date_grammar.py`); more builder rows → later |
+| `/regex/` | ✅ "الگوی شرح" field in the builder (M9) | ✅ | — |
+| `and` / `or` / `xor` / parentheses | 🟡 the builder's raw-extras box takes them verbatim, labelled as such (M9) | ✅ | a structured boolean builder is out of scope — documented |
+| id / id-range / uuid | ✅ dedicated "شناسه / UUID" field in the builder (M9) | ✅ | — |
+| virtual tags (`+OVERDUE`, `+BLOCKED`, …) | ✅ one-click picker in the builder (9 common tags) + quick views (M9) | ✅ | — |
+| UDA filters | 🟡 via the builder's raw-extras box | ✅ | typed UDA rows in the builder → later |
 
 The raw filter bar already accepts **any** Taskwarrior filter string verbatim
 (with autocomplete), so no user is ever blocked — the gaps above are
@@ -100,7 +100,7 @@ convenience, not capability.
 | UDA definitions | ✅ UDA Manager (M8) — CRUD (name / label / type / values / default); delete warns data is kept | — |
 | report definitions | ✅ Reports Manager (M8) — all reports listed; custom reports editable (columns / labels / sort / filter / dateformat / description); built-ins read-only, overriding one needs explicit confirm | — |
 | aliases | 🟡 visible in the Config Manager (`alias.*` rows) | dedicated list in Command Browser → M9 |
-| hooks | ❌ | list (read-only) in Diagnostics → M9 |
+| hooks | 🟡 the Diagnostics tab shows the Hooks section of `task diagnostics` (location + enabled) | a dedicated hook list/editor → later |
 
 ---
 

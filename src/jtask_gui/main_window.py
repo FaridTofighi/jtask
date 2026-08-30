@@ -257,6 +257,11 @@ class MainWindow(QMainWindow):
         self._console_action.toggled.connect(self._toggle_console)
         row2.addAction(self._console_action)
 
+        self._tools_action = QAction(icons.icon("tools"), "تشخیص و ابزارها…", self)
+        self._tools_action.setToolTip("تشخیص · راهنمای فرمان‌ها · ماشین‌حساب")
+        self._tools_action.triggered.connect(self._open_tools)
+        row2.addAction(self._tools_action)
+
         self._toolbars = [row1, row2]
 
         add_sc = QAction(self)
@@ -351,6 +356,14 @@ class MainWindow(QMainWindow):
             "Taskwarrior آماده است" if ok else "Taskwarrior یافت نشد"
         )
         sb.addWidget(self._status_binary)
+        if ok:
+            submit(
+                taskwarrior.version,
+                lambda v: self._status_binary.setText(
+                    f"Taskwarrior {v}" if v else "Taskwarrior آماده است"
+                ),
+                lambda _e: None,
+            )
 
         self._timer = TimerIndicator()
         self._timer.stopRequested.connect(lambda uuid: self._start_stop(uuid, False))
@@ -601,6 +614,11 @@ class MainWindow(QMainWindow):
         dlg.changed.connect(self.refresh_all)
         dlg.exec()
 
+    def _open_tools(self) -> None:
+        from .widgets.tools_dialog import ToolsDialog
+
+        ToolsDialog(self).exec()
+
     def _open_task_form(self, mode: str) -> None:
         from .widgets.task_form import TaskFormDialog
 
@@ -816,6 +834,7 @@ class MainWindow(QMainWindow):
         self._add_full_action.setIcon(icons.icon("add"))
         self._log_action.setIcon(icons.icon("completed"))
         self._manage_action.setIcon(icons.icon("manage"))
+        self._tools_action.setIcon(icons.icon("tools"))
         self._data_btn.setIcon(icons.icon("data"))
         self._export_action.setIcon(icons.icon("export"))
         self._import_action.setIcon(icons.icon("import"))
