@@ -63,6 +63,11 @@ class TaskTable(QTableView):
     doneRequested = pyqtSignal(list)         # list[uuid]
     deleteRequested = pyqtSignal(list)
     startStopRequested = pyqtSignal(str, bool)   # uuid, start?
+    duplicateRequested = pyqtSignal(list)    # list[uuid]
+    appendRequested = pyqtSignal(list)       # list[uuid] — caller prompts for text
+    prependRequested = pyqtSignal(list)      # list[uuid]
+    purgeRequested = pyqtSignal(list)        # list[uuid] (deleted tasks only)
+    bulkEditRequested = pyqtSignal(list)     # list[uuid]
 
     def __init__(self, model: TaskTableModel, parent=None) -> None:
         super().__init__(parent)
@@ -172,6 +177,16 @@ class TaskTable(QTableView):
         src = self._proxy.mapToSource(idx)
         return self._model.data(src, TASK_ROLE)
 
+    def selected_tasks(self) -> list[dict]:
+        rows = {i.row() for i in self.selectionModel().selectedRows()}
+        out = []
+        for r in rows:
+            src = self._proxy.mapToSource(self._proxy.index(r, 0))
+            task = self._model.data(src, TASK_ROLE)
+            if task:
+                out.append(task)
+        return out
+
     # --- events -----------------------------------------------
 
     def _on_double(self, index) -> None:
@@ -186,21 +201,47 @@ class TaskTable(QTableView):
             self.taskActivated.emit(task)
 
     def _context_menu(self, pos) -> None:
-        uuids = self.selected_uuids()
+        tasks = self.selected_tasks()
+        uuids = [t.get("uuid") for t in tasks if t.get("uuid")]
         if not uuids:
             return
+        n = len(uuids)
+        deleted = [t["uuid"] for t in tasks if t.get("status") == "deleted"]
+
         menu = QMenu(self)
-        act_done = menu.addAction(f"انجام‌شده ({len(uuids)})")
-        act_del = menu.addAction(f"حذف ({len(uuids)})")
+        act_done = menu.addAction(f"انجام‌شده ({n})")
+        act_del = menu.addAction(f"حذف ({n})")
+        act_dup = menu.addAction(f"تکثیر ({n})")
+        menu.addSeparator()
+        act_bulk = menu.addAction(f"ویرایش گروهی… ({n})")
+        act_append = menu.addAction("افزودن به شرح…")
+        act_prepend = menu.addAction("پیش‌افزودن به شرح…")
         menu.addSeparator()
         act_start = menu.addAction("شروع زمان‌سنجی")
         act_stop = menu.addAction("توقف زمان‌سنجی")
+        act_purge = None
+        if deleted:
+            menu.addSeparator()
+            act_purge = menu.addAction(f"پاک‌سازی برای همیشه… ({len(deleted)})")
+
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
+        if chosen is None:
+            return
         if chosen == act_done:
             self.doneRequested.emit(uuids)
         elif chosen == act_del:
             self.deleteRequested.emit(uuids)
+        elif chosen == act_dup:
+            self.duplicateRequested.emit(uuids)
+        elif chosen == act_bulk:
+            self.bulkEditRequested.emit(uuids)
+        elif chosen == act_append:
+            self.appendRequested.emit(uuids)
+        elif chosen == act_prepend:
+            self.prependRequested.emit(uuids)
         elif chosen == act_start:
             self.startStopRequested.emit(uuids[0], True)
         elif chosen == act_stop:
             self.startStopRequested.emit(uuids[0], False)
+        elif act_purge is not None and chosen == act_purge:
+            self.purgeRequested.emit(deleted)

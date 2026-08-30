@@ -687,3 +687,136 @@ Console stays **permanently** — future Taskwarrior versions, power-user syntax
 custom hooks/reports, and anything M5–M9 doesn't grow a control for.
 
 **STOP — awaiting review of this milestone breakdown before implementation.**
+
+---
+
+## M5 — implementation log (in progress)
+
+Approved 2026-08-28. Landing per-feature with screenshots + tests, not one batch.
+
+### Cross-cutting infrastructure (done)
+
+- **Real error surfacing (§23).** `jtask.errors.TaskCommandError` carries
+  `returncode` / `stderr` / `cmd` + `.details()`. `taskwarrior.run()` raises it
+  on any non-zero exit. Removed `rc.verbose=nothing` from the shared `_RC`
+  overrides — it was silencing Taskwarrior's own error text; machine-output
+  callers (`export`, `_lines`, `urgency_terms`) now pass `run(..., quiet=True)`.
+  Workers deliver the **exception object** (signal is `pyqtSignal(object)`),
+  never a flattened string.
+- **`widgets/error_dialog.py`.** Human message on top; `$ cmd` + exit code +
+  stderr behind a "نمایش جزئیات فنی" disclosure (monospace, LTR, no-wrap);
+  buttons «رونوشت جزئیات» (clipboard) and «باز کردن کنسول» (reveals + focuses
+  the Raw Console). `main_window._error` accepts any object, shows details only
+  for `TaskCommandError`.
+- **`widgets/confirm.py` — GUI-enforced confirmation layer.** `confirm(...)`
+  → bool. Shows exact affected **count** (Persian digits, custom noun),
+  danger-styled button when `destructive`, and a type-the-phrase **hard
+  confirmation** (`require_phrase`) for purge. Independent of the user's
+  `rc.confirmation` / `rc.bulk` (jtask always forces both off so `task` never
+  prompts) — this dialog is the only, constant gate.
+- **`widgets/op_status.py`.** Status-bar indicator with
+  idle / running / success / failed / cancelled; success + cancelled auto-fade,
+  failed persists to the next op. Replaces the old plain busy label; wired
+  through `_begin_busy` / `_end_busy` / `_write` / `_on_load_error`.
+
+### Verbs
+
+- **`undo` preview (broad — every undo, not only post-bulk).**
+  `taskwarrior.undo_preview()` runs `task undo` with confirmation on + answers
+  "no" (state untouched), returns `{text, count, empty}`. `_undo()` fetches the
+  preview async, and for a non-empty result shows the confirm dialog with the
+  operation count + raw revert diff as details before running the real
+  `task undo`. Empty → status message, no dialog.
+
+### Task-table context menu — lifecycle verbs (done)
+
+`widgets/task_table.py` gained `selected_tasks()` (full dicts) and intent
+signals: `duplicateRequested` / `appendRequested` / `prependRequested` /
+`purgeRequested` / `bulkEditRequested`. Menu now:
+انجام‌شده · حذف · تکثیر · ویرایش گروهی… · افزودن/پیش‌افزودن به شرح… ·
+شروع/توقف زمان‌سنجی · پاک‌سازی برای همیشه… (only shown when any selected row is
+`status:deleted`).
+
+- **delete** now routes through `confirm(destructive, count)` before running.
+- **duplicate** — 1 task → `taskwarrior.duplicate()` (parses `Created task
+  <uuid|id>`) and the status bar shows the new identifier; N tasks →
+  `command(uuids,"duplicate")`.
+- **append / prepend** — `QInputDialog` for the text, `command(uuids, verb,
+  [text])`; bulk (>1) gets a confirm.
+- **purge** — `taskwarrior.purge(filter)` (returns "Purged N" count); hard
+  confirm (`require_phrase="پاک‌سازی"`) + count; only deleted UUIDs passed.
+- **bulk edit** — `widgets/bulk_edit.py` `BulkEditDialog`: priority
+  (`SegmentedControl`: — / H / M / L / حذف), project (editable combo), add-tags
+  / remove-tags line edits, and due / scheduled / wait rows (Jalali picker +
+  "پاک‌کردن" checkbox). `mods()` emits **only touched fields**; dates come back
+  Gregorian so the caller skips `rewrite_args`. `>1` task → confirm with the
+  mod list + count.
+
+### Full Add Task dialog + Log completed task (done)
+
+`widgets/task_form.py` `TaskFormDialog(mode="add"|"log")` — one form for both.
+Fields: description (required), project (editable combo), tags
+(`TagChipEditor` + completions), priority (`SegmentedControl` — / H / M / L),
+due / scheduled / wait / until (`JalaliDatePicker`, time on due+scheduled),
+recurrence (`RecurrenceBuilder`, hidden in log mode), depends (`_DependsField`
+= line edit + "افزودن…" picker over `report_next`). `_revalidate()` disables
+OK + shows a hint when description is empty or recurrence is set with no due.
+`args()` emits Gregorian-ready tokens → handed straight to `taskwarrior.add`
+/ `taskwarrior.log` (no `rewrite_args`). Two toolbar actions on row 2:
+«افزودن کار…» (Ctrl+Shift+N) and «ثبت کار انجام‌شده…».
+
+### M5 scope — complete
+
+append · prepend · duplicate · log dialog · purge (hard confirm + count) ·
+undo preview (broad) · full Add Task dialog · bulk priority / tag / project /
+date · GUI-enforced confirmation layer · real error surfacing · visible async
+op-state — all landed with tests + screenshots. Deferred by note: single-cell
+inline table edit, bulk annotate, back-dating a logged task's `end`,
+`until` in the bulk dialog.
+
+---
+
+## M6 — implementation log (in progress)
+
+### Core parsing (framework-agnostic, TDD)
+
+- **`src/jtask/history.py`** — `parse_information(text) → InformationReport`
+  (`attributes`, `changes: list[ChangeEntry]`, `sessions: list[Session]`).
+  The `Date | Modification` block is one timestamp per transaction (blank on
+  continuation lines); every `ChangeEntry` keeps the exact `raw` line.
+  `Session`s come from `Start set to '<ts>'` / `Start deleted (duration: <d>)`
+  pairs; an unclosed `Start set` → `running`. `parse_duration` handles
+  `'N days, H:MM:SS'`.
+- **`src/jtask/timesheet.py`** — `build(filter, since, until) → Timesheet`:
+  export tasks `modified.after:<since>` (+ `+ACTIVE`), parse each one's
+  `information`, clip sessions to the window, group by task, roll up
+  `by_project` / `by_day` / `total`. Per-task `information` calls capped at 300
+  (`truncated` flag). Timewarrior is **not** required.
+- **`taskwarrior.information(spec)` / `taskwarrior.stats(filter)`** helpers;
+  `jalali.from_local(value, fmt)` for the local timestamps that `information`
+  emits (`short` / `long` / `datetime` / `time` / `gregorian`).
+
+### GUI
+
+- **Detail panel is now a `QTabWidget`** (`_detail_host`): «ویرایش» (the existing
+  form, untouched) / «تاریخچه» / «دادهٔ خام». `_show_detail` loads all three.
+- **`widgets/history_view.py`** — `TaskHistoryView`: anchors line
+  (ایجاد / آخرین ویرایش / پایان), then a day-grouped tree of changes rendered as
+  Persian sentences (`describe()`), date-typed values shown Jalali, the raw
+  Taskwarrior line on hover. Start/Stop get dedicated wording
+  («زمان‌سنجی آغاز شد …» / «… متوقف شد — مدت …»).
+- **`widgets/raw_data_view.py`** — `RawDataView`: the task's stored JSON
+  (jtask's derived `*_gregorian` keys stripped), monospace LTR, copy button.
+- **`widgets/stats_view.py`** — `StatsView` in the Reports rail as «آمار»:
+  `task stats` as a two-column table, Persian category labels, ISO dates → Jalali,
+  units/percent localised, respects the active filter.
+- **`widgets/timesheet_view.py`** — `TimesheetView` in the Reports rail as
+  «برگهٔ زمان»: Jalali از/تا range (defaults to the current Jalali week),
+  task→sessions tree, running marker, جمع کل + per-project summary, honest
+  "بازسازی‌شده از تاریخچهٔ Taskwarrior" note (mentions Timewarrior when present).
+- **`widgets/timer_indicator.py`** — status-bar pill: `▶ <desc>  H:MM:SS` (or
+  `▶ N کار فعال` when several), a 1 s `QTimer` ticks the elapsed time, click →
+  `stopRequested(uuid)`. Fed from `export(["+ACTIVE"])` on every `refresh_all`.
+
+_Next in M6: nothing outstanding for the milestone's stated scope — History /
+Raw Data / Statistics / Timesheet / timer indicator all landed._

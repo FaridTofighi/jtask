@@ -272,3 +272,70 @@ QPlainTextEdit#ConsoleOutput {
     background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
 }
 QLineEdit#ConsoleInput { font-family: "Vazirmatn", "DejaVu Sans Mono", monospace; }
+
+/* ============================ error dialog ============== */
+QLabel#ErrorMessage { font-size: 14px; line-height: 150%; }
+QToolButton#ErrorDetailsToggle {
+    color: @text_muted@; font-size: 12px; border: none; background: transparent;
+    padding: 2px 4px;
+}
+QToolButton#ErrorDetailsToggle:hover { color: @primary@; background: transparent; }
+QPlainTextEdit#ErrorDetails {
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace; font-size: 12px;
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+    color: @text_muted@;
+}
+
+/* ============================ confirm dialog ============ */
+QLabel#ConfirmBody { font-size: 13px; line-height: 150%; }
+QPlainTextEdit#ConfirmDetails {
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace; font-size: 12px;
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QPushButton#Danger {
+    background-color: @overdue@; color: #fff; border: 1px solid @overdue@;
+    font-weight: 700;
+}
+QPushButton#Danger:hover   { background-color: @blocked@; border-color: @blocked@; }
+QPushButton#Danger:pressed { background-color: @accent@; }
+QPushButton#Danger:disabled{ background-color: @bg_alt@; color: @text_muted@;
+    border-color: @border@; }
+
+/* ============================ M6 — history / raw / stats / timesheet === */
+QLabel#FormHint { color: @overdue@; font-size: 12px; }
+QLabel#H2 { font-size: 13px; font-weight: 700; color: @text@; padding: 2px 0; }
+
+QTreeWidget#HistoryTree, QTreeWidget#TimesheetTree {
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QTreeWidget#HistoryTree::item, QTreeWidget#TimesheetTree::item { padding: 3px 4px; }
+QTreeWidget#HistoryTree QHeaderView::section,
+QTreeWidget#TimesheetTree QHeaderView::section,
+QTableWidget#StatsTable QHeaderView::section {
+    background-color: @bg_alt@; color: @text_muted@; border: none;
+    border-bottom: 1px solid @border@; padding: 5px 6px; font-weight: 700;
+}
+QTableWidget#StatsTable {
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+QTableWidget#StatsTable::item { padding: 4px 8px; }
+
+QPlainTextEdit#RawJson {
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace; font-size: 12px;
+    background-color: @bg@; border: 1px solid @border@; border-radius: 8px;
+}
+
+QLabel#TimerIndicator {
+    color: @primary_fg@; background-color: @primary@;
+    border-radius: 9px; padding: 1px 9px; font-weight: 700;
+}
+QLabel#TimerIndicator:hover { background-color: @overdue@; color: #fff; }
+
+QTabWidget#DetailTabs::pane { border: none; }
+QTabWidget#DetailTabs QTabBar::tab {
+    background: transparent; color: @text_muted@; padding: 6px 14px;
+    border-bottom: 2px solid transparent;
+}
+QTabWidget#DetailTabs QTabBar::tab:selected {
+    color: @text@; border-bottom: 2px solid @primary@;
+}

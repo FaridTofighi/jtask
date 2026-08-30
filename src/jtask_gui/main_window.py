@@ -12,14 +12,15 @@ from PyQt6.QtWidgets import (
     QDockWidget,
     QLabel,
     QMainWindow,
-    QMessageBox,
     QSizePolicy,
     QSplitter,
     QStackedWidget,
+    QTabWidget,
     QToolBar,
 )
 
 from jtask import reports, taskwarrior
+from jtask.errors import TaskCommandError
 from jtask.rtl import set_digit_mode
 
 from . import fmt, icons
@@ -27,12 +28,18 @@ from .models.task_model import TaskTableModel
 from .settings import Settings
 from .theme import other_theme, render_qss
 from .widgets.command_console import CommandConsole
+from .widgets.confirm import confirm
 from .widgets.detail_panel import DetailPanel
+from .widgets.error_dialog import ErrorDialog
 from .widgets.filter_bar import FilterBar
+from .widgets.history_view import TaskHistoryView
+from .widgets.op_status import OperationStatus
 from .widgets.quick_add import QuickAddBar
+from .widgets.raw_data_view import RawDataView
 from .widgets.reports_view import ReportsView
 from .widgets.sidebar import Sidebar
 from .widgets.task_table import TaskTable
+from .widgets.timer_indicator import TimerIndicator
 from .workers import submit
 
 log = logging.getLogger("jtask_gui.window")
@@ -63,6 +70,8 @@ class MainWindow(QMainWindow):
         )
         self._table = TaskTable(self._model)
         self._detail = DetailPanel()
+        self._history_view = TaskHistoryView()
+        self._raw_view = RawDataView()
         self._reports = ReportsView(self.settings.theme)
 
         self._really_quit = False
@@ -93,18 +102,25 @@ class MainWindow(QMainWindow):
     def _build_central(self) -> None:
         self._content = QStackedWidget()
 
+        self._detail_host = QTabWidget()
+        self._detail_host.setObjectName("DetailTabs")
+        self._detail_host.setDocumentMode(True)
+        self._detail_host.addTab(self._detail, "ویرایش")
+        self._detail_host.addTab(self._history_view, "تاریخچه")
+        self._detail_host.addTab(self._raw_view, "دادهٔ خام")
+
         self._split = QSplitter(Qt.Orientation.Horizontal)
         self._split.setObjectName("MainSplit")
         self._split.setHandleWidth(1)
         self._split.addWidget(self._table)
-        self._split.addWidget(self._detail)
+        self._split.addWidget(self._detail_host)
         self._split.setStretchFactor(0, 1)
         self._split.setStretchFactor(1, 0)
         self._split.setCollapsible(0, False)
         self._split.setCollapsible(1, True)
-        for w in (self._table, self._detail):
+        for w in (self._table, self._detail_host):
             w.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._detail.setVisible(False)
+        self._detail_host.setVisible(False)
         self._split.setSizes([1_000_000, 0])
 
         self._content.addWidget(self._split)     # index 0: tasks
@@ -169,6 +185,19 @@ class MainWindow(QMainWindow):
             lambda: self._table.set_group_key(self._group_combo.currentData())
         )
         row2.addWidget(self._group_combo)
+        row2.addSeparator()
+
+        self._add_full_action = QAction(icons.icon("add"), "افزودن کار…", self)
+        self._add_full_action.setShortcut("Ctrl+Shift+N")
+        self._add_full_action.setToolTip("افزودن کار با همهٔ فیلدها (Ctrl+Shift+N)")
+        self._add_full_action.triggered.connect(lambda: self._open_task_form("add"))
+        row2.addAction(self._add_full_action)
+
+        self._log_action = QAction(icons.icon("completed"), "ثبت کار انجام‌شده…", self)
+        self._log_action.setToolTip("ثبت کاری که همین حالا انجام شده است (task log)")
+        self._log_action.triggered.connect(lambda: self._open_task_form("log"))
+        row2.addAction(self._log_action)
+
         row2.addSeparator()
 
         self._undo_action = QAction(icons.icon("undo"), "واگرد آخرین عملیات", self)
@@ -290,9 +319,13 @@ class MainWindow(QMainWindow):
         )
         sb.addWidget(self._status_binary)
 
-        self._status_busy = QLabel("")
-        self._status_busy.setObjectName("Muted")
-        sb.addWidget(self._status_busy)
+        self._timer = TimerIndicator()
+        self._timer.stopRequested.connect(lambda uuid: self._start_stop(uuid, False))
+        sb.addWidget(self._timer)
+
+        self._op_status = OperationStatus()
+        self._status_busy = self._op_status  # back-compat alias
+        sb.addWidget(self._op_status)
 
     def _wire(self) -> None:
         self._sidebar.activated.connect(self._on_view_selected)
@@ -303,9 +336,16 @@ class MainWindow(QMainWindow):
         self._table.doneRequested.connect(
             lambda uuids: self._bulk(uuids, "done", "کارها انجام‌شده شدند")
         )
-        self._table.deleteRequested.connect(
-            lambda uuids: self._bulk(uuids, "delete", "کارها حذف شدند")
+        self._table.deleteRequested.connect(self._delete)
+        self._table.duplicateRequested.connect(self._duplicate)
+        self._table.appendRequested.connect(
+            lambda uuids: self._append_like(uuids, "append", "افزودن به شرح")
         )
+        self._table.prependRequested.connect(
+            lambda uuids: self._append_like(uuids, "prepend", "پیش‌افزودن به شرح")
+        )
+        self._table.purgeRequested.connect(self._purge)
+        self._table.bulkEditRequested.connect(self._bulk_edit)
         self._table.startStopRequested.connect(self._start_stop)
         self._reports.filterRequested.connect(self._drill_into_filter)
         self._reports._calendar.taskRescheduled.connect(self._reschedule)
@@ -350,11 +390,13 @@ class MainWindow(QMainWindow):
         end = int(self._detail_anim.endValue() or 0)
         self._apply_detail_width(end)
         if end == 0:
-            self._detail.setVisible(False)
+            self._detail_host.setVisible(False)
 
     def _show_detail(self, task: dict) -> None:
         self._detail.load_task(task)
-        self._detail.setVisible(True)
+        self._history_view.load_task(task)
+        self._raw_view.load_task(task)
+        self._detail_host.setVisible(True)
         self._animate_detail(_DETAIL_WIDTH)
 
     def _hide_detail(self) -> None:
@@ -407,6 +449,11 @@ class MainWindow(QMainWindow):
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
         self._reports.discover_custom_reports()
+        submit(
+            lambda: taskwarrior.export(["+ACTIVE"]),
+            self._timer.set_active_tasks,
+            lambda _e: None,
+        )
         self._load_current_view()
 
     def _load_current_view(self) -> None:
@@ -438,9 +485,10 @@ class MainWindow(QMainWindow):
         title = self._view_spec.get("title", "کارها")
         self._status_count.setText(f"{fmt.num(len(tasks))} کار · {title}")
 
-    def _on_load_error(self, message: str) -> None:
+    def _on_load_error(self, err: object) -> None:
         self._end_busy()
-        self._error(message)
+        self._op_status.failed("بارگذاری ناموفق بود")
+        self._error(err)
 
     # --- events --------------------------------------------
 
@@ -462,10 +510,138 @@ class MainWindow(QMainWindow):
     def _add_task(self, args: list[str]) -> None:
         self._write(functools.partial(taskwarrior.add, args), "کار افزوده شد")
 
+    def _open_task_form(self, mode: str) -> None:
+        from .widgets.task_form import TaskFormDialog
+
+        dlg = TaskFormDialog(
+            mode, taskwarrior.list_projects(), taskwarrior.list_tags(), self
+        )
+        if not dlg.exec():
+            return
+        args = dlg.args()
+        verb = taskwarrior.log if mode == "log" else taskwarrior.add
+        self._write(
+            functools.partial(verb, args),
+            "کار انجام‌شده ثبت شد" if mode == "log" else "کار افزوده شد",
+        )
+
     def _bulk(self, uuids: list[str], verb: str, msg: str) -> None:
         if not uuids:
             return
         self._write(functools.partial(taskwarrior.command, uuids, verb), msg)
+
+    # --- M5 task-lifecycle verbs --------------------------
+
+    def _delete(self, uuids: list[str]) -> None:
+        if not uuids:
+            return
+        if not confirm(
+            self,
+            title="حذف کارها",
+            body=(
+                "کارهای انتخاب‌شده حذف می‌شوند. با «واگرد» یا از نمای "
+                "«تکمیل‌شده» قابل بازیابی‌اند."
+            ),
+            count=len(uuids),
+            destructive=True,
+            confirm_label="حذف",
+        ):
+            return
+        self._bulk(uuids, "delete", "کارها حذف شدند")
+
+    def _duplicate(self, uuids: list[str]) -> None:
+        if not uuids:
+            return
+        if len(uuids) == 1:
+            self._begin_busy("در حال تکثیر…")
+
+            def done(res: dict) -> None:
+                self._end_busy()
+                self._op_status.success("کار تکثیر شد")
+                new = res.get("id") or res.get("uuid") or ""
+                self.statusBar().showMessage(
+                    f"کار تکثیر شد ({new})" if new else "کار تکثیر شد", 3000
+                )
+                self.refresh_all()
+
+            submit(
+                functools.partial(taskwarrior.duplicate, uuids), done, self._op_failed
+            )
+        else:
+            self._write(
+                functools.partial(taskwarrior.command, uuids, "duplicate"),
+                "کارها تکثیر شدند",
+            )
+
+    def _append_like(self, uuids: list[str], verb: str, title: str) -> None:
+        if not uuids:
+            return
+        from PyQt6.QtWidgets import QInputDialog
+
+        text, ok = QInputDialog.getText(self, title, "متن:")
+        text = text.strip()
+        if not ok or not text:
+            return
+        if len(uuids) > 1 and not confirm(
+            self,
+            title=title,
+            body=f"«{text}» به شرح کارهای انتخاب‌شده {title} می‌شود.",
+            count=len(uuids),
+        ):
+            return
+        self._write(
+            functools.partial(taskwarrior.command, uuids, verb, [text]),
+            "شرح به‌روزرسانی شد",
+        )
+
+    def _purge(self, uuids: list[str]) -> None:
+        if not uuids:
+            return
+        if not confirm(
+            self,
+            title="پاک‌سازی برای همیشه",
+            body=(
+                "این کارهای حذف‌شده برای همیشه از پایگاه‌دادهٔ Taskwarrior پاک "
+                "می‌شوند و دیگر با «واگرد» بازیابی نمی‌شوند."
+            ),
+            count=len(uuids),
+            destructive=True,
+            confirm_label="پاک‌سازی برای همیشه",
+            require_phrase="پاک‌سازی",
+        ):
+            return
+        self._write(
+            functools.partial(taskwarrior.purge, uuids), "کارهای حذف‌شده پاک شدند"
+        )
+
+    def _bulk_edit(self, uuids: list[str]) -> None:
+        if not uuids:
+            return
+        from .widgets.bulk_edit import BulkEditDialog
+
+        dlg = BulkEditDialog(
+            len(uuids),
+            taskwarrior.list_projects(),
+            taskwarrior.list_tags(),
+            self,
+        )
+        if not dlg.exec():
+            return
+        mods = dlg.mods()
+        if not mods:
+            self.statusBar().showMessage("تغییری انتخاب نشد.", 2000)
+            return
+        if len(uuids) > 1 and not confirm(
+            self,
+            title="ویرایش گروهی",
+            body="تغییرات زیر اعمال می‌شود:\n" + " ".join(mods),
+            count=len(uuids),
+        ):
+            return
+        self._write(
+            functools.partial(taskwarrior.command, uuids, "modify", mods),
+            "کارها به‌روزرسانی شدند",
+        )
 
     def _start_stop(self, uuid: str, start: bool) -> None:
         self._write(
@@ -483,7 +659,33 @@ class MainWindow(QMainWindow):
         )
 
     def _undo(self) -> None:
-        self._write(functools.partial(taskwarrior.run, ["undo"]), "واگرد انجام شد")
+        """Show what the last transaction reverts, then confirm before applying."""
+        self._begin_busy("در حال آماده‌سازی واگرد…")
+        submit(taskwarrior.undo_preview, self._confirm_undo, self._on_load_error)
+
+    def _confirm_undo(self, preview: dict) -> None:
+        self._end_busy()
+        if preview.get("empty"):
+            self._op_status.idle()
+            self.statusBar().showMessage("چیزی برای واگرد وجود ندارد.", 2500)
+            return
+        ok = confirm(
+            self,
+            title="واگرد آخرین تغییر",
+            body=(
+                "آخرین تراکنش Taskwarrior به وضعیت پیش از آن بازگردانده می‌شود.\n"
+                "این عمل بازگشت‌پذیر نیست."
+            ),
+            count=preview.get("count"),
+            count_noun="عملیات",
+            destructive=True,
+            confirm_label="واگرد",
+            details=preview.get("text"),
+        )
+        if ok:
+            self._write(
+                functools.partial(taskwarrior.run, ["undo"]), "واگرد انجام شد"
+            )
 
     def _change_context(self, name: str) -> None:
         verb = ["context", "none"] if not name else ["context", name]
@@ -520,6 +722,8 @@ class MainWindow(QMainWindow):
         self._undo_action.setIcon(icons.icon("undo"))
         self._settings_action.setIcon(icons.icon("settings"))
         self._console_action.setIcon(icons.icon("console"))
+        self._add_full_action.setIcon(icons.icon("add"))
+        self._log_action.setIcon(icons.icon("completed"))
 
     def _toggle_console(self, visible: bool) -> None:
         self._console_dock.setVisible(visible)
@@ -542,29 +746,43 @@ class MainWindow(QMainWindow):
 
     def _begin_busy(self, message: str) -> None:
         self._pending_ops += 1
-        self._status_busy.setText("⟳ " + message)
+        self._op_status.running(message)
 
     def _end_busy(self) -> None:
         self._pending_ops = max(0, self._pending_ops - 1)
-        if self._pending_ops == 0:
-            self._status_busy.setText("")
+        if self._pending_ops == 0 and self._op_status.state == "running":
+            self._op_status.idle()
 
     def _write(self, fn, success_msg: str) -> None:
         self._begin_busy("در حال اعمال…")
 
         def done(_result):
             self._end_busy()
+            self._op_status.success(success_msg)
             self.statusBar().showMessage(success_msg, 2500)
             self.refresh_all()
 
-        def failed(message):
-            self._end_busy()
-            self._error(message)
+        submit(fn, done, self._op_failed)
 
-        submit(fn, done, failed)
+    def _op_failed(self, err: object) -> None:
+        self._end_busy()
+        self._op_status.failed("عملیات ناموفق بود")
+        self._error(err)
 
-    def _error(self, message: str) -> None:
-        QMessageBox.warning(self, "خطا", message)
+    def _error(self, err: object) -> None:
+        """Surface a failure without ever crashing — real exit code + stderr
+        behind a disclosure, with copy + open-console (§23)."""
+        message = str(err)
+        details = err.details() if isinstance(err, TaskCommandError) else None
+        ErrorDialog(
+            message, details, parent=self, on_open_console=self._reveal_console
+        ).exec()
+
+    def _reveal_console(self) -> None:
+        self._console_action.setChecked(True)
+        self._console_dock.setVisible(True)
+        self._console_dock.raise_()
+        self._console._in.setFocus()
 
     def _restore_state(self) -> None:
         geo = self.settings.window_geometry()

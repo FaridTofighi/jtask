@@ -16,18 +16,18 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 
 | Command | Native GUI today | Console | Gap → milestone | Status |
 |---|---|---|---|---|
-| `add` | ✅ quick-add + (planned) full add dialog | ✅ | full add dialog with all fields → **M5** | Partial |
-| `modify` | ✅ detail panel save (diff), drag-drop project/due, bulk project/due | ✅ | bulk priority/tag/status/wait, inline edit → **M5** | Partial |
+| `add` | ✅ quick-add **and** full Add Task dialog (description / project / tags / priority / due·scheduled·wait·until Jalali pickers / recurrence / depends, with validation) (M5) | ✅ | — | Implemented |
+| `modify` | ✅ detail panel save (diff), drag-drop project/due, **bulk edit dialog** (priority / project / tag +− / due / scheduled / wait, affected count, confirm) (M5) | ✅ | single-cell inline edit → later | Implemented |
 | `done` | ✅ row action + bulk | ✅ | — | Implemented |
-| `delete` | ✅ row action + bulk (uses TW confirm) | ✅ | GUI-side confirm + count regardless of `rc.confirmation` → **M5** | Partial |
-| `start` / `stop` | ✅ row action + context menu | ✅ | timer indicator, elapsed time → **M6** | Partial |
-| `annotate` | ✅ detail panel | ✅ | bulk annotate → **M5** | Implemented |
+| `delete` | ✅ row action + bulk, **GUI confirm + exact count**, danger-styled (M5) | ✅ | — | Implemented |
+| `start` / `stop` | ✅ row action + context menu + **status-bar timer indicator** (live elapsed, click to stop) (M6) | ✅ | — | Implemented |
+| `annotate` | ✅ detail panel | ✅ | bulk annotate → later | Implemented |
 | `denotate` | ✅ detail panel | ✅ | — | Implemented |
-| `append` / `prepend` | ❌ (only via `modify`-style save) | ✅ | native append/prepend actions → **M5** | Console-only |
-| `duplicate` | ❌ | ✅ | "Duplicate task" action, show new id/uuid → **M5** | Console-only |
-| `log` | ❌ | ✅ | "Log completed task" dialog → **M5** | Console-only |
-| `undo` | ✅ toolbar + Ctrl+Z (`rc.confirmation=off`) | ✅ | show "N operations will be reverted" preview + GUI confirm → **M5** | Partial |
-| `purge` | ❌ | ✅ | native purge, hard confirm + exact count → **M5** | Console-only |
+| `append` / `prepend` | ✅ context-menu action, prompts for text, bulk-capable with confirm (M5) | ✅ | — | Implemented |
+| `duplicate` | ✅ context-menu action; single-task shows the new id/uuid (M5) | ✅ | — | Implemented |
+| `log` | ✅ "ثبت کار انجام‌شده…" toolbar action — same full form as Add (recurrence hidden), runs `task log` (M5) | ✅ | back-dating `end` → later | Implemented |
+| `undo` | ✅ toolbar + Ctrl+Z — **preview dialog** ("N operations would be reverted" + raw diff) then GUI confirm before applying (M5) | ✅ | — | Implemented |
+| `purge` | ✅ context-menu action on deleted tasks — hard confirm (type «پاک‌سازی») + exact count, `taskwarrior.purge()` returns purged count (M5) | ✅ | — | Implemented |
 | `edit` | ❌ (spawns `$EDITOR`) | ✅ | "Raw task editor" = export `.task` text → edit → re-import; else console | Console-only |
 | `import` / `import-v2` | ❌ | ✅ | Import dialog: file picker, format detect, preview, confirm → **M7** | Console-only |
 | `export` | 🟡 core `taskwarrior.export` used internally; no user export | ✅ | Export dialog: JSON/TW-format, filter/all, destination → **M7** | Partial |
@@ -36,9 +36,9 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `context` | 🟡 sidebar switch + `task context none/<name>` | ✅ | Context Manager: create/edit/delete, show filters → **M8** | Partial |
 | `calc` | ❌ | ✅ | Calc panel wrapping `task calc` → **M9** | Console-only |
 | `count` | ✅ used internally (status bar counts) | ✅ | — | Implemented |
-| `stats` | ❌ | ✅ | Statistics view → **M6** | Console-only |
+| `stats` | ✅ "آمار" report — `task stats` parsed, Persian labels, Jalali dates, Persian digits, respects the active filter (M6) | ✅ | — | Implemented |
 | `diagnostics` | ❌ | ✅ | Diagnostics view (readable, copyable, exportable) → **M9** | Console-only |
-| `information` / `task <id>` | 🟡 detail panel shows attributes + urgency terms + audit | ✅ | History tab (parse modification log), Raw Data tab → **M6** | Partial |
+| `information` / `task <id>` | ✅ detail panel + **History tab** (modification log → Jalali/Persian, raw line kept) + **Raw Data tab** (stored JSON) (M6) | ✅ | — | Implemented |
 | `version` | 🟡 shown in status bar ("Taskwarrior آماده") | ✅ | show detected version in Diagnostics + startup → **M9** | Partial |
 | `help` | ❌ | ✅ | Command Browser/Help (from installed `task help`) → **M9** | Console-only |
 | `news` | ❌ | ✅ | (low value) console-only, documented | Console-only |
@@ -47,7 +47,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | built-in reports (`next/list/all/waiting/blocked/blocking/ready/active/completed/recurring/overdue/minimal/newest/oldest/long/ls`) | 🟡 sidebar quick-views map several; not all | ✅ | Reports Manager: run any report, configurable → **M8** | Partial |
 | `burndown.*` / `history.*` / `ghistory.*` | ✅ native charts (M2), computed from export | ✅ | period-granularity toggle done | Implemented |
 | `summary` | ✅ native progress view (M2) | ✅ | — | Implemented |
-| `timesheet` | ❌ | ✅ | Timesheet view (from modification-log session parse) → **M6** | Console-only |
+| `timesheet` | ✅ "برگهٔ زمان" — sessions rebuilt from `Start set` / `Start deleted (duration:…)` log pairs, Jalali date-range picker, per-task / per-project / per-day totals, running-session marker, honest label; detects Timewarrior (M6) | ✅ | multi-day session split; per-task `information` calls capped at 300 | Implemented |
 | `colors` / `logo` | — | ✅ | not applicable to a GUI | Not-applicable |
 | `show` | ❌ (used internally via `_show`) | ✅ | folded into Configuration Manager → **M8** | Console-only |
 | `_*` helper commands | ✅ used internally as shared lookups | ✅ | — | Implemented |
@@ -57,18 +57,18 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | Attribute | Native edit | Native display | Gap → milestone |
 |---|---|---|---|
 | description | ✅ detail + quick-add | ✅ table + detail | — |
-| project (dotted) | ✅ combo + drag-drop | ✅ table + sidebar tree | inline edit → M5 |
-| tags | ✅ chip editor | ✅ table | bulk tag add/remove → M5 |
-| priority | ✅ combo | ✅ table | bulk → M5 |
-| due / scheduled / wait / until | ✅ Jalali pickers | ✅ table (Jalali) | bulk date change → M5 |
+| project (dotted) | ✅ combo + drag-drop + **bulk edit** (M5) | ✅ table + sidebar tree | single-cell inline edit → later |
+| tags | ✅ chip editor + **bulk add/remove** (M5) | ✅ table | — |
+| priority | ✅ combo + **bulk** (M5) | ✅ table | — |
+| due / scheduled / wait / until | ✅ Jalali pickers + **bulk date change / clear** (M5) | ✅ table (Jalali) | `until` not yet in the bulk dialog |
 | status | 🟡 via done/delete/start actions | ✅ table | — |
 | recur / rtype / mask / imask | ✅ recurrence builder (M3) | 🟡 indicator icon | recurrence templates view → M8 |
 | depends | ✅ picker + dep graph (M3) | ✅ indicator + graph | — |
-| annotations | ✅ detail | 🟡 indicator icon | first-class History/Annotations tabs → M6 |
+| annotations | ✅ detail + shown in History tab | 🟡 indicator icon | dedicated Annotations tab → later |
 | urgency | ✅ read-only + "چرا؟" breakdown | ✅ table column | — |
-| entry / modified / end | ✅ audit line (Jalali) | 🟡 | History tab → M6 |
-| start | 🟡 via start/stop | ❌ no elapsed display | timer indicator → M6 |
-| uuid / id / parent | ✅ shown | ✅ | Raw Data tab → M6 |
+| entry / modified / end | ✅ audit line + **History tab** anchors (Jalali) (M6) | 🟡 | — |
+| start | ✅ start/stop + **live timer indicator** with elapsed (M6) | ✅ status bar | — |
+| uuid / id / parent | ✅ shown + **Raw Data tab** (M6) | ✅ | — |
 | template | ❌ | ❌ | rare; console-only, documented |
 | UDAs (any) | ✅ dynamic widgets in detail (M1) | ✅ (if a column) | UDA **Manager** (CRUD the definitions) → M8; UDA **filters** → M9 |
 
@@ -100,6 +100,47 @@ convenience, not capability.
 | report definitions | 🟡 custom reports *discovered & rendered* read-only (M3) | Reports Manager (create/edit definitions, never clobber existing) → M8 |
 | aliases | ❌ | list in Command Browser → M9 |
 | hooks | ❌ | list (read-only) in Diagnostics → M9 |
+
+---
+
+## Intentional non-features (documented decisions, not gaps)
+
+### Backup / Restore — **not a milestone item**
+
+Taskwarrior has never had a first-class backup/restore command, and jtask does
+not add one. The **Export** feature (M7 — all tasks, JSON *or* Taskwarrior
+format, to a file the user chooses) plus **Import** together give a complete
+manual backup-and-restore path: `export` everything → keep the file →
+`import` it into a fresh database. This is deliberate; a dedicated "backup"
+button would only be a thin alias over Export with all filters cleared.
+
+### GUI-enforced confirmation layer (M5)
+
+jtask always invokes `task` with `rc.confirmation=off rc.bulk=0` so Taskwarrior
+never blocks on its own terminal prompt (which a GUI cannot answer). Every
+destructive or bulk action instead routes through jtask's own confirmation
+dialog (`widgets/confirm.py`) **before** any command runs — showing the exact
+affected count, a danger-styled button for destructive ops, and a
+type-the-word hard confirmation for `purge`. This gate is independent of the
+user's `rc.confirmation` / `rc.bulk` values: it is always present and always
+the same.
+
+### Real error surfacing (M5, cross-cutting from here on)
+
+Every Taskwarrior-facing action shows failures through `widgets/error_dialog.py`:
+the human message on top, and the real `$ command`, exit code and stderr behind
+a disclosure with copy-to-clipboard and a jump into the Raw Command Console.
+`taskwarrior.run()` raises `TaskCommandError` (carrying returncode / stderr /
+cmd) on any non-zero exit; background workers deliver the exception object
+itself, never a flattened string. `rc.verbose=nothing` is **not** in the shared
+rc-override set (it silences Taskwarrior's own error text) — read-only callers
+that parse machine output opt in via `run(..., quiet=True)`.
+
+### Visible async operation state (M5, cross-cutting)
+
+The status bar carries an operation indicator with five states —
+idle / running / success / failed / cancelled (`widgets/op_status.py`) — so
+every heavy call has a visible lifecycle, not just a spinner that vanishes.
 
 ---
 

@@ -28,6 +28,7 @@ __all__ = [
     "resolve",
     "to_gregorian_string",
     "from_taskwarrior",
+    "from_local",
     "is_leap",
     "month_length",
     "weekday_sat",
@@ -275,3 +276,39 @@ def from_taskwarrior(value: str, fmt: str = "short") -> str:
         wd = WEEKDAY_NAMES[weekday_sat(jd)]
         return to_persian_digits(f"{wd} {jd.day} {MONTH_NAMES[jd.month - 1]} {jd.year}")
     return to_persian_digits(f"{jd.year:04d}-{jd.month:02d}-{jd.day:02d}")
+
+
+_LOCAL_TS_RE = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$"
+)
+
+
+def from_local(value: str, fmt: str = "short") -> str:
+    """Format an already-*local* timestamp as a Jalali string.
+
+    Accepts ``YYYY-MM-DD`` and ``YYYY-MM-DD HH:MM[:SS]`` — the form Taskwarrior's
+    ``information`` report and modification log emit (rendered in local time).
+    ``fmt``: ``short`` (``۱۴۰۳-۰۷-۱۰``), ``long`` (``سه‌شنبه ۱۰ مهر ۱۴۰۳``),
+    ``datetime`` (``۱۴۰۳-۰۷-۱۰ ۱۴:۳۰``), ``time`` (``۱۴:۳۰``),
+    ``gregorian`` (``2024-10-01``).  Empty / unparseable input returns it unchanged.
+    """
+    if not value:
+        return ""
+    m = _LOCAL_TS_RE.match(value.strip())
+    if not m:
+        return value
+    y, mo, d, hh, mm, _ss = m.groups()
+    jd = jdatetime.date.fromgregorian(date=datetime.date(int(y), int(mo), int(d)))
+    hm = f"{hh}:{mm}" if hh is not None else ""
+    if fmt == "gregorian":
+        return f"{y}-{mo}-{d}"
+    if fmt == "time":
+        return to_persian_digits(hm)
+    if fmt == "long":
+        wd = WEEKDAY_NAMES[weekday_sat(jd)]
+        base = f"{wd} {jd.day} {MONTH_NAMES[jd.month - 1]} {jd.year}"
+        return to_persian_digits(f"{base} {hm}".strip())
+    base = f"{jd.year:04d}-{jd.month:02d}-{jd.day:02d}"
+    if fmt == "datetime" and hm:
+        base = f"{base} {hm}"
+    return to_persian_digits(base)

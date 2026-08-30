@@ -28,7 +28,9 @@ from .charts.history_chart import HistoryChart
 from .charts.summary_view import SummaryView
 from .generic_report import GenericReport
 from .segmented import SegmentedControl
+from .stats_view import StatsView
 from .table_reports import ProjectsReport, TagsReport
+from .timesheet_view import TimesheetView
 
 _REPORTS = [
     ("burndown", "نمودار سوختن", "reports"),
@@ -38,6 +40,8 @@ _REPORTS = [
     ("calendar", "تقویم جلالی", "calendar"),
     ("projects", "گزارش پروژه‌ها", "project"),
     ("tags", "گزارش برچسب‌ها", "tag"),
+    ("timesheet", "برگهٔ زمان", "waiting"),
+    ("stats", "آمار", "reports"),
 ]
 _PERIODS = [("روزانه", "daily"), ("هفتگی", "weekly"), ("ماهانه", "monthly")]
 _PERIOD_REPORTS = {"burndown", "ghistory", "history"}
@@ -103,8 +107,10 @@ class ReportsView(QWidget):
         self._calendar = CalendarReport(theme_name)
         self._projects = ProjectsReport()
         self._tags = TagsReport()
+        self._timesheet = TimesheetView()
+        self._stats = StatsView()
         for w in (self._burndown, self._history, self._summary, self._calendar,
-                  self._projects, self._tags):
+                  self._projects, self._tags, self._timesheet, self._stats):
             self._stack.addWidget(w)
         self._generic = GenericReport()
         self._stack.addWidget(self._generic)
@@ -121,7 +127,8 @@ class ReportsView(QWidget):
             "burndown": self._burndown, "ghistory": self._history,
             "history": self._history, "summary": self._summary,
             "calendar": self._calendar, "projects": self._projects,
-            "tags": self._tags,
+            "tags": self._tags, "timesheet": self._timesheet,
+            "stats": self._stats,
         }
         self._custom_names: set[str] = set()
         self._retint_rail()
@@ -164,6 +171,8 @@ class ReportsView(QWidget):
     def set_filter(self, tokens: list[str]) -> None:
         self._filter = tokens
         self._calendar.set_filter(tokens)
+        self._timesheet.set_filter(tokens)
+        self._stats.set_filter(tokens)
         self.reload()
 
     def refresh_digits(self) -> None:
@@ -172,6 +181,7 @@ class ReportsView(QWidget):
         self._history.redraw()
         self._projects.refresh_digits()
         self._tags.refresh_digits()
+        self._stats.refresh_digits()
         self._load_active()  # summary rebuild + calendar
 
     def reload(self) -> None:
@@ -244,6 +254,10 @@ class ReportsView(QWidget):
         elif key == "tags":
             submit(functools.partial(reports.report_tags, flt),
                    guarded(self._tags.set_data))
+        elif key == "timesheet":
+            self._timesheet.reload()
+        elif key == "stats":
+            self._stats.reload()
         elif key.startswith("custom:"):
             name = key.split(":", 1)[1]
             submit(functools.partial(reports.run_custom_report, name, flt),

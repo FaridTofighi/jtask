@@ -14,7 +14,7 @@ import shutil
 import subprocess
 from functools import lru_cache
 
-from .errors import JtaskError
+from .errors import JtaskError, TaskCommandError
 
 __all__ = [
     "binary",
@@ -22,18 +22,26 @@ __all__ = [
     "export",
     "add",
     "command",
+    "log",
+    "duplicate",
+    "purge",
+    "undo_preview",
+    "information",
+    "stats",
     "passthrough",
     "date_uda_names",
 ]
 
 # rc overrides applied to every non-interactive call.  Hooks stay ON so the
-# user's Taskwarrior hooks keep firing.
+# user's Taskwarrior hooks keep firing.  NOTE: verbosity is *not* forced here —
+# ``rc.verbose=nothing`` also silences Taskwarrior's error text ("No tasks
+# specified.", "Task not found", …), which the GUI must be able to surface.
+# Callers that only parse machine output (lookups, export) pass ``quiet=True``.
 _RC = [
     "rc.confirmation=off",
     "rc.recurrence.confirmation=off",
     "rc.bulk=0",
     "rc.color=off",
-    "rc.verbose=nothing",
     "rc.hooks=on",
 ]
 
@@ -55,10 +63,16 @@ def run(
     *,
     capture: bool = True,
     check: bool = True,
+    quiet: bool = False,
     extra_rc: list[str] | None = None,
 ) -> subprocess.CompletedProcess:
-    """Invoke ``task`` with the given *args* (rc overrides prepended)."""
-    cmd = [binary(), *_RC, *(extra_rc or []), *args]
+    """Invoke ``task`` with the given *args* (rc overrides prepended).
+
+    *quiet* adds ``rc.verbose=nothing`` — use it only when the caller parses
+    machine output and does not need Taskwarrior's human messages/errors.
+    """
+    verbose = ["rc.verbose=nothing"] if quiet else []
+    cmd = [binary(), *_RC, *verbose, *(extra_rc or []), *args]
     proc = subprocess.run(
         cmd,
         capture_output=capture,
@@ -67,7 +81,13 @@ def run(
     )
     if check and proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip()
-        raise JtaskError(f"اجرای Taskwarrior ناموفق بود:\n{detail}")
+        raise TaskCommandError(
+            f"اجرای Taskwarrior ناموفق بود (کد {proc.returncode}).",
+            returncode=proc.returncode,
+            stderr=detail,
+            # show the command without the noisy rc-override prefix
+            cmd=["task", *args],
+        )
     return proc
 
 
@@ -76,7 +96,7 @@ def export(filter_args: list[str] | None = None) -> list[dict]:
 
     Taskwarrior requires the filter to precede the ``export`` command.
     """
-    proc = run([*(filter_args or []), "export"])
+    proc = run([*(filter_args or []), "export"], quiet=True)
     text = proc.stdout.strip()
     if not text:
         return []
@@ -101,6 +121,102 @@ def command(
     return proc.stdout.strip()
 
 
+def log(args: list[str]) -> str:
+    """``task log <args>`` — create an already-completed task."""
+    return run(["log", *args], extra_rc=["rc.verbose=new-id"]).stdout.strip()
+
+
+def duplicate(filter_args: list[str], mods: list[str] | None = None) -> dict:
+    """``task <filter> duplicate [mods]`` — return ``{stdout, id, uuid}``."""
+    proc = run(
+        [*filter_args, "duplicate", *(mods or [])],
+        extra_rc=["rc.verbose=new-uuid"],
+    )
+    out = proc.stdout.strip()
+    uuid = ""
+    task_id = ""
+    for line in out.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Created task "):
+            token = stripped[len("Created task ") :].rstrip(".")
+            if "-" in token:
+                uuid = token
+            else:
+                task_id = token
+    return {"stdout": out, "id": task_id, "uuid": uuid}
+
+
+_UNDO_PROMPT_RE = re.compile(
+    r"\n*The undo command is not reversible\..*$", re.DOTALL
+)
+_UNDO_COUNT_RE = re.compile(r"following (\d+) operations? would be reverted")
+
+
+_PURGED_RE = re.compile(r"Purged (\d+) task")
+
+
+def purge(filter_args: list[str]) -> int:
+    """``task <filter> purge`` — permanently drop deleted tasks. Returns count.
+
+    Only tasks already in the ``deleted`` state are removed; Taskwarrior itself
+    refuses the rest, so the caller must scope *filter_args* to deleted UUIDs.
+    """
+    out = run([*filter_args, "purge"]).stdout
+    m = _PURGED_RE.search(out)
+    return int(m.group(1)) if m else 0
+
+
+def undo_preview() -> dict:
+    """What ``task undo`` would revert, *without* applying anything.
+
+    Runs with confirmation on and answers 'no', so state is untouched.
+    Returns ``{"text": <preview>, "count": <int>, "empty": <bool>}``.
+    """
+    proc = subprocess.run(
+        [binary(), *_RC, "rc.confirmation=on", "undo"],
+        input="no\n",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    out = (proc.stdout or "").strip()
+    text = _UNDO_PROMPT_RE.sub("", out).strip()
+    m = _UNDO_COUNT_RE.search(text)
+    empty = not m and (
+        not text
+        or "No operations to undo" in text
+        or "No undo transactions" in text
+        or "Nothing to undo" in text
+        or "Could not undo" in text
+    )
+    count = int(m.group(1)) if m else (0 if empty else 1)
+    return {"text": text, "count": count, "empty": empty}
+
+
+def information(spec: str) -> str:
+    """Raw ``task <spec> information`` text (id or uuid). Local-time rendered."""
+    return run([spec, "information"], quiet=True).stdout
+
+
+def stats(filter_args: list[str] | None = None) -> list[tuple[str, str]]:
+    """``task <filter> stats`` as ordered ``(category, value)`` pairs."""
+    out = run([*(filter_args or []), "stats"], quiet=True).stdout
+    pairs: list[tuple[str, str]] = []
+    started = False
+    for line in out.splitlines():
+        if re.match(r"^Category\s+Data\s*$", line):
+            started = True
+            continue
+        if not started or not line.strip() or set(line.strip()) <= {"-", " "}:
+            continue
+        m = re.match(r"^(\S.*?)\s{2,}(.*)$", line)
+        if m:
+            pairs.append((m.group(1).strip(), m.group(2).strip()))
+        else:
+            pairs.append((line.strip(), ""))
+    return pairs
+
+
 def passthrough(args: list[str]) -> int:
     """Run ``task`` transparently (inherit stdio) and return the exit code."""
     cmd = [binary(), *args]
@@ -109,7 +225,7 @@ def passthrough(args: list[str]) -> int:
 
 def _lines(args: list[str]) -> list[str]:
     try:
-        proc = run(args)
+        proc = run(args, quiet=True)
     except JtaskError:
         return []
     return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
@@ -214,7 +330,7 @@ def urgency_terms(uuid: str) -> list[dict[str, float | str]]:
     "value": float}``; empty when Taskwarrior gives no breakdown.
     """
     try:
-        proc = run([uuid, "info"], extra_rc=["rc.verbose=nothing"])
+        proc = run([uuid, "info"], quiet=True)
     except JtaskError:
         return []
     terms: list[dict[str, float | str]] = []

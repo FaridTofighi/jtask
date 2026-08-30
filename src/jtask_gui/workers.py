@@ -31,11 +31,13 @@ _live: set[QRunnable] = set()
 
 class _Signals(QObject):
     finished = pyqtSignal(object)
-    failed = pyqtSignal(str)
+    # carries the exception itself (a JtaskError / TaskCommandError) so the UI
+    # can surface the real exit code + stderr, not a flattened string.
+    failed = pyqtSignal(object)
 
 
 class TaskRunnable(QRunnable):
-    """Wraps a zero-arg callable; emits ``finished(result)`` or ``failed(msg)``."""
+    """Wraps a zero-arg callable; emits ``finished(result)`` or ``failed(exc)``."""
 
     def __init__(self, fn: Callable[[], Any]) -> None:
         super().__init__()
@@ -46,11 +48,11 @@ class TaskRunnable(QRunnable):
         try:
             result = self._fn()
         except JtaskError as exc:
-            self.signals.failed.emit(str(exc))
+            self.signals.failed.emit(exc)
         except Exception as exc:  # pragma: no cover - defensive
             log.error("background task failed:\n%s", traceback.format_exc())
             self.signals.failed.emit(
-                f"خطای غیرمنتظره: {exc}\n(جزئیات در فایل لاگ ثبت شد.)"
+                JtaskError(f"خطای غیرمنتظره: {exc}\n(جزئیات در فایل لاگ ثبت شد.)")
             )
         else:
             self.signals.finished.emit(result)
@@ -59,7 +61,7 @@ class TaskRunnable(QRunnable):
 def submit(
     fn: Callable[[], Any],
     on_ok: Callable[[Any], None],
-    on_err: Callable[[str], None] | None = None,
+    on_err: Callable[[Any], None] | None = None,
 ) -> TaskRunnable:
     """Schedule *fn* on the global pool and wire its result to the callbacks."""
     runnable = TaskRunnable(fn)

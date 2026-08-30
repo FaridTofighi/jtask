@@ -91,7 +91,8 @@ class CommandConsole(QWidget):
 
         submit(work, self._done, self._done)
 
-    def _done(self, output: str) -> None:
-        self._append(strip_ansi(output) or "(بدون خروجی)")
+    def _done(self, output: object) -> None:
+        text = output if isinstance(output, str) else str(output)
+        self._append(strip_ansi(text) or "(بدون خروجی)")
         self._in.setEnabled(True)
         self._in.setFocus()
