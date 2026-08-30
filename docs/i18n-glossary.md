@@ -10,9 +10,10 @@ matches Taskwarrior's own vocabulary (verified against `task` 3.5.0 man pages:
 column here is the wording i5 must ship — it must be consistent everywhere (never
 "Due" in one screen and "Deadline" in another for the same concept).
 
-Status of the English column: **draft — approved wording applied in milestone
-i5.** `en.py` currently mirrors `fa.py` (Resolution 4 seeding); i5 replaces it
-from this table.
+Status of the English column: **shipped in i5.** `src/jtask_gui/i18n/en.py` now
+carries a full English override of every key in `fa.py`; the wording here is what
+it ships. `tests/gui/test_i5_english_catalog.py` enforces coverage, the
+"no stray Persian" rule, the Taskwarrior-vocabulary terms, and the §8 clean-ups.
 
 ---
 
@@ -203,7 +204,13 @@ Gregorian mode uses the locale's real names (January…, Monday…).
 ## 8. Wording clean-ups i5 must make (single wording per concept)
 
 - priority H/M/L: pick one fa set + one en set (see §1 note).
+  **Done (i5):** fa = «بحرانی / متوسط / پایین», en = «High / Medium / Low» —
+  across `priority.*`, `detail.priority.*`, `fb.priority.*`, `quickadd.priority.*`,
+  `col.priority.*`.
 - "completed" status: «انجام‌شده» everywhere (drop «تکمیل‌شده» as a *status*;
   keep «تکمیل‌شده» only where it means the GTD quick-view "Completed").
+  **Done (i5):** status/`stats`/`col.status` all «انجام‌شده» / "Completed";
+  `view.completed` keeps the GTD sense.
 - "wait" attribute label: «تاریخ انتظار» everywhere (drop bare «انتظار»).
+  **Done (i5):** `detail.date.wait`, `col.wait`, `quickadd.preview.wait` unified.
 - history-view vs. filter-builder both say «در انتظار» for Waiting — already consistent.

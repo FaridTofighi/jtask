@@ -284,7 +284,7 @@ CATALOG: dict[str, str] = {
     "rep.name.placeholder": "مثال: امروز",
     "rep.builtin.note": "این یک گزارش داخلی است؛ ذخیره یک تعریف سفارشی هم‌نام می‌سازد.",
 
-    # ---- priorities (task_form / bulk_edit — pre-i5 wording variants) ---
+    # ---- priorities (unified i5 — glossary §1/§8) ---
     "priority.none": "بدون",
     "priority.h": "بحرانی",
     "priority.m": "متوسط",
@@ -385,12 +385,12 @@ CATALOG: dict[str, str] = {
     "status.deleted": "حذف‌شده",
     "status.recurring": "تکرارشونده",
 
-    # ---- detail panel (widgets/detail_panel.py) — pre-i5 variants ---
-    "detail.priority.h": "زیاد",
+    # ---- detail panel (widgets/detail_panel.py) ---
+    "detail.priority.h": "بحرانی",
     "detail.priority.m": "متوسط",
-    "detail.priority.l": "کم",
+    "detail.priority.l": "پایین",
     "detail.priority.none": "بدون",
-    "detail.date.wait": "انتظار",
+    "detail.date.wait": "تاریخ انتظار",
     "detail.title": "جزئیات کار",
     "detail.field.recurrence": "تکرار",
     "detail.deps.placeholder": "شناسه‌ها با کاما، مثلاً 3,7",
@@ -505,9 +505,9 @@ CATALOG: dict[str, str] = {
     # ---- filter builder (widgets/filter_builder.py) ---------
     "fb.status.all": "همه",
     "fb.priority.all": "همه",
-    "fb.priority.h": "زیاد",
+    "fb.priority.h": "بحرانی",
     "fb.priority.m": "متوسط",
-    "fb.priority.l": "کم",
+    "fb.priority.l": "پایین",
     "fb.priority.none": "بدون",
     "fb.vtag.OVERDUE": "معوق",
     "fb.vtag.DUE": "سررسید امروز",
@@ -571,16 +571,16 @@ CATALOG: dict[str, str] = {
     "table_reports.col.count": "تعداد",
 
     # ---- quick add (quickadd.py / widgets/quick_add.py) -----
-    "quickadd.priority.h": "زیاد",
+    "quickadd.priority.h": "بحرانی",
     "quickadd.priority.m": "متوسط",
-    "quickadd.priority.l": "کم",
+    "quickadd.priority.l": "پایین",
     "quickadd.prompt": "برای افزودن، شرح کار را بنویسید…",
     "quickadd.preview.project": "پروژه: {project}",
     "quickadd.preview.tags": "برچسب: ",
     "quickadd.preview.priority": "اولویت: ",
     "quickadd.preview.due": "سررسید",
     "quickadd.preview.scheduled": "زمان‌بندی",
-    "quickadd.preview.wait": "انتظار",
+    "quickadd.preview.wait": "تاریخ انتظار",
     "quickadd.preview.error_sep": "؛ ",
     "quickadd.preview.error_prefix": "⚠ ",
     "quickadd.bar.placeholder": "شرح کار…  مثال: تماس با آرش فردا +تماس pri:H",
@@ -631,9 +631,9 @@ CATALOG: dict[str, str] = {
     "depgraph.empty": "این کار وابستگی‌ای ندارد.",
 
     # ---- column spec (models/column_spec.py) --------------
-    "col.priority.h": "زیاد",
+    "col.priority.h": "بحرانی",
     "col.priority.m": "متوسط",
-    "col.priority.l": "کم",
+    "col.priority.l": "پایین",
     "col.status.pending": "در جریان",
     "col.status.completed": "انجام‌شده",
     "col.status.waiting": "در انتظار",
@@ -646,7 +646,7 @@ CATALOG: dict[str, str] = {
     "col.priority": "اولویت",
     "col.due": "سررسید",
     "col.scheduled": "زمان‌بندی",
-    "col.wait": "انتظار",
+    "col.wait": "تاریخ انتظار",
     "col.urgency": "فوریت",
     "col.status": "وضعیت",
     "col.has_annotation": "یادداشت دارد",

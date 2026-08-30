@@ -37,4 +37,4 @@ def num(value, *, isolate: bool = False) -> str:
 
 
 def pct(value) -> str:
-    return num(value) + "٪"
+    return num(value) + ("٪" if digit_mode() else "%")

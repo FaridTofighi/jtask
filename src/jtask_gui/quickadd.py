@@ -19,6 +19,7 @@ import jdatetime
 from jtask import jalali, rewrite
 from jtask.rewrite import DATE_ATTRS
 
+from . import fmt
 from .i18n import t
 
 _PRIORITY_ALIASES = {"pri": "priority"}
@@ -84,7 +85,7 @@ def parse_quick_add(text: str, today: jdatetime.date | None = None) -> ParsedQui
         rel = _extract_relative(desc_parts, today)
         if rel is not None:
             date_obj, used_idx, span = rel
-            result.dates["due"] = jalali.to_persian_digits(date_obj.strftime("%Y-%m-%d"))
+            result.dates["due"] = fmt.digits(date_obj.strftime("%Y-%m-%d"))
             result._due_gregorian = date_obj.togregorian().strftime("%Y-%m-%d")
             desc_parts = [w for i, w in enumerate(desc_parts) if i not in used_idx]
             bare_due_expr = span
@@ -123,7 +124,7 @@ def parse_quick_add(text: str, today: jdatetime.date | None = None) -> ParsedQui
 
 def _display_date(value: str, today: jdatetime.date | None) -> str:
     resolved = jalali.resolve(value, today=today)
-    return jalali.to_persian_digits(resolved.strftime("%Y-%m-%d"))
+    return fmt.digits(resolved.strftime("%Y-%m-%d"))
 
 
 def _extract_relative(

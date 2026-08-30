@@ -139,8 +139,11 @@ class JalaliCalendarSystem(CalendarSystem):
 
     def label_ym(self, year: int, month: int) -> str:
         name = self.month_names()[month - 1]
-        return jalali.to_persian_digits(f"{name} {year}") if not self._latin() \
-            else f"{name} {year}"
+        text = f"{name} {year}"
+        if self._latin():
+            return text
+        from .fmt import digits
+        return digits(text)
 
     def is_today(self, year: int, month: int, day: int) -> bool:
         t = jdatetime.date.today()

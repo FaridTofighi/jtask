@@ -1192,3 +1192,61 @@ and is otherwise unchanged — Persian + Jalali output is still byte-identical.
 
 _Next: i5 — fill `en.py` from the glossary, digit/font defaults per language,
 terminology + transliteration tests, wording clean-ups._
+
+## i5 — implementation log (complete)
+
+The **English catalog is real** and the digit default now follows the language.
+
+### `en.py` — full override
+
+Every key in `fa.py` (~430) has an English value, drawn from the glossary's
+approved English column. Seeded from `fa.py` so a missed key degrades to Persian
+(and is caught by a test), then `CATALOG.update({...})` overrides all of them.
+
+- **Taskwarrior vocabulary, exactly** — Due / Scheduled / Wait / Until /
+  Priority / Project / Tags / Annotation / Recurrence / Dependencies / Urgency /
+  Context / UDA; statuses Pending / Waiting / Completed / Deleted / Recurring;
+  virtual tags Overdue / Ready / Active / Blocked / Blocking / Tagged /
+  Annotated; verbs Annotate / Denotate, Start / Stop timer, Purge.
+- **GTD quick-views** use planning English: Today, This Week, Overdue,
+  **Next Actions**, **Waiting For**, Blocked, Completed.
+
+### Wording clean-ups (glossary §8, both languages)
+
+- Priority unified: fa «بحرانی / متوسط / پایین», en High / Medium / Low — was
+  split «زیاد/بحرانی … کم/پایین» between the detail panel and the Add/bulk
+  dialogs.
+- `wait` label unified to «تاریخ انتظار» / "Wait" (bare «انتظار» dropped from
+  `detail.date.wait`, `col.wait`, `quickadd.preview.wait`).
+
+These change the fa snapshot baseline (3 strings consolidated onto existing
+ones) — intended, and the only fa visible-text change in i5.
+
+### Digit mode default per language (Resolution 1)
+
+`Settings.persian_digits` now returns the **language default** (en → ASCII,
+fa → core-config default) *until* `digit_mode_user_overridden` is set — never
+inferred from a stored value. The Settings dialog and the first-run wizard both
+set the flag only when the checkbox deviates from that default.
+
+Hard `jalali.to_persian_digits(...)` calls that bypassed the setting
+(`history_view`, `timesheet_view`, `timer_indicator`, `quickadd`,
+`calendar_system.label_ym`, `fmt.pct`'s `٪`) now route through `fmt.digits()` /
+the digit-mode check, so an English UI shows ASCII digits and `%` end to end.
+
+### Font (§7)
+
+Vazirmatn ships a complete, well-drawn Latin set; English renders cleanly in it
+(verified in the offscreen smoke run — columns, sidebar, priority/status all
+legible). No second font is bundled; `app._load_fonts` is unchanged.
+
+### Tests
+
+`tests/gui/test_i5_english_catalog.py` (12): full key coverage, no-stray-Persian,
+Taskwarrior-vocabulary spot checks, per-language priority + wait consistency,
+Jalali transliteration table vs. the glossary, and the per-language digit
+default incl. the override-wins case.
+
+Full suite: **364 → 387 passing**, ruff + mypy clean.
+
+_Next: i6 — four-combination (Language × Calendar) hardening, screenshots, docs._

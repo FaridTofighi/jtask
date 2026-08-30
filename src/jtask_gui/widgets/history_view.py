@@ -15,8 +15,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import history, jalali, taskwarrior
+from jtask import history, taskwarrior
 
+from .. import fmt
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -52,8 +53,8 @@ def _fa_duration(d: dt.timedelta) -> str:
     h, rem = divmod(total, 3600)
     m, s = divmod(rem, 60)
     if h:
-        return jalali.to_persian_digits(f"{h}:{m:02d}:{s:02d}")
-    return jalali.to_persian_digits(f"{m}:{s:02d}")
+        return fmt.digits(f"{h}:{m:02d}:{s:02d}")
+    return fmt.digits(f"{m}:{s:02d}")
 
 
 def describe(ch: history.ChangeEntry) -> str:
@@ -162,7 +163,7 @@ class TaskHistoryView(QWidget):
             self._tree.addTopLevelItem(head)
             head.setExpanded(True)
             for ch in entries:
-                clock = jalali.to_persian_digits(ch.when.strftime("%H:%M"))
+                clock = fmt.digits(ch.when.strftime("%H:%M"))
                 row = QTreeWidgetItem([clock, describe(ch)])
                 row.setToolTip(1, ch.raw)
                 head.addChild(row)

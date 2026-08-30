@@ -92,7 +92,12 @@ class FirstRunWizard(QDialog):
     def _finish(self) -> None:
         idx = self._theme_group.checkedId()
         self._settings.theme = self._theme_names[idx if idx >= 0 else 0]
-        self._settings.persian_digits = self._digits.isChecked()
+        # Only an explicit deviation from the language default counts as a
+        # user override (Resolution 1); otherwise digit mode keeps following
+        # the UI language.
+        if self._digits.isChecked() != self._settings.persian_digits:
+            self._settings.digit_mode_user_overridden = True
+            self._settings.persian_digits = self._digits.isChecked()
         self._settings.notifications_enabled = self._notify.isChecked()
         self._settings.wizard_done = True
         self._settings.sync()

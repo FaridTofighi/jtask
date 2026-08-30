@@ -12,8 +12,7 @@ import datetime as dt
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QWidget
 
-from jtask import jalali
-
+from .. import fmt
 from ..i18n import t
 
 
@@ -21,7 +20,7 @@ def _elapsed(since: dt.datetime, now: dt.datetime) -> str:
     total = max(0, int((now - since).total_seconds()))
     h, rem = divmod(total, 3600)
     m, s = divmod(rem, 60)
-    return jalali.to_persian_digits(f"{h}:{m:02d}:{s:02d}")
+    return fmt.digits(f"{h}:{m:02d}:{s:02d}")
 
 
 class TimerIndicator(QLabel):
@@ -64,7 +63,7 @@ class TimerIndicator(QLabel):
             el = _elapsed(self._start, now) if self._start else "—"
             self.setText(f"▶ {desc}  {el}")
         else:
-            n = jalali.to_persian_digits(str(len(self._active)))
+            n = fmt.digits(str(len(self._active)))
             el = _elapsed(self._start, now) if self._start else "—"
             self.setText(t("timer.n_active", n=n, el=el))
 
@@ -78,9 +77,9 @@ def _parse(raw: str) -> dt.datetime | None:
     raw = raw.strip()
     if not raw:
         return None
-    for fmt in ("%Y%m%dT%H%M%SZ", "%Y-%m-%dT%H:%M:%SZ"):
+    for fmt_ in ("%Y%m%dT%H%M%SZ", "%Y-%m-%dT%H:%M:%SZ"):
         try:
-            return dt.datetime.strptime(raw, fmt).replace(tzinfo=dt.timezone.utc)
+            return dt.datetime.strptime(raw, fmt_).replace(tzinfo=dt.timezone.utc)
         except ValueError:
             pass
     try:  # local "YYYY-MM-DD HH:MM:SS"

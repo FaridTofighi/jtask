@@ -21,8 +21,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import jalali, timesheet
+from jtask import timesheet
 
+from .. import fmt
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -32,11 +33,11 @@ from .jalali_date_picker import JalaliDatePicker
 def _hm(d: dt.timedelta) -> str:
     total = int(d.total_seconds())
     h, m = divmod(total // 60, 60)
-    return jalali.to_persian_digits(f"{h}:{m:02d}")
+    return fmt.digits(f"{h}:{m:02d}")
 
 
 def _clock(moment: dt.datetime) -> str:
-    return jalali.to_persian_digits(moment.strftime("%H:%M"))
+    return fmt.digits(moment.strftime("%H:%M"))
 
 
 class TimesheetView(QWidget):

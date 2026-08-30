@@ -64,6 +64,14 @@ class Settings:
     # --- digits ---
     @property
     def persian_digits(self) -> bool:
+        # Until the user picks a digit mode explicitly (Resolution 1), the
+        # default follows the UI language: English → ASCII, Persian → the
+        # core-config default. Any stored value is honoured only after an
+        # explicit choice.
+        if not self.digit_mode_user_overridden:
+            if self.language == "en":
+                return False
+            return bool(core_config.load().get("persian_digits", True))
         default = bool(core_config.load().get("persian_digits", True))
         return self._s.value("persian_digits", default, bool)
 
