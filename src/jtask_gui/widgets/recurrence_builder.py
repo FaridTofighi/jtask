@@ -5,6 +5,7 @@ from __future__ import annotations
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QSpinBox, QWidget
 
+from .. import tokens as tok
 from ..i18n import t
 
 _UNITS = [
@@ -23,7 +24,7 @@ class RecurrenceBuilder(QWidget):
         super().__init__(parent)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
+        row.setSpacing(tok.SP_6)
 
         self._enabled = QComboBox()
         self._enabled.addItems([t("recur.none"), t("recur.every")])

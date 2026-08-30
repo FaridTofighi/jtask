@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from jtask import jalali, reports
 
 from .. import fmt, icons
+from .. import tokens as tok
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -39,8 +40,8 @@ class _DayCell(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAcceptDrops(True)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(6, 6, 6, 6)
-        lay.setSpacing(3)
+        lay.setContentsMargins(tok.SP_6, tok.SP_6, tok.SP_6, tok.SP_6)
+        lay.setSpacing(tok.SP_2)
 
         num = QLabel(fmt.digits(str(ctx.day)))
         num.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -51,7 +52,7 @@ class _DayCell(QFrame):
         if count:
             colour = pal["overdue"] if overdue else pal["primary"]
             dot = QLabel(fmt.digits(t("calendar.n_tasks", count=count)))
-            dot.setStyleSheet(f"color:{colour}; font-size:11px;")
+            dot.setStyleSheet(f"color:{colour}; font-size:{tok.FS_XS}px;")
             dot.setAlignment(Qt.AlignmentFlag.AlignRight)
             lay.addWidget(dot)
             self.setStyleSheet(
@@ -92,8 +93,8 @@ class CalendarReport(QWidget):
         self._gen = 0
 
         root = QHBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(16)
+        root.setContentsMargins(*tok.INSET_DIALOG)
+        root.setSpacing(tok.SP_16)
 
         self._grid = JalaliMonthGrid(self._year, self._month)
         self._grid.monthChanged.connect(self._on_month)

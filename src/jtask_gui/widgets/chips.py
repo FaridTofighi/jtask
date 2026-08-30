@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .. import tokens as tok
 from ..i18n import t
 
 
@@ -24,8 +25,8 @@ class _Chip(QFrame):
         self.setObjectName("Chip")
         self.text = text
         row = QHBoxLayout(self)
-        row.setContentsMargins(6, 1, 2, 1)
-        row.setSpacing(2)
+        row.setContentsMargins(tok.SP_6, 1, tok.SP_2, 1)
+        row.setSpacing(tok.SP_2)
         row.addWidget(QLabel(f"#{text}"))
         btn = QToolButton()
         btn.setText("✕")
@@ -44,7 +45,7 @@ class TagChipEditor(QWidget):
         self._tags: list[str] = []
         self._row = QHBoxLayout(self)
         self._row.setContentsMargins(0, 0, 0, 0)
-        self._row.setSpacing(4)
+        self._row.setSpacing(tok.SP_4)
 
         self._input = QLineEdit()
         self._input.setPlaceholderText(t("chips.placeholder"))

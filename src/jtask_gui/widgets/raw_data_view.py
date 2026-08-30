@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .. import tokens as tok
 from ..i18n import t
 
 
@@ -28,8 +29,8 @@ class RawDataView(QWidget):
         super().__init__(parent)
         self.setObjectName("RawDataView")
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 10, 10, 10)
-        lay.setSpacing(8)
+        lay.setContentsMargins(*tok.INSET_TIGHT)
+        lay.setSpacing(tok.SP_8)
 
         top = QHBoxLayout()
         top.addWidget(QLabel(t("raw.title")), 1)

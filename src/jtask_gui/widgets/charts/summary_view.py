@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ... import fmt
+from ... import tokens as tok
 from ...i18n import t
 
 
@@ -25,7 +26,7 @@ class SummaryView(QScrollArea):
         self._body = QWidget()
         self._body.setObjectName("DetailPanel")
         self._grid = QGridLayout(self._body)
-        self._grid.setContentsMargins(18, 18, 18, 18)
+        self._grid.setContentsMargins(*tok.INSET_DIALOG)
         self._grid.setHorizontalSpacing(16)
         self._grid.setVerticalSpacing(12)
         self.setWidget(self._body)

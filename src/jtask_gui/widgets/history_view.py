@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 from jtask import history, taskwarrior
 
 from .. import fmt
+from .. import tokens as tok
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -92,8 +93,8 @@ class TaskHistoryView(QWidget):
         super().__init__(parent)
         self.setObjectName("HistoryView")
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 10, 10, 10)
-        lay.setSpacing(8)
+        lay.setContentsMargins(*tok.INSET_TIGHT)
+        lay.setSpacing(tok.SP_8)
 
         self._anchors = QLabel("")
         self._anchors.setObjectName("Muted")

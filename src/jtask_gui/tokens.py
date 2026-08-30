@@ -49,6 +49,15 @@ FS_H1, FS_TITLE, FS_LG, FS_BODY, FS_H2, FS_XS = (
     FONT_SIZE["body"], FONT_SIZE["h2"], FONT_SIZE["xs"],
 )
 
+# --- semantic insets (left, top, right, bottom) ---------------------
+# Use these for a widget's outer layout margins instead of ad-hoc tuples.
+# A few dialogs / panels that used 18 / 12 / 10 px are normalised onto the
+# scale here (documented in docs/design-system.md).
+INSET_NONE = (0, 0, 0, 0)                    # a layout nested inside a padded one
+INSET_TIGHT = (SP_8, SP_8, SP_8, SP_8)       # dense cards, day cells, popovers
+INSET_PANEL = (SP_14, SP_14, SP_14, SP_14)   # slide-in panels, side rails
+INSET_DIALOG = (SP_16, SP_16, SP_16, SP_16)  # QDialog root layout
+
 # --- elevation ------------------------------------------------------
 # A raised surface (dialog, popover, menu, card) is set apart from the base
 # background by the ``surface`` colour role + a 1-px ``border`` edge and — for

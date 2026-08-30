@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QLabel, QLineEdit, QVBoxLayout, QWidget
 from jtask import taskwarrior
 
 from .. import icons
+from .. import tokens as tok
 from ..i18n import t
 from ..quickadd import ParsedQuickAdd, parse_quick_add, preview_text
 from .autocomplete import make_token_completer
@@ -22,7 +23,7 @@ class QuickAddBar(QWidget):
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(2)
+        lay.setSpacing(tok.SP_2)
 
         self._edit = QLineEdit()
         self._edit.setObjectName("QuickAdd")

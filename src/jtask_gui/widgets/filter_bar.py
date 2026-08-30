@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QInputDialog, QLineEdit, QToolButton, Q
 from jtask import rewrite, taskwarrior
 
 from .. import icons
+from .. import tokens as tok
 from ..i18n import t
 from .autocomplete import make_token_completer
 from .filter_builder import FilterBuilder
@@ -38,7 +39,7 @@ class FilterBar(QWidget):
         super().__init__(parent)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(6)
+        row.setSpacing(tok.SP_6)
 
         self._builder_btn = QToolButton()
         self._builder_btn.setToolTip(t("filterbar.builder_tip"))

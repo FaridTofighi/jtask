@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import fmt
+from .. import tokens as tok
 from ..calendar_system import CalendarSystem, active
 
 
@@ -71,7 +72,7 @@ class JalaliMonthGrid(QWidget):
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(6)
+        root.setSpacing(tok.SP_6)
 
         rtl = QApplication.instance() is not None and (
             QApplication.instance().layoutDirection() == Qt.LayoutDirection.RightToLeft
@@ -99,7 +100,7 @@ class JalaliMonthGrid(QWidget):
         self._next.clicked.connect(lambda: self._step(+1))
 
         self._grid = QGridLayout()
-        self._grid.setSpacing(4)
+        self._grid.setSpacing(tok.SP_4)
         for col, name in enumerate(self._cal.weekday_names_short()):
             lbl = QLabel(name)
             lbl.setObjectName("Muted")

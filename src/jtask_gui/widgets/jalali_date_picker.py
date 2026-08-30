@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali
 
+from .. import tokens as tok
 from ..calendar_system import CalendarSystem, active
 from ..i18n import t
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
@@ -40,7 +41,7 @@ class _CalendarPopup(QDialog):
         super().__init__(parent, Qt.WindowType.Popup)
         self._cal = cal
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 10, 10, 10)
+        lay.setContentsMargins(*tok.INSET_TIGHT)
         y, m, _d = cal.from_gregorian_date(initial)
         self._grid = JalaliMonthGrid(y, m, cell_factory=self._make_cell, calendar=cal)
         self._grid.setMinimumSize(280, 240)
@@ -84,7 +85,7 @@ class JalaliDatePicker(QWidget):
 
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(4)
+        row.setSpacing(tok.SP_4)
 
         self._edit = QLineEdit()
         self._edit.setPlaceholderText(

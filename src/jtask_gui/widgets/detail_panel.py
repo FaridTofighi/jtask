@@ -22,6 +22,7 @@ from jtask import taskwarrior
 from jtask.rtl import bidi_isolate
 
 from .. import fmt
+from .. import tokens as tok
 from ..calendar_system import active
 from ..i18n import t
 from .chips import TagChipEditor
@@ -60,8 +61,8 @@ class DetailPanel(QScrollArea):
         body.setObjectName("DetailPanel")
         self.setWidget(body)
         outer = QVBoxLayout(body)
-        outer.setContentsMargins(14, 14, 14, 14)
-        outer.setSpacing(10)
+        outer.setContentsMargins(*tok.INSET_PANEL)
+        outer.setSpacing(tok.SP_10)
 
         top = QHBoxLayout()
         self._title = QLabel(t("detail.title"))

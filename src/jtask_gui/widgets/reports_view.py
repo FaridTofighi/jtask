@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from jtask import reports
 
 from .. import icons
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 from .calendar_report import CalendarReport
@@ -80,8 +81,8 @@ class ReportsView(QWidget):
 
         # --- content ---
         content = QVBoxLayout()
-        content.setContentsMargins(16, 12, 16, 16)
-        content.setSpacing(10)
+        content.setContentsMargins(*tok.INSET_DIALOG)
+        content.setSpacing(tok.SP_10)
 
         bar = QHBoxLayout()
         self._title = QLabel(t("reports.burndown"))

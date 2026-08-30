@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import rewrite, taskwarrior
 
+from .. import tokens as tok
 from ..i18n import t
 from ..workers import submit
 
@@ -54,8 +55,8 @@ class CommandConsole(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(6, 6, 6, 6)
-        lay.setSpacing(4)
+        lay.setContentsMargins(tok.SP_6, tok.SP_6, tok.SP_6, tok.SP_6)
+        lay.setSpacing(tok.SP_4)
 
         self._out = QPlainTextEdit()
         self._out.setObjectName("ConsoleOutput")

@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from jtask import timesheet
 
 from .. import fmt
+from .. import tokens as tok
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -47,11 +48,11 @@ class TimesheetView(QWidget):
         self._filter: list[str] | None = None
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 8, 10, 8)
-        lay.setSpacing(8)
+        lay.setContentsMargins(*tok.INSET_TIGHT)
+        lay.setSpacing(tok.SP_8)
 
         bar = QHBoxLayout()
-        bar.setSpacing(6)
+        bar.setSpacing(tok.SP_6)
         bar.addWidget(QLabel(t("word.from")))
         self._from = JalaliDatePicker()
         bar.addWidget(self._from)
