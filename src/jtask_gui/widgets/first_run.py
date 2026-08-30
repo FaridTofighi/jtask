@@ -1,4 +1,8 @@
-"""First-run setup dialog: theme, digits, Vazirmatn check, notifications."""
+"""First-run setup dialog: theme, digits, Vazirmatn check, notifications.
+
+Uses the same label-beside-field ``QFormLayout`` as the Settings dialog (§ d3)
+so the two read consistently.
+"""
 
 from __future__ import annotations
 
@@ -8,11 +12,13 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QRadioButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from jtask import fonts
@@ -30,19 +36,27 @@ class FirstRunWizard(QDialog):
         self.setWindowTitle(t("firstrun.title"))
         self.setMinimumWidth(460)
         root = QVBoxLayout(self)
+        root.setContentsMargins(*tok.INSET_DIALOG)
         root.setSpacing(tok.SP_14)
 
         title = QLabel(t("firstrun.heading"))
         title.setObjectName("H1")
         root.addWidget(title)
-        root.addWidget(QLabel(
-            t("firstrun.intro")
-        ))
+        intro = QLabel(t("firstrun.intro"))
+        intro.setObjectName("Muted")
+        intro.setWordWrap(True)
+        root.addWidget(intro)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form.setSpacing(tok.SP_10)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        root.addLayout(form)
 
         # theme
-        root.addWidget(_section(t("firstrun.section.theme")))
         self._theme_group = QButtonGroup(self)
         trow = QHBoxLayout()
+        trow.setContentsMargins(0, 0, 0, 0)
         for i, name in enumerate(THEMES):
             rb = QRadioButton(t(f"theme.{name}"))
             if name == settings.theme:
@@ -50,30 +64,33 @@ class FirstRunWizard(QDialog):
             self._theme_group.addButton(rb, i)
             trow.addWidget(rb)
         trow.addStretch(1)
-        root.addLayout(trow)
+        theme_w = QWidget()
+        theme_w.setLayout(trow)
+        form.addRow(t("firstrun.section.theme"), theme_w)
         self._theme_names = list(THEMES)
 
         # digits
         self._digits = QCheckBox(t("firstrun.digits"))
         self._digits.setChecked(settings.persian_digits)
-        root.addWidget(self._digits)
+        form.addRow("", self._digits)
 
         # font check
-        root.addWidget(_section(t("firstrun.section.font")))
         font_row = QHBoxLayout()
+        font_row.setContentsMargins(0, 0, 0, 0)
         self._font_status = QLabel("—")
         check_btn = QPushButton(t("firstrun.check_font"))
         check_btn.clicked.connect(self._check_font)
         font_row.addWidget(self._font_status, 1)
         font_row.addWidget(check_btn)
-        root.addLayout(font_row)
+        font_w = QWidget()
+        font_w.setLayout(font_row)
+        form.addRow(t("firstrun.section.font"), font_w)
         self._check_font()
 
         # notifications
-        root.addWidget(_section(t("firstrun.section.notifications")))
         self._notify = QCheckBox(t("firstrun.notify"))
         self._notify.setChecked(settings.notifications_enabled)
-        root.addWidget(self._notify)
+        form.addRow(t("firstrun.section.notifications"), self._notify)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText(t("firstrun.start"))
@@ -83,12 +100,9 @@ class FirstRunWizard(QDialog):
 
     def _check_font(self) -> None:
         found, _ = fonts.is_vazir_installed()
-        if found:
-            self._font_status.setText(t("firstrun.font.found"))
-        else:
-            self._font_status.setText(
-                t("firstrun.font.missing")
-            )
+        self._font_status.setText(
+            t("firstrun.font.found") if found else t("firstrun.font.missing")
+        )
 
     def _finish(self) -> None:
         idx = self._theme_group.checkedId()
@@ -103,10 +117,3 @@ class FirstRunWizard(QDialog):
         self._settings.wizard_done = True
         self._settings.sync()
         self.accept()
-
-
-def _section(text: str) -> QLabel:
-    lbl = QLabel(text)
-    lbl.setObjectName("Section")
-    lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
-    return lbl

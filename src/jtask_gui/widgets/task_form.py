@@ -105,6 +105,7 @@ class TaskFormDialog(QDialog):
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         form.setSpacing(tok.SP_10)
 
+        self._submitted = False  # no validation hint until a submit is attempted
         self._description = QLineEdit()
         self._description.setPlaceholderText(t("form.description.placeholder"))
         self._description.textChanged.connect(self._revalidate)
@@ -133,6 +134,7 @@ class TaskFormDialog(QDialog):
             form.addRow(t(label), picker)
             if key == "due":
                 picker.dateChanged.connect(self._revalidate)
+        self._description.editingFinished.connect(self._on_field_left)
 
         self._recur = RecurrenceBuilder()
         self._recur.recurrenceChanged.connect(self._revalidate)
@@ -162,22 +164,46 @@ class TaskFormDialog(QDialog):
             QDialogButtonBox.ButtonRole.AcceptRole,
         )
         self._ok.setObjectName("Primary")
-        self._ok.clicked.connect(self.accept)
+        self._ok.clicked.connect(self._try_accept)
         root.addWidget(btns)
 
-        self._revalidate()
+        self._ok.setEnabled(not self._problems())  # button state only — no hint
 
     # -- validation ---------------------------------------------------
+    # A disabled OK button is fine on a pristine form; a red error message is
+    # not (§6.1). The hint appears only after a submit attempt or after the
+    # description field has been touched and left empty.
+
+    def _problems(self) -> list[str]:
+        out: list[str] = []
+        if not self._description.text().strip():
+            out.append(t("form.err.description_required"))
+        if self._recur.value() and not self._dates["due"].gregorian_string():
+            out.append(t("form.err.recur_needs_due"))
+        return out
 
     def _revalidate(self, *_a: object) -> None:
-        problems: list[str] = []
-        if not self._description.text().strip():
-            problems.append(t("form.err.description_required"))
-        if self._recur.value() and not self._dates["due"].gregorian_string():
-            problems.append(t("form.err.recur_needs_due"))
+        problems = self._problems()
         self._ok.setEnabled(not problems)
+        if self._submitted:
+            self._show_problems(problems)
+
+    def _show_problems(self, problems: list[str] | None = None) -> None:
+        problems = self._problems() if problems is None else problems
         self._hint.setText(" ".join(problems))
         self._hint.setVisible(bool(problems))
+
+    def _on_field_left(self) -> None:
+        if not self._description.text().strip():
+            self._submitted = True  # they engaged the required field and left it empty
+            self._show_problems()
+
+    def _try_accept(self) -> None:
+        self._submitted = True
+        problems = self._problems()
+        self._show_problems(problems)
+        if not problems:
+            self.accept()
 
     # -- result -----------------------------------------------------
 

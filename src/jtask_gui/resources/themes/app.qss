@@ -325,8 +325,10 @@ QPushButton#Danger {
 }
 QPushButton#Danger:hover   { background-color: @blocked@; border-color: @blocked@; }
 QPushButton#Danger:pressed { background-color: @accent@; }
-QPushButton#Danger:disabled{ background-color: @bg_alt@; color: @text_muted@;
-    border-color: @border@; }
+/* a gated destructive button (purge, behind the phrase field) still reads as
+   destructive — greyed fill, but a red edge and label (§ d3 §6.2) */
+QPushButton#Danger:disabled{ background-color: @bg_alt@; color: @overdue@;
+    border: 1px solid @overdue@; }
 
 /* ============================ M6 — history / raw / stats / timesheet === */
 QLabel#FormHint { color: @overdue@; font-size: @fs_xs@; }

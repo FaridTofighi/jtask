@@ -1425,3 +1425,42 @@ inputs/controls now layer correctly on the raised dialog surface.
 
 _Next: d3 — dialog sizing guard test; first-run `QFormLayout`; validation-timing
 helper (no validation on a pristine dialog); `#Danger:disabled` tint._
+
+## d3 — implementation log (complete)
+
+Dialog and form standards, and the guard tests that keep them.
+
+### §2 — dialog sizing (confirmed non-bug, now guarded)
+`tests/gui/test_d3_dialog_form_standards.py`: no dialog file calls
+`self.setFixedHeight` / `setMinimumHeight` / `setFixedSize` / `setMinimumSize`
+(none did — the audit's "empty space" was the screenshot script forcing an
+oversized `resize()`), plus a runtime check that Sync / Settings / Error /
+Confirm sit within 40 px of their content `sizeHint`.
+
+### §3 — first-run wizard form layout
+Rewritten onto a `QFormLayout` with right-aligned labels beside their controls,
+exactly like the Settings dialog — was a stack of right-floating `#Section`
+headers above each control. Test asserts the wizard contains a `QFormLayout`.
+
+### §6.1 — no validation on a pristine form
+`TaskFormDialog`: `_revalidate()` no longer runs at construction. Split into
+`_problems()` (pure) · button enable/disable (live, a disabled submit is the
+pristine signal) · `_show_problems()` (the red hint — shown **only** after a
+submit attempt via `_try_accept`, or after the description field is left empty
+after being touched). Tests: pristine form → hint hidden + OK disabled; after
+`_try_accept` → hint shown. Grep guard: no widget calls
+`self._(re)validate()` in `__init__`. Snapshot baseline loses the now-absent
+`«شرح کار الزامی است.»` (deliberate).
+
+### §6.2 — gated destructive button still reads as destructive
+`QPushButton#Danger:disabled` — was fully neutral grey; now greyed fill with a
+red edge and red label, so the phrase-gated Purge button still signals danger
+while it waits for the confirmation word.
+
+### Evidence
+Full suite **415 passing** (408 + 8 new − 1 snapshot line), ruff + mypy clean.
+Screenshots both themes: first-run (form layout), pristine Add-Task (no error),
+Purge (red-edged disabled button).
+
+_Next: d4 — toolbar grouping + flat overflow menu (Resolution 3), tooltip
+audit (test), icon-consistency pass._
