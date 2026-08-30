@@ -82,15 +82,24 @@ class Settings:
         self._s.setValue("due_soon_days", int(value))
 
     # --- window / layout ---
+    # Dock layout ("state") is layout-direction-dependent, so it is namespaced by
+    # language — an fa (sidebar right) layout must not be restored into an en
+    # (sidebar left) window. Geometry (size/position) is direction-agnostic.
+    def _state_key(self) -> str:
+        return f"win/state_{self.language}"
+
     def save_window(self, geometry: QByteArray, state: QByteArray) -> None:
         self._s.setValue("win/geometry", geometry)
-        self._s.setValue("win/state", state)
+        self._s.setValue(self._state_key(), state)
 
     def window_geometry(self) -> QByteArray | None:
         return self._s.value("win/geometry")
 
     def window_state(self) -> QByteArray | None:
-        return self._s.value("win/state")
+        val = self._s.value(self._state_key())
+        if val is None and self.language == "fa":
+            val = self._s.value("win/state")  # pre-i3 store was fa-only
+        return val
 
     # --- columns ---
     def save_columns(self, order: list[str], hidden: list[str], widths: dict[str, int]) -> None:

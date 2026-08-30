@@ -44,7 +44,6 @@ class BulkEditDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("BulkEditDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("bulk.title"))
         self.setMinimumWidth(460)
         self._count = count

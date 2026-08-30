@@ -78,7 +78,9 @@ CATALOG: dict[str, str] = {
     "settings.notify.interval": "بازهٔ بررسی",
     "settings.notify.quiet_hours": "ساعات سکوت",
     "settings.restart.title": "راه‌اندازی دوباره لازم است",
-    "settings.restart.body": "تغییر زبان پس از راه‌اندازی دوبارهٔ jtask اعمال می‌شود.",
+    "settings.restart.body": "تغییر زبان و تقویم پس از راه‌اندازی دوبارهٔ jtask اعمال می‌شود. هم‌اکنون راه‌اندازی دوباره شود؟",
+    "settings.restart.now": "راه‌اندازی دوباره",
+    "settings.restart.later": "بعداً",
 
     # ---- first-run wizard (widgets/first_run.py) -----------------
     "firstrun.title": "به jtask خوش آمدید",

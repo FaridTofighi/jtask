@@ -48,7 +48,6 @@ class ConfirmDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ConfirmDialog")
         self.setWindowTitle(title)
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setMinimumWidth(440)
         self._require_phrase = (require_phrase or "").strip() or None
 

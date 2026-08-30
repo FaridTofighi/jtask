@@ -143,8 +143,23 @@ class SettingsDialog(QDialog):
         s.language = new_lang
         s.sync()
 
-        if lang_changed:
-            QMessageBox.information(
-                self, t("settings.restart.title"), t("settings.restart.body")
-            )
         self.accept()
+        if lang_changed:
+            self._prompt_restart()
+
+    def _prompt_restart(self) -> None:
+        box = QMessageBox(self.parent() or self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("settings.restart.title"))
+        box.setText(t("settings.restart.body"))
+        now = box.addButton(t("settings.restart.now"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(t("settings.restart.later"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is now:
+            import sys
+
+            from PyQt6.QtCore import QProcess
+            from PyQt6.QtWidgets import QApplication
+
+            QProcess.startDetached(sys.executable, sys.argv)
+            QApplication.quit()

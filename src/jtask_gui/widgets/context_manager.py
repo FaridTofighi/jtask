@@ -138,7 +138,6 @@ class ContextManager(QWidget):
 class _ContextDialog(QDialog):
     def __init__(self, parent=None, *, name="", read="", write="") -> None:
         super().__init__(parent)
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("ctx.dialog.title") if name else t("ctx.dialog.title_new"))
         self.setMinimumWidth(420)
 

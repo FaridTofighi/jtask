@@ -93,7 +93,6 @@ class TaskFormDialog(QDialog):
         super().__init__(parent)
         self.mode = mode
         self.setObjectName("TaskFormDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("form.title.add") if mode == "add" else t("form.title.log"))
         self.setMinimumWidth(500)
 

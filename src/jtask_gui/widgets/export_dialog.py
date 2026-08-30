@@ -11,7 +11,6 @@ import datetime as dt
 import os
 
 import jdatetime
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -38,7 +37,6 @@ class ExportDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("ExportDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("export.title"))
         self.setMinimumWidth(500)
         self._current_filter = list(current_filter or [])

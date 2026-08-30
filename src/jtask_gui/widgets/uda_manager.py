@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -144,7 +144,6 @@ class _UdaDialog(QDialog):
     def __init__(self, parent=None, *, name="", spec: dict | None = None) -> None:
         super().__init__(parent)
         spec = spec or {}
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("uda.dialog.title") if name else t("uda.dialog.title_new"))
         self.setMinimumWidth(420)
 

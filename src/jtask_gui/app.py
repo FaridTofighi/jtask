@@ -71,7 +71,6 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
     app.setApplicationDisplayName("jtask")
     app.setOrganizationName("jtask")
     app.setDesktopFileName("jtask-gui")  # StartupWMClass / Wayland app-id
-    app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
     app.setWindowIcon(app_icon())
 
     family = _load_fonts()
@@ -79,9 +78,13 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
 
     settings = Settings()
 
-    from .i18n import set_language
+    from .i18n import is_rtl, set_language
 
     set_language(settings.language)
+    # Layout direction follows the UI language only (never the calendar system).
+    app.setLayoutDirection(
+        Qt.LayoutDirection.RightToLeft if is_rtl() else Qt.LayoutDirection.LeftToRight
+    )
 
     qss = render_qss(settings.theme)
     app.setStyleSheet(qss)

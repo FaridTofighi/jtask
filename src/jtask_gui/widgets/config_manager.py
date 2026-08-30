@@ -168,7 +168,6 @@ class ConfigManager(QWidget):
 class _EditDialog(QDialog):
     def __init__(self, name: str, value: str, default: str, parent=None) -> None:
         super().__init__(parent)
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("cfg.edit.title"))
         self.setMinimumWidth(440)
         self._action = "cancel"

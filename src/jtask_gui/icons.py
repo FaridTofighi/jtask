@@ -2,15 +2,23 @@
 
 Call :func:`set_theme` once at startup and on every theme switch; widgets fetch
 icons by semantic name via :func:`icon` and get one tinted for the active theme.
-Directional glyphs are mirrored for the RTL UI where it matters.
+Glyphs in ``_MIRRORED`` are flipped 180° **only** when the application layout
+direction is RTL (fa); in LTR (en) they render un-mirrored.
 """
 
 from __future__ import annotations
 
 import qtawesome as qta
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication
 
 from .theme import palette
+
+
+def _is_rtl() -> bool:
+    app = QApplication.instance()
+    return app is not None and app.layoutDirection() == Qt.LayoutDirection.RightToLeft
 
 # semantic name -> qtawesome id
 _MAP = {
@@ -80,7 +88,7 @@ def icon(name: str, role: str = "text") -> QIcon:
         return _cache[key]
     qid = _MAP.get(name, "mdi.help-circle-outline")
     opts: dict = {"color": _colour(role)}
-    if name in _MIRRORED:
+    if name in _MIRRORED and _is_rtl():
         opts["rotated"] = 180
     try:
         result = qta.icon(qid, **opts)

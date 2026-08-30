@@ -159,7 +159,6 @@ class ToolsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("ToolsDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("tools.title"))
         self.resize(720, 540)
 

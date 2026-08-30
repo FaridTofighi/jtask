@@ -7,7 +7,7 @@ silently clobbered.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -148,7 +148,6 @@ class _ReportDialog(QDialog):
     def __init__(self, parent=None, *, name="", spec: dict | None = None, builtin=False) -> None:
         super().__init__(parent)
         spec = spec or {}
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("rep.dialog.title") if name else t("rep.dialog.title_new"))
         self.setMinimumWidth(480)
 

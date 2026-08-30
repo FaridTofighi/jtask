@@ -1080,6 +1080,46 @@ fa-only visually — the snapshot gate stays **byte-identical**.
 
 Full suite: **336 → 341 passing**, ruff + mypy clean, no fa/Jalali regression.
 
-_Next: i3 — layout direction follows Language (remove the 15 hardcoded
-`setLayoutDirection(RightToLeft)`, sidebar dock L/R, conditional icon mirroring,
-restart-prompt flow, QSS/scrollbar re-verify in LTR)._
+---
+
+## i3 — implementation log (complete)
+
+Layout direction follows the **UI language only** — the calendar system never
+touches it.
+
+- **`app.build_application`** — `app.setLayoutDirection(RightToLeft if is_rtl()
+  else LeftToRight)`, computed after `set_language(settings.language)`.
+- **13 hardcoded `self.setLayoutDirection(RightToLeft)`** removed from the M5–M9
+  dialogs (they were latent bugs — they forced RTL regardless of the app). The
+  **4 `LeftToRight` overrides on monospace/code boxes** (diagnostics, stderr
+  details, raw JSON) are kept — code stays LTR in both languages.
+- **Sidebar dock** — `RightDockWidgetArea` (fa) / `LeftDockWidgetArea` (en).
+- **Window "state" (dock layout) is namespaced by language** in QSettings
+  (`win/state_<lang>`) so an fa (sidebar-right) layout is never restored into an
+  en (sidebar-left) window; a pre-i3 store still loads for fa. Geometry
+  (size/position) stays shared.
+- **`icons._MIRRORED`** (just `undo`) is flipped 180° **only when
+  `QApplication.layoutDirection()` is RTL** — un-mirrored in en.
+- **Restart flow** — the Settings dialog now shows a
+  «راه‌اندازی دوباره / بعداً» prompt on a language change and, on confirm,
+  relaunches (`QProcess.startDetached` + `QApplication.quit`).
+- **QSS** — Qt Style Sheets mirror `border-left/right`, `padding/margin-left/
+  right` and border-radius corners by `layoutDirection()`, so `#Sidebar`
+  `border-right`, `#DetailPanel` `border-left`, and the `#Segment[pos]` radii
+  flip correctly in LTR with no change needed (verified by rendering — sidebar
+  divider, detail-panel edge, and segmented-control corners all land right).
+
+### Tests
+
+`tests/gui/test_i3_layout_direction.py` (9): parametrized fa/en — sidebar dock
+side, every migrated dialog inherits the app direction, monospace boxes stay
+LTR in both, `undo` glyph mirrored only in RTL, and a grep guard that no widget
+may hardcode `setLayoutDirection(RightToLeft)` again.
+
+Full suite: **341 → 350 passing**, ruff + mypy clean. The i18n snapshot gate
+(fa/Jalali) is unchanged. English still shows catalog keys until i5 —
+structurally the UI is now a correct LTR layout (sidebar left, columns LTR,
+dialogs LTR).
+
+_Next: i4 — `CalendarSystem` abstraction (`Jalali` + `Gregorian`), one shared
+`MonthGrid`, week-start per system, `Settings.calendar`._

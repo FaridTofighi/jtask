@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -72,7 +71,6 @@ class ImportDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("ImportDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("import.title"))
         self.setMinimumWidth(500)
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -32,7 +32,6 @@ class SyncManagerDialog(QDialog):
         super().__init__(parent)
         self._settings = settings
         self.setObjectName("SyncDialog")
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(t("sync.title"))
         self.setMinimumWidth(440)
         self._running = False

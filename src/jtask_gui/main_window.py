@@ -283,8 +283,15 @@ class MainWindow(QMainWindow):
             | QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
         dock.setMinimumWidth(240)
-        # Persian reading order: navigation sits on the right.
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        # Navigation sits on the reading-start edge: right for RTL, left for LTR.
+        from .i18n import is_rtl
+
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea
+            if is_rtl()
+            else Qt.DockWidgetArea.LeftDockWidgetArea,
+            dock,
+        )
         self._sidebar_dock = dock
 
     def _build_console(self) -> None:

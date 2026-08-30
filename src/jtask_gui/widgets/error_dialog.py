@@ -39,7 +39,6 @@ class ErrorDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("ErrorDialog")
         self.setWindowTitle(t("error.title"))
-        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setMinimumWidth(480)
 
         self._details = (details or "").strip() or None
