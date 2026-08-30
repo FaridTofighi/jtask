@@ -11,15 +11,20 @@ def test_render_qss_has_no_unfilled_tokens():
         assert "@" not in re.sub(r"/\*.*?\*/", "", rendered, flags=re.S)
 
 
-def _tmpl_tokens() -> set[str]:
+def _tmpl_colour_tokens() -> set[str]:
+    """Template placeholders that must resolve from the palette — i.e. every
+    ``@name@`` that is not a dimension token from ``jtask_gui.tokens``."""
+    from jtask_gui import tokens
+
     body = re.sub(r"/\*.*?\*/", "", theme.template_text(), flags=re.S)
-    return set(re.findall(r"@([a-z_]+)@", body))
+    all_tokens = set(re.findall(r"@([a-z0-9_]+)@", body))
+    return all_tokens - set(tokens.qss_tokens())
 
 
 def test_every_template_token_exists_in_every_palette():
-    tokens = _tmpl_tokens()
+    colour_tokens = _tmpl_colour_tokens()
     for name, pal in theme.THEMES.items():
-        missing = tokens - set(pal)
+        missing = colour_tokens - set(pal)
         assert not missing, f"{name} missing {missing}"
 
 

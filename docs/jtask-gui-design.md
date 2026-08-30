@@ -1303,3 +1303,85 @@ snapshot is unchanged bar the i5 consolidations.
 
 The Raw Command Console remains the escape hatch; its input still rewrites
 Jalali date tokens regardless of the selected calendar.
+
+---
+
+# Mission "d" — Design-system standardization
+
+After a full visual audit (design-token source + ~98 screenshots, both themes).
+The colour system was already sound; spacing / typography / radius existed only
+as a header comment, and had drifted across dialogs added in different
+milestones. Two "bugs" from the audit were **screenshot-script artifacts, not
+real defects** — dialogs forced to an oversized `resize()` looked empty; a
+phrase-gated Purge button looked grey because it was correctly *disabled*.
+
+Milestones **d1–d7** (approved 2026-08-31, 4 resolutions):
+d1 token foundation · d2 Python layout sweep + elevation · d3 dialog/form
+standards · d4 toolbar · d5 terminology + widget fixes (priority بحرانی→بالا,
+dep-graph nodes, bidi paths) · d6 toast + empty-state consistency · d7 docs
+(`docs/design-system.md`) + corrected screenshots + regression.
+
+Cross-cutting: pure presentation, zero behavioural change, full suite green at
+every milestone. Deliberate documented exceptions to "zero visual change":
+the d1 ≤2 px spacing normalisations (below) and the d5 priority wording.
+
+## d1 — implementation log (complete)
+
+The spacing / type / radius scale is now **code, not a comment**, and enforced.
+
+### `jtask_gui/tokens.py` (new) — the single source of truth
+- **spacing** `SPACE = (2,4,6,8,10,12,14,16,20,24)` — a curated 2-px ladder;
+  token name carries the value (`SP_8` = 8, `@sp_8@` in QSS).
+- **radius** `RADIUS = {sm:6, md:8, pill:9, lg:12}`.
+- **type** `FONT_SIZE = {h1:22, title:16, lg:15, body:14, h2:13, xs:12}` —
+  values are **what actually renders today** (see `#H2` below).
+- **elevation** — documented convention (`surface` fill + 1-px `border`; a soft
+  drop shadow via `tokens.shadow(widget)` for free-floating overlays only,
+  since QSS can't render shadows). *Defined* in d1; *applied* in d2.
+- `qss_tokens()` returns the `@name@ → "Npx"` map.
+
+### `theme.render_qss()` — extended
+Substitutes `{**tokens.qss_tokens(), **palette(name)}`, so `@sp_*@` / `@fs_*@` /
+`@r_*@` fill alongside the colour tokens. `template_text()` unchanged.
+
+### `app.qss` — fully tokenised
+Every `padding` / `margin` / `spacing` / `font-size` / `border-radius` now reads
+a token. Only `0` / `1px` / `2px` (border + hairline widths) remain as bare
+lengths.
+
+**Dead-rule removal (Resolution 1):** `QLabel#H2` was declared twice — `17px`
+at the top and `13px` in the M6 block. Qt's cascade means the later rule always
+won, so **every `#H2` has rendered at 13 px since M6**; the 17-px rule was dead
+code. Removing it changes nothing on screen. The type scale records `h2 = 13`.
+
+**Spacing normalisations (documented exception, all ≤2 px, internal padding
+only):** button / input / quick-add / table-row vertical padding `7→8` and
+`9→8`; table-header vertical `10→12`; menu-item `7px 22px → 8px 24px`; badge
+`3→4`; tooltip `5px 9px → 4px 8px`; History/Stats/Manager cell padding `3→4`,
+`5→4`; a few `border-radius` `5→6` / `7→8`. Net effect: dialogs grow 2–14 px in
+height (Settings +14, from ~7 input rows × +1 px padding each). Before/after
+screenshots below; the shell is pixel-identical bar 1-day data drift.
+
+### Guard — `tests/gui/test_qss_uses_tokens.py` (new, 5 tests)
+Fails if a raw px value appears in a scale property, if a full selector is
+declared twice (the dead-rule class of bug), if a declared token is unused, or
+if a rendered value lands off-scale. Modelled on `test_chart_text.py`.
+
+### Chart-palette drift fixed
+`jtask_gui.theme.DEFAULT_CHART_PALETTE` (unused by any GUI chart — they colour
+series by palette role) is replaced by `CHART_SERIES_ROLES` naming that mapping.
+The CLI keeps its own `jtask.themes.DEFAULT_CHART_PALETTE` for plotext.
+
+### Incidental test-infra fix
+`tests/gui/_i18n_util.normalize_for_snapshot` masked weekday names shortest-first,
+so `«شنبه»` (Saturday) inside `«یک‌شنبه»` left a `یک‌` fragment — the snapshot
+flaked whenever the run day ≠ capture day. Now longest-first; baseline
+regenerated (1 line, collapses a duplicate mask — no app change).
+
+### Evidence
+Full suite **407 passing** (403 + 4 new), ruff + mypy clean. Snapshot &
+hardcoded-string ceilings green. Natural-size screenshots both themes: shell,
+shell+detail, toolbar, Sync / Settings / Error / first-run / Purge / Add-Task.
+
+_Next: d2 — Python layout sweep (~118 call sites / ~32 files) + elevation
+application; split d2a/d2b with per-half evidence (Resolution 2)._

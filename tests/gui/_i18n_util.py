@@ -42,9 +42,10 @@ def normalize_for_snapshot(s: str) -> str:
     from jtask.jalali import MONTH_NAMES, WEEKDAY_NAMES
 
     out = s
-    for name in WEEKDAY_NAMES:
+    # longest first: "شنبه" (Saturday) is a substring of "یک‌شنبه", "دوشنبه", …
+    for name in sorted(WEEKDAY_NAMES, key=len, reverse=True):
         out = out.replace(name, "‹D›")
-    for name in MONTH_NAMES:
+    for name in sorted(MONTH_NAMES, key=len, reverse=True):
         out = out.replace(name, "‹M›")
     out = _DIGITS.sub("#", out)
     return out.strip()

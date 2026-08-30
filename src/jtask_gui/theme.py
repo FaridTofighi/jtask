@@ -11,12 +11,18 @@ from __future__ import annotations
 
 from importlib import resources
 
+from . import tokens
+
 __all__ = [
     "THEMES", "DEFAULT_THEME", "palette", "render_qss", "template_text",
-    "other_theme", "canonical_theme", "DEFAULT_CHART_PALETTE",
+    "other_theme", "canonical_theme", "CHART_SERIES_ROLES",
 ]
 
-DEFAULT_CHART_PALETTE = ["#6cc7dd", "#b98cf0", "#7fdca0", "#f0c674", "#7aa2ff", "#ff7ac0"]
+# The GUI charts colour their series by semantic palette role (see
+# widgets/charts/*), never from a flat list — this names that mapping so it is
+# discoverable. The CLI keeps its own ``DEFAULT_CHART_PALETTE`` in
+# ``jtask.themes`` for plotext, which has no palette roles to draw on.
+CHART_SERIES_ROLES = ("primary", "completed", "overdue", "due_soon", "accent")
 
 # --- شب (dark) --------------------------------------------------------
 _SHAB = {
@@ -109,6 +115,7 @@ def template_text() -> str:
 
 def render_qss(name: str) -> str:
     qss = template_text()
-    for key, value in palette(name).items():
+    subs = {**tokens.qss_tokens(), **palette(name)}
+    for key, value in subs.items():
         qss = qss.replace(f"@{key}@", value)
     return qss
