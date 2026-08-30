@@ -1,12 +1,17 @@
-"""Jalali date / datetime picker — a thin consumer of ``JalaliMonthGrid``.
+"""Date / datetime picker — calendar-system agnostic (§ i4).
 
-Picker-level behaviour (typing, validation, "click a day → set value & close")
-lives here, never in the grid engine.
+A line edit (typed absolute or relative date) plus a calendar-popup button.
+Renders and parses through the active ``CalendarSystem`` (Jalali or Gregorian);
+its output (``gregorian_string``) is always a Taskwarrior-ready string.
+
+``JalaliDatePicker`` is kept as the class name (many imports); it now takes an
+optional ``calendar`` argument.
 """
 
 from __future__ import annotations
 
-import jdatetime
+import datetime as _dt
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
@@ -21,20 +26,23 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali
 
+from ..calendar_system import CalendarSystem, active
 from ..i18n import t
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
 
 
 class _CalendarPopup(QDialog):
-    datePicked = pyqtSignal(object)  # jdatetime.date
+    datePicked = pyqtSignal(object)  # datetime.date (Gregorian)
 
-    def __init__(self, initial: jdatetime.date, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, initial: _dt.date, cal: CalendarSystem, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent, Qt.WindowType.Popup)
+        self._cal = cal
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 10, 10, 10)
-        self._grid = JalaliMonthGrid(
-            initial.year, initial.month, cell_factory=self._make_cell
-        )
+        y, m, _d = cal.from_gregorian_date(initial)
+        self._grid = JalaliMonthGrid(y, m, cell_factory=self._make_cell, calendar=cal)
         self._grid.setMinimumSize(280, 240)
         lay.addWidget(self._grid)
 
@@ -45,27 +53,32 @@ class _CalendarPopup(QDialog):
         if ctx.is_today:
             btn.setObjectName("Primary")
         btn.clicked.connect(
-            lambda: self._pick(jdatetime.date(ctx.year, ctx.month, ctx.day))
+            lambda: self._pick(
+                self._cal.to_gregorian_date(ctx.year, ctx.month, ctx.day)
+            )
         )
         return btn
 
-    def _pick(self, d: jdatetime.date) -> None:
+    def _pick(self, d: _dt.date) -> None:
         self.datePicked.emit(d)
         self.accept()
 
 
 class JalaliDatePicker(QWidget):
-    """Line edit (typed Jalali / Persian-relative) + calendar-popup button.
+    """Line edit + calendar popup. ``with_time=True`` makes the value a datetime."""
 
-    ``with_time=True`` adds a time spinner and the value is a datetime.
-    """
+    dateChanged = pyqtSignal(object)  # datetime.date | datetime.datetime | None
 
-    dateChanged = pyqtSignal(object)  # jdatetime.date | jdatetime.datetime | None
-
-    def __init__(self, with_time: bool = False, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        with_time: bool = False,
+        parent: QWidget | None = None,
+        calendar: CalendarSystem | None = None,
+    ) -> None:
         super().__init__(parent)
+        self._cal = calendar or active()
         self._with_time = with_time
-        self._value: jdatetime.date | jdatetime.datetime | None = None
+        self._value: _dt.date | _dt.datetime | None = None  # Gregorian
 
         from .. import icons
 
@@ -107,22 +120,32 @@ class JalaliDatePicker(QWidget):
         return self._value
 
     def gregorian_string(self) -> str:
-        """Taskwarrior-facing string, or '' when empty."""
         if self._value is None:
             return ""
-        if isinstance(self._value, jdatetime.datetime):
-            return self._value.togregorian().strftime("%Y-%m-%dT%H:%M:%S")
-        return self._value.togregorian().strftime("%Y-%m-%d")
+        if isinstance(self._value, _dt.datetime):
+            return self._value.strftime("%Y-%m-%dT%H:%M:%S")
+        return self._value.strftime("%Y-%m-%d")
+
+    def _display_text(self) -> str:
+        if self._value is None:
+            return ""
+        if isinstance(self._value, _dt.datetime):
+            return self._cal.format_local(
+                self._value.strftime("%Y-%m-%d %H:%M:%S"), "datetime"
+            )
+        return self._cal.format_local(self._value.strftime("%Y-%m-%d"), "short")
 
     def set_value(self, value) -> None:
+        """*value* may be a Gregorian ``date``/``datetime`` or (compat) a
+        ``jdatetime`` object."""
+        if value is not None and hasattr(value, "togregorian"):
+            value = value.togregorian()
         self._value = value
         if value is None:
             self._edit.clear()
         else:
-            self._edit.setText(
-                jalali.to_persian_digits(value.strftime("%Y-%m-%d"))
-            )
-            if self._with_time and isinstance(value, jdatetime.datetime):
+            self._edit.setText(self._display_text())
+            if self._with_time and isinstance(value, _dt.datetime):
                 self._time.setTime(
                     self._time.time().fromString(
                         f"{value.hour:02d}:{value.minute:02d}", "HH:mm"
@@ -131,15 +154,18 @@ class JalaliDatePicker(QWidget):
         self.dateChanged.emit(self._value)
 
     def set_from_taskwarrior(self, ts: str) -> None:
-        """Populate from a raw Taskwarrior UTC timestamp."""
         if not ts:
             self.set_value(None)
             return
-        shown = jalali.from_taskwarrior(ts, fmt="short")  # ۱۴۰۳-۰۷-۱۰
-        try:
-            self.set_value(jalali.parse_jalali(jalali.normalize_digits(shown)))
-        except jalali.JalaliError:
+        m = jalali._TW_TS_RE.match(ts.strip())
+        if not m:
             self.set_value(None)
+            return
+        y, mo, d, hh, mm, ss = (int(x) for x in m.groups())
+        local = _dt.datetime(
+            y, mo, d, hh, mm, ss, tzinfo=_dt.timezone.utc
+        ).astimezone(jalali.LOCAL_TZ)
+        self.set_value(local.date())
 
     def clear(self) -> None:
         self.set_value(None)
@@ -151,45 +177,60 @@ class JalaliDatePicker(QWidget):
         if not text:
             self.set_value(None)
             return
-        try:
-            resolved = jalali.resolve(text)
-        except jalali.JalaliError:
+        tw = self._cal.to_taskwarrior(text)
+        parsed = _parse_tw_string(tw)
+        if parsed is None:
             self._edit.setStyleSheet("border: 1px solid #d1242f;")
             return
         self._edit.setStyleSheet("")
-        if (
-            self._with_time
-            and not isinstance(resolved, jdatetime.datetime)
-        ):
-            t = self._time.time()
-            resolved = jdatetime.datetime(
-                resolved.year, resolved.month, resolved.day, t.hour(), t.minute()
+        if self._with_time and not isinstance(parsed, _dt.datetime):
+            time = self._time.time()
+            parsed = _dt.datetime(
+                parsed.year, parsed.month, parsed.day, time.hour(), time.minute()
             )
-        self.set_value(resolved)
+        self.set_value(parsed)
 
     def _on_time(self) -> None:
-        if isinstance(self._value, jdatetime.date):
-            base = self._value
-            t = self._time.time()
+        if isinstance(self._value, _dt.date) and not isinstance(
+            self._value, _dt.datetime
+        ):
+            time = self._time.time()
             self.set_value(
-                jdatetime.datetime(base.year, base.month, base.day, t.hour(), t.minute())
+                _dt.datetime(
+                    self._value.year, self._value.month, self._value.day,
+                    time.hour(), time.minute(),
+                )
             )
 
     def _open_popup(self) -> None:
-        initial = self._value or jdatetime.date.today()
-        if isinstance(initial, jdatetime.datetime):
+        initial = self._value or _dt.date.today()
+        if isinstance(initial, _dt.datetime):
             initial = initial.date()
-        popup = _CalendarPopup(initial, self)
+        popup = _CalendarPopup(initial, self._cal, self)
         popup.datePicked.connect(self._picked_from_popup)
         pos = self.mapToGlobal(self._btn.geometry().bottomLeft())
         popup.move(pos)
         popup.exec()
 
-    def _picked_from_popup(self, d: jdatetime.date) -> None:
+    def _picked_from_popup(self, d: _dt.date) -> None:
         if self._with_time:
-            t = self._time.time()
+            time = self._time.time()
             self.set_value(
-                jdatetime.datetime(d.year, d.month, d.day, t.hour(), t.minute())
+                _dt.datetime(d.year, d.month, d.day, time.hour(), time.minute())
             )
         else:
             self.set_value(d)
+
+
+def _parse_tw_string(s: str) -> _dt.date | _dt.datetime | None:
+    """A Taskwarrior date string we produced → a Gregorian date/datetime.
+    Relative words we didn't resolve (``tomorrow`` …) return None → the field
+    shows an error rather than a wrong value; use the picker for those."""
+    s = s.strip()
+    for fmt_ in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            v = _dt.datetime.strptime(s, fmt_)
+            return v if "T" in s else v.date()
+        except ValueError:
+            pass
+    return None

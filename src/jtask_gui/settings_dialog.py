@@ -26,6 +26,10 @@ _NOTIFY_STATES = [
     ("settings.notify.state.soon", "soon"),
 ]
 _LANGUAGES = [("settings.language.fa", "fa"), ("settings.language.en", "en")]
+_CALENDARS = [
+    ("settings.calendar.jalali", "jalali"),
+    ("settings.calendar.gregorian", "gregorian"),
+]
 
 
 class SettingsDialog(QDialog):
@@ -48,6 +52,15 @@ class SettingsDialog(QDialog):
             else 0
         )
         form.addRow(t("settings.language"), self._language)
+
+        self._calendar = QComboBox()
+        for key, code in _CALENDARS:
+            self._calendar.addItem(t(key), code)
+        codes = [c for _, c in _CALENDARS]
+        self._calendar.setCurrentIndex(
+            codes.index(settings.calendar) if settings.calendar in codes else 0
+        )
+        form.addRow(t("settings.calendar"), self._calendar)
 
         self._theme = QComboBox()
         for key in THEMES:
@@ -139,12 +152,14 @@ class SettingsDialog(QDialog):
         s.quiet_hours = (self._quiet_start.value(), self._quiet_end.value())
 
         new_lang = self._language.currentData()
-        lang_changed = new_lang != s.language
+        new_cal = self._calendar.currentData()
+        needs_restart = new_lang != s.language or new_cal != s.calendar
         s.language = new_lang
+        s.calendar = new_cal
         s.sync()
 
         self.accept()
-        if lang_changed:
+        if needs_restart:
             self._prompt_restart()
 
     def _prompt_restart(self) -> None:

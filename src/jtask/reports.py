@@ -275,8 +275,33 @@ def shape_burndown(
     return {"period": period, "buckets": buckets}
 
 
-def shape_calendar(tasks: list[dict], year_j: int, month_j: int) -> dict:
-    grid = jalali.month_grid(year_j, month_j)
+def _greg_month_grid(year: int, month: int, week_start: int = 0) -> list[list[int | None]]:
+    """Gregorian month as weeks of 7 (``None`` pads). ``week_start``: Mon=0..Sun=6."""
+    import calendar as _cal
+
+    first = datetime.date(year, month, 1)
+    lead = (first.weekday() - week_start) % 7
+    length = _cal.monthrange(year, month)[1]
+    cells: list[int | None] = [None] * lead + list(range(1, length + 1))
+    while len(cells) % 7:
+        cells.append(None)
+    return [cells[i:i + 7] for i in range(0, len(cells), 7)]
+
+
+def shape_calendar(
+    tasks: list[dict], year: int, month: int, *, gregorian: bool = False,
+    week_start: int = 0,
+) -> dict:
+    """Month grid + per-day task buckets.
+
+    Default: *year*/*month* are Jalali, days keyed in Jalali. With
+    ``gregorian=True`` they are Gregorian and days are keyed in Gregorian
+    (``week_start`` then controls the leading weekday, Mon=0..Sun=6).
+    """
+    if gregorian:
+        grid = _greg_month_grid(year, month, week_start)
+    else:
+        grid = jalali.month_grid(year, month)
     days: dict[tuple[int, int, int], list[dict]] = defaultdict(list)
     shaped = shape_task_list(tasks)
     for t in shaped:
@@ -285,10 +310,15 @@ def shape_calendar(tasks: list[dict], year_j: int, month_j: int) -> dict:
             dt = _parse(raw)
             if not dt:
                 continue
-            jd = _jdate(dt)
-            if (jd.year, jd.month) == (year_j, month_j):
-                days[(jd.year, jd.month, jd.day)].append(t)
-    return {"year": year_j, "month": month_j, "grid": grid, "days": dict(days)}
+            local = dt.astimezone(jalali.LOCAL_TZ).date()
+            if gregorian:
+                ky, km, kd = local.year, local.month, local.day
+            else:
+                jd = jdatetime.date.fromgregorian(date=local)
+                ky, km, kd = jd.year, jd.month, jd.day
+            if (ky, km) == (year, month):
+                days[(ky, km, kd)].append(t)
+    return {"year": year, "month": month, "grid": grid, "days": dict(days)}
 
 
 # --------------------------------------------------------------------------
@@ -343,8 +373,13 @@ def report_burndown(period="daily", filter_args=None) -> dict:
     return shape_burndown(_all(filter_args), period=period)
 
 
-def report_calendar(year_j: int, month_j: int, filter_args=None) -> dict:
-    return shape_calendar(_all(filter_args), year_j, month_j)
+def report_calendar(
+    year: int, month: int, filter_args=None, *, gregorian: bool = False,
+    week_start: int = 0,
+) -> dict:
+    return shape_calendar(
+        _all(filter_args), year, month, gregorian=gregorian, week_start=week_start
+    )
 
 
 _MODIFIER_RE = re.compile(r"\.(age|relative|countdown|remaining|indicator)$")

@@ -21,8 +21,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import jalali, taskwarrior
+from jtask import taskwarrior
 
+from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 
@@ -144,7 +145,7 @@ class _CalcTab(QWidget):
         extra = ""
         if len(result) >= 19 and result[4] == "-" and "T" in result:
             try:
-                extra = "   ·   " + jalali.from_local(
+                extra = "   ·   " + active().format_local(
                     result.replace("T", " ")[:19], "long"
                 )
             except Exception:  # noqa: BLE001

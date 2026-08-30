@@ -18,10 +18,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import jalali, taskwarrior
+from jtask import taskwarrior
 from jtask.rtl import bidi_isolate
 
 from .. import fmt
+from ..calendar_system import active
 from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
@@ -266,7 +267,7 @@ class DetailPanel(QScrollArea):
         for key, label in anchors:
             raw = task.get(f"{key}_gregorian") or task.get(key)
             if raw:
-                shown = bidi_isolate(jalali.from_taskwarrior(raw, fmt="short"))
+                shown = bidi_isolate(active().format_utc(raw, "short"))
                 parts.append(f"{label}: {shown}")
         return "   ·   ".join(parts)
 
@@ -275,7 +276,7 @@ class DetailPanel(QScrollArea):
         for ann in task.get("annotations") or []:
             when = ann.get("entry", "")
             if when and not when.startswith("۱"):  # raw gregorian -> jalali
-                when = jalali.from_taskwarrior(when, fmt="short")
+                when = active().format_utc(when, "short")
             item = QListWidgetItem(f"{when} — {ann.get('description', '')}")
             item.setData(Qt.ItemDataRole.UserRole, ann.get("description", ""))
             self._annotations.addItem(item)

@@ -13,9 +13,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import jalali, taskwarrior
+from jtask import taskwarrior
 
 from .. import fmt
+from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 
@@ -42,7 +43,7 @@ def _render_value(raw: str) -> str:
     if not raw:
         return "—"
     if _ISO_DATE.match(raw):
-        return jalali.from_local(raw, "short")
+        return active().format_local(raw, "short")
     m = re.match(r"^(-?[\d.]+)\s*(.*)$", raw)
     if m:
         val = float(m.group(1)) if "." in m.group(1) else int(m.group(1))

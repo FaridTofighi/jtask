@@ -145,6 +145,11 @@ class TaskTableModel(QAbstractTableModel):
             return ""
         if col.formatter is not None:
             text = col.formatter(task)
+        elif col.key in _STRUCTURED_KEYS and f"{col.key}_gregorian" in task:
+            # Re-render the stored Gregorian/UTC value through the active
+            # calendar system, ignoring reports.py's pre-formatted Jalali string.
+            from ..calendar_system import active
+            text = active().format_utc(task.get(f"{col.key}_gregorian") or "", "short")
         else:
             value = task.get(col.key, "")
             text = "" if value is None else str(value)

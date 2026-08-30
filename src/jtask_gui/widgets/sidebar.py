@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import datetime
 
-import jdatetime
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
 
-from jtask import jalali
-
 from .. import icons
+from ..calendar_system import active
 from ..i18n import t
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
@@ -19,9 +17,9 @@ UUID_MIME = "application/x-jtask-uuids"
 
 
 def _this_week_filter() -> list[str]:
-    start, end = jalali.week_range(jdatetime.date.today())
-    g_start = start.togregorian() - datetime.timedelta(days=1)
-    g_end = end.togregorian() + datetime.timedelta(days=1)
+    start, end = active().week_bounds()
+    g_start = start - datetime.timedelta(days=1)
+    g_end = end + datetime.timedelta(days=1)
     return [
         f"due.after:{g_start:%Y-%m-%d}",
         f"due.before:{g_end:%Y-%m-%d}",

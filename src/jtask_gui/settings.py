@@ -37,6 +37,19 @@ class Settings:
     def theme(self, name: str) -> None:
         self._s.setValue("theme", canonical_theme(name))
 
+    # --- calendar system ---
+    @property
+    def calendar(self) -> str:
+        v = self._s.value("calendar", "jalali", str)
+        return v if v in ("jalali", "gregorian") else "jalali"
+
+    @calendar.setter
+    def calendar(self, value: str) -> None:
+        self._s.setValue(
+            "calendar", value if value in ("jalali", "gregorian") else "jalali"
+        )
+        self._s.sync()
+
     # --- language ---
     @property
     def language(self) -> str:

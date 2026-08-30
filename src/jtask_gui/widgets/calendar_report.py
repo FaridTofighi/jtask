@@ -7,7 +7,6 @@ in the side list.
 
 from __future__ import annotations
 
-import jdatetime
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
@@ -22,6 +21,7 @@ from PyQt6.QtWidgets import (
 from jtask import jalali, reports
 
 from .. import fmt, icons
+from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 from .jalali_calendar import DayCellContext, JalaliMonthGrid
@@ -86,7 +86,8 @@ class CalendarReport(QWidget):
         self._theme = theme_name
         self._filter: list[str] = []
         self._data: dict = {"days": {}}
-        today = jdatetime.date.today()
+        self._cal = active()
+        today = self._cal.today()
         self._year, self._month = today.year, today.month
         self._gen = 0
 
@@ -129,7 +130,14 @@ class CalendarReport(QWidget):
             if gen == self._gen:
                 self._on_data(data)
 
-        submit(lambda: reports.report_calendar(y, m, self._filter or None), apply)
+        greg = self._cal.id == "gregorian"
+        ws = self._cal.week_start_pyweekday()
+        submit(
+            lambda: reports.report_calendar(
+                y, m, self._filter or None, gregorian=greg, week_start=ws
+            ),
+            apply,
+        )
 
     # --- internals ------------------------------------------
 
@@ -154,7 +162,7 @@ class CalendarReport(QWidget):
 
     def _on_drop(self, uuids: list[str], key) -> None:
         y, m, d = key
-        greg = jdatetime.date(y, m, d).togregorian().strftime("%Y-%m-%d")
+        greg = self._cal.to_gregorian_date(y, m, d).strftime("%Y-%m-%d")
         self.taskRescheduled.emit(uuids, greg)
 
     @staticmethod
@@ -172,7 +180,7 @@ class CalendarReport(QWidget):
     def _show_day(self, key) -> None:
         y, m, d = key
         self._day_title.setText(
-            fmt.digits(f"{d} {jalali.MONTH_NAMES[m - 1]} {y}")
+            fmt.digits(f"{d} {self._cal.month_names()[m - 1]} {y}")
         )
         self._day_list.clear()
         for task in self._data.get("days", {}).get(key, []):

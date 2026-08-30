@@ -1,10 +1,12 @@
-"""Reusable Saturday-first Jalali month-grid engine.
+"""Reusable month-grid engine — calendar-system agnostic (§ i4).
 
-``JalaliMonthGrid`` knows only how to lay out a Jalali month.  It does not
-decide what a day cell shows or what clicking it does — the caller supplies a
-``cell_factory(ctx) -> QWidget``.  This lets the date picker (plain selectable
-numbers, click returns a date) and the M2 calendar report (task-density cells,
-click opens that day's task list) share one grid with zero duplication.
+The grid knows only how to lay out *a* month for whatever ``CalendarSystem`` it
+is given (Jalali or Gregorian). It does not decide what a day cell shows or what
+clicking it does — the caller supplies ``cell_factory(ctx) -> QWidget``. The
+date picker and the calendar report share this one engine for both systems.
+
+``JalaliMonthGrid`` is kept as the class name (many imports); it now takes an
+optional ``calendar`` argument and defaults to the active system.
 """
 
 from __future__ import annotations
@@ -12,9 +14,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-import jdatetime
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QApplication,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -24,9 +26,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import jalali
-
 from .. import fmt
+from ..calendar_system import CalendarSystem, active
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,7 @@ class DayCellContext:
     day: int
     is_today: bool
     is_current_month: bool
-    weekday_index: int  # 0 = Saturday
+    weekday_index: int  # 0 = first column of the active system's week
 
 
 CellFactory = Callable[[DayCellContext], QWidget]
@@ -49,7 +50,7 @@ def _default_cell(ctx: DayCellContext) -> QWidget:
 
 
 class JalaliMonthGrid(QWidget):
-    """A 7-column (Saturday-first) Jalali month grid with month navigation."""
+    """A 7-column month grid with month navigation, for any calendar system."""
 
     monthChanged = pyqtSignal(int, int)  # year, month
 
@@ -59,9 +60,11 @@ class JalaliMonthGrid(QWidget):
         month: int | None = None,
         cell_factory: CellFactory | None = None,
         parent: QWidget | None = None,
+        calendar: CalendarSystem | None = None,
     ) -> None:
         super().__init__(parent)
-        today = jdatetime.date.today()
+        self._cal = calendar or active()
+        today = self._cal.today()
         self._year = year or today.year
         self._month = month or today.month
         self._factory: CellFactory = cell_factory or _default_cell
@@ -70,10 +73,12 @@ class JalaliMonthGrid(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        # --- header: « month year » (RTL: prev on the right, next on the left) ---
-        header = QHBoxLayout()
-        self._prev = QPushButton("»")   # earlier month — points right
-        self._next = QPushButton("«")   # later month — points left
+        rtl = QApplication.instance() is not None and (
+            QApplication.instance().layoutDirection() == Qt.LayoutDirection.RightToLeft
+        )
+        # earlier / later month — glyphs chosen for the reading direction
+        self._prev = QPushButton("›" if rtl else "‹")
+        self._next = QPushButton("‹" if rtl else "›")
         for b in (self._prev, self._next):
             b.setFixedWidth(38)
             b.setAutoDefault(False)
@@ -84,19 +89,18 @@ class JalaliMonthGrid(QWidget):
         self._title = QLabel()
         self._title.setObjectName("H2")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # RTL: "next" (advance) sits on the left, "prev" on the right
-        header.addWidget(self._next)
+        header = QHBoxLayout()
+        header.addWidget(self._prev)      # Qt positions by layout direction
         header.addWidget(self._title, 1)
-        header.addWidget(self._prev)
+        header.addWidget(self._next)
         root.addLayout(header)
 
         self._prev.clicked.connect(lambda: self._step(-1))
         self._next.clicked.connect(lambda: self._step(+1))
 
-        # --- weekday header row ---
         self._grid = QGridLayout()
         self._grid.setSpacing(4)
-        for col, name in enumerate(jalali.WEEKDAY_NAMES_SHORT):
+        for col, name in enumerate(self._cal.weekday_names_short()):
             lbl = QLabel(name)
             lbl.setObjectName("Muted")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -154,13 +158,10 @@ class JalaliMonthGrid(QWidget):
                 w.deleteLater()
 
     def _rebuild(self) -> None:
-        self._title.setText(
-            fmt.digits(f"{jalali.MONTH_NAMES[self._month - 1]} {self._year}")
-        )
+        self._title.setText(self._cal.label_ym(self._year, self._month))
         self._clear_day_cells()
 
-        today = jdatetime.date.today()
-        grid = jalali.month_grid(self._year, self._month)
+        grid = self._cal.month_grid(self._year, self._month)
         for r, week in enumerate(grid, start=1):
             for c, day in enumerate(week):
                 if day is None:
@@ -169,8 +170,7 @@ class JalaliMonthGrid(QWidget):
                     year=self._year,
                     month=self._month,
                     day=day,
-                    is_today=(today.year, today.month, today.day)
-                    == (self._year, self._month, day),
+                    is_today=self._cal.is_today(self._year, self._month, day),
                     is_current_month=True,
                     weekday_index=c,
                 )
@@ -179,3 +179,6 @@ class JalaliMonthGrid(QWidget):
                     QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
                 )
                 self._grid.addWidget(cell, r, c)
+
+
+MonthGrid = JalaliMonthGrid  # the honest name; both are the same engine

@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import history, jalali, taskwarrior
 
+from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 
@@ -40,7 +41,7 @@ _DATE_ATTRS = {"Due", "Scheduled", "Wait", "Until", "Start", "End", "Entry", "Mo
 
 def _val(attr: str, raw: str) -> str:
     if attr in _DATE_ATTRS:
-        return jalali.from_local(raw, "datetime")
+        return active().format_local(raw, "datetime")
     if attr == "Status":
         return t(_STATUS_KEY[raw]) if raw in _STATUS_KEY else raw
     return raw
@@ -67,7 +68,7 @@ def describe(ch: history.ChangeEntry) -> str:
         return t("hist.tag_deleted", v=ch.old)
     if ch.attr == "Start":
         if ch.kind == "set":
-            return t("hist.start_set", when=jalali.from_local(ch.new or "", "datetime"))
+            return t("hist.start_set", when=active().format_local(ch.new or "", "datetime"))
         if ch.kind == "deleted":
             if ch.duration is not None:
                 return t("hist.start_stopped_dur", dur=_fa_duration(ch.duration))
@@ -145,13 +146,13 @@ class TaskHistoryView(QWidget):
         ):
             raw = next((rep.attributes[k] for k in keys if rep.attributes.get(k)), "")
             if raw:
-                shown = jalali.from_local(raw.split(" (")[0], "long")
+                shown = active().format_local(raw.split(" (")[0], "long")
                 anchors.append(f"{label}: {shown}")
         self._anchors.setText("   ·   ".join(anchors))
 
         by_day: dict[str, list[history.ChangeEntry]] = {}
         for ch in rep.changes:
-            day = jalali.from_local(ch.when.strftime("%Y-%m-%d"), "long")
+            day = active().format_local(ch.when.strftime("%Y-%m-%d"), "long")
             by_day.setdefault(day, []).append(ch)
 
         for day, entries in by_day.items():

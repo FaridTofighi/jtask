@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import jalali, timesheet
 
+from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 from .jalali_date_picker import JalaliDatePicker
@@ -63,8 +64,7 @@ class TimesheetView(QWidget):
         bar.addStretch(1)
         lay.addLayout(bar)
 
-        today = jdatetime.date.today()
-        start, end = jalali.week_range(today)
+        start, end = active().week_bounds()
         self._from.set_value(start)
         self._to.set_value(end)
 

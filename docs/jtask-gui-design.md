@@ -1123,3 +1123,72 @@ dialogs LTR).
 
 _Next: i4 — `CalendarSystem` abstraction (`Jalali` + `Gregorian`), one shared
 `MonthGrid`, week-start per system, `Settings.calendar`._
+
+## i4 — implementation log (complete)
+
+The calendar system is now a **selectable setting, independent of language**.
+Taskwarrior storage stays Gregorian/UTC; a `CalendarSystem` only decides how a
+date is *shown* and how typed input becomes a Taskwarrior string.
+
+### New module — `calendar_system.py`
+
+- **`CalendarSystem`** ABC: `today`, `month_names`, `weekday_names_short`,
+  `week_start_pyweekday` (Mon=0…Sun=6), `month_grid`, `label_ym`, `is_today`,
+  `to_gregorian_date` / `from_gregorian_date`, `format_utc` / `format_local`
+  (`style` = `short` / `long` / `datetime` / `time` / `gregorian`),
+  `week_bounds(ref)` (concrete — first/last Gregorian date of the week per the
+  system's start), `to_taskwarrior`.
+- **`JalaliCalendarSystem`** — wraps `jtask.jalali`. Saturday week start. In an
+  **English UI** the month/weekday names switch to the canonical Latin
+  transliteration (`Farvardin`…`Esfand`, `Shanbeh`…`Jomeh`) from the glossary
+  §7; digits stay ASCII. `format_*` output is byte-identical to the old
+  `jalali.from_*` path in a Persian UI.
+- **`GregorianCalendarSystem`** — near-passthrough. Week start from Taskwarrior's
+  `rc.weekstart` (`_read_weekstart()`, default Monday). `to_taskwarrior` parses
+  an absolute `Y-M-D[ H:M[:S]]` (any separator, either digit set) and passes
+  everything else (`tomorrow`, `eom`, date-math) through to Taskwarrior.
+- **`active()`** — one process-wide instance chosen from `Settings().calendar`
+  (restart-required, like language). `set_calendar(id)` for the switch / tests.
+
+### Shared grid + picker
+
+- **`widgets/jalali_calendar.py`** (`JalaliMonthGrid`, alias `MonthGrid`) — now
+  calendar-agnostic: takes an optional `calendar=`, delegates every calendar
+  decision to it, picks nav-arrow glyphs by `layoutDirection()`. One engine for
+  both systems, both the date-picker popup and the calendar report.
+- **`widgets/jalali_date_picker.py`** (`JalaliDatePicker`) — stores a **Gregorian**
+  `date`/`datetime` internally; renders via `active().format_local`; parses typed
+  text via `active().to_taskwarrior` → `strptime` (unresolved relatives show a
+  red border — use the popup). `set_value` still accepts a `jdatetime` for
+  back-compat.
+
+### Consumers routed through `active()`
+
+`models/task_model.py` (date columns re-render from `<key>_gregorian` via
+`format_utc`, ignoring reports.py's pre-formatted Jalali), `widgets/`
+`history_view`, `stats_view`, `timesheet_view` (+ default range via
+`week_bounds`), `detail_panel`, `tools_dialog`, `calendar_report`, and
+`sidebar._this_week_filter` (week span via `week_bounds`).
+
+`jtask/reports.py` got one **additive** change: `shape_calendar` /
+`report_calendar` take `gregorian=` + `week_start=` — Gregorian year/month with
+Gregorian-keyed day buckets when set, Jalali (unchanged) otherwise.
+
+### Settings dialog
+
+A **Calendar** combo (جلالی / میلادی) next to Language. Changing *either*
+Language or Calendar now fires the restart prompt.
+
+### Tests
+
+`tests/gui/test_i4_calendar_system.py` (14): Jalali + Gregorian shape, Latin
+names in English UI, date round-trips, `format_utc` parity with the core,
+`to_taskwarrior` (absolute / relative / invalid), `week_bounds` per system,
+`active()` follows `Settings().calendar`, calendar setting persists.
+
+Full suite: **350 → 364 passing**, ruff + mypy clean. The i18n snapshot gate
+gained the 3 intended Calendar-selector strings (تقویم / جلالی (شمسی) / میلادی)
+and is otherwise unchanged — Persian + Jalali output is still byte-identical.
+
+_Next: i5 — fill `en.py` from the glossary, digit/font defaults per language,
+terminology + transliteration tests, wording clean-ups._
