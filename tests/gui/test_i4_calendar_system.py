@@ -69,10 +69,16 @@ def test_jalali_roundtrip_date():
 
 def test_jalali_format_utc_matches_core(fa):
     from jtask import jalali
+    from jtask.rtl import digit_mode, set_digit_mode
 
-    j = cs.JalaliCalendarSystem()
-    ts = "20241001T093000Z"
-    assert j.format_utc(ts, "short") == jalali.from_taskwarrior(ts, fmt="short")
+    prev = digit_mode()
+    set_digit_mode(True)  # Persian UI, Persian digits — the default fa config
+    try:
+        j = cs.JalaliCalendarSystem()
+        ts = "20241001T093000Z"
+        assert j.format_utc(ts, "short") == jalali.from_taskwarrior(ts, fmt="short")
+    finally:
+        set_digit_mode(prev)
 
 
 def test_jalali_to_taskwarrior_absolute():

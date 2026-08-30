@@ -92,6 +92,13 @@ class CalendarSystem(ABC):
     def format_local(self, local_ts: str, style: str = "short") -> str:
         """A local ``YYYY-MM-DD[ HH:MM[:SS]]`` string → a display string."""
 
+    def example_input(self) -> str:
+        """A concrete ``Y-M-D`` in this system (today) — for input placeholders."""
+        from .fmt import digits
+
+        d = self.today()
+        return digits(f"{d.year:04d}-{d.month:02d}-{d.day:02d}")
+
     def week_bounds(self, ref: _dt.date | None = None) -> tuple[_dt.date, _dt.date]:
         """(first day, last day) Gregorian dates of the week containing *ref*
         (today by default), using this system's week-start convention."""
@@ -170,8 +177,10 @@ class JalaliCalendarSystem(CalendarSystem):
     def format_utc(self, tw_ts: str, style: str = "short") -> str:
         if self._latin() and style == "long":
             parts = self._jalali_ymd_local(tw_ts)
-            return self._latin_long(*parts[:3]) if parts else (tw_ts or "")
-        return jalali.from_taskwarrior(tw_ts, fmt=style)
+            out = self._latin_long(*parts[:3]) if parts else (tw_ts or "")
+        else:
+            out = jalali.from_taskwarrior(tw_ts, fmt=style)
+        return self._digits(out)
 
     def format_local(self, local_ts: str, style: str = "short") -> str:
         if self._latin() and style == "long":
@@ -181,8 +190,18 @@ class JalaliCalendarSystem(CalendarSystem):
             y, mo, d, hh, mi, _s = m.groups()
             j = jdatetime.date.fromgregorian(date=_dt.date(int(y), int(mo), int(d)))
             hm = f"{hh}:{mi}" if hh is not None else ""
-            return self._latin_long(j.year, j.month, j.day, hm)
-        return jalali.from_local(local_ts, fmt=style)
+            out = self._latin_long(j.year, j.month, j.day, hm)
+        else:
+            out = jalali.from_local(local_ts, fmt=style)
+        return self._digits(out)
+
+    @staticmethod
+    def _digits(text: str) -> str:
+        # jtask.jalali always emits Persian digits; honour the GUI digit mode
+        # (English UI / an explicit ASCII choice must show ASCII digits).
+        from .fmt import digits
+
+        return digits(text)
 
     @staticmethod
     def _latin_long(jy: int, jm: int, jd_: int, hm: str = "") -> str:

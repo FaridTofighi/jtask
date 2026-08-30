@@ -1250,3 +1250,56 @@ default incl. the override-wins case.
 Full suite: **364 → 387 passing**, ruff + mypy clean.
 
 _Next: i6 — four-combination (Language × Calendar) hardening, screenshots, docs._
+
+## i6 — implementation log (complete) — mission done
+
+All four **Language × Calendar** combinations verified end to end.
+
+| Language | Calendar | Direction | Sidebar | Dates | Digits (default) |
+|---|---|---|---|---|---|
+| Persian | Jalali | RTL | right | `۱۴۰۵-۰۶-۱۳` | Persian |
+| Persian | Gregorian | RTL | right | `۲۰۲۶-۰۹-۰۴` | Persian |
+| English | Jalali | LTR | left | `1405-06-13` (Latin month names in pickers/calendar) | ASCII |
+| English | Gregorian | LTR | left | `2026-09-04` | ASCII |
+
+Taskwarrior storage stays Gregorian/UTC in every combination.
+
+### Fixes found by the four-combination pass
+
+- **`JalaliCalendarSystem.format_utc/format_local`** now run their result through
+  `fmt.digits()` — `jtask.jalali` always emits Persian digits, so an English UI
+  (or an explicit ASCII choice) was showing Persian digits in the detail panel
+  and history. Now consistent with the task table.
+- **Date-picker placeholder** is calendar-neutral: `t("datepicker.placeholder",
+  example=…)` where the example is today in the active system
+  (`CalendarSystem.example_input()`), so a Gregorian UI no longer shows a Jalali
+  example.
+
+### Tests
+
+`tests/gui/test_i6_four_combinations.py` (16, parametrized over the 4 combos):
+layout direction follows language only; window chrome is in the right language;
+the Due column renders in the active calendar's year range; the shared
+month-grid's month names are transliterated (en+Jalali) / native
+(Gregorian) / Persian (fa+Jalali). The `combo` fixture saves and restores
+language, direction, active calendar and digit mode so it can't leak.
+
+Full suite: **387 → 403 passing**, ruff + mypy clean. The fa/Jalali visible-text
+snapshot is unchanged bar the i5 consolidations.
+
+### Where each setting lives
+
+- `Settings.language` (`fa`/`en`) — interface text + layout direction. Restart
+  required.
+- `Settings.calendar` (`jalali`/`gregorian`) — date display + input parsing.
+  Restart required.
+- `Settings.persian_digits` — follows the language until the user picks
+  explicitly (`digit_mode_user_overridden`); live toggle, no restart.
+- Catalog: `src/jtask_gui/i18n/{fa,en}.py`, one flat dotted namespace, driven by
+  `docs/i18n-glossary.md`. New user-facing strings go through `t()` — the
+  `tests/test_no_new_hardcoded_strings.py` ceiling guards against regressions.
+- Calendar logic: `src/jtask_gui/calendar_system.py` (`active()` is the one
+  process-wide instance).
+
+The Raw Command Console remains the escape hatch; its input still rewrites
+Jalali date tokens regardless of the selected calendar.

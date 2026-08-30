@@ -655,7 +655,7 @@ CATALOG.update({
     "sidebar.delete.body": "Delete the filter “{name}”?",
 
     # ---- jalali date picker -----------
-    "datepicker.placeholder": "1403-07-10 or “tomorrow”",
+    "datepicker.placeholder": "{example} or “tomorrow”",
     "datepicker.calendar_tip": "Pick from the calendar",
 
     # ---- dep graph -------------------

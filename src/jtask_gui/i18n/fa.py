@@ -624,7 +624,7 @@ CATALOG: dict[str, str] = {
     "sidebar.delete.body": "فیلتر «{name}» حذف شود؟",
 
     # ---- jalali date picker (widgets/jalali_date_picker.py) --
-    "datepicker.placeholder": "۱۴۰۳-۰۷-۱۰ یا «فردا»",
+    "datepicker.placeholder": "{example} یا «فردا»",
     "datepicker.calendar_tip": "انتخاب از تقویم جلالی",
 
     # ---- dep graph (widgets/dep_graph.py) -----------------

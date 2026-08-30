@@ -87,7 +87,9 @@ class JalaliDatePicker(QWidget):
         row.setSpacing(4)
 
         self._edit = QLineEdit()
-        self._edit.setPlaceholderText(t("datepicker.placeholder"))
+        self._edit.setPlaceholderText(
+            t("datepicker.placeholder", example=self._cal.example_input())
+        )
         self._edit.setClearButtonEnabled(True)
         self._edit.setMinimumWidth(120)
         self._edit.editingFinished.connect(self._parse_text)

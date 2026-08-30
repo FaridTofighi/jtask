@@ -103,16 +103,18 @@ def test_digit_mode_default_follows_language(tmp_path, monkeypatch, qapp):
     from jtask_gui.settings import Settings
 
     QSettings("jtask", "jtask-gui").clear()
+    try:
+        s = Settings()
+        s.language = "en"
+        assert s.persian_digits is False  # English → ASCII by default
 
-    s = Settings()
-    s.language = "en"
-    assert s.persian_digits is False  # English → ASCII by default
+        s.language = "fa"
+        assert s.persian_digits is True   # Persian → Persian by default
 
-    s.language = "fa"
-    assert s.persian_digits is True   # Persian → Persian by default
-
-    # an explicit override wins and survives a language switch
-    s.digit_mode_user_overridden = True
-    s.persian_digits = False
-    s.language = "fa"
-    assert s.persian_digits is False
+        # an explicit override wins and survives a language switch
+        s.digit_mode_user_overridden = True
+        s.persian_digits = False
+        s.language = "fa"
+        assert s.persian_digits is False
+    finally:
+        QSettings("jtask", "jtask-gui").clear()
