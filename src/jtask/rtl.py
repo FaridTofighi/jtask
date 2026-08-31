@@ -9,6 +9,8 @@ algorithm so the visual byte order is what a Persian reader expects.
 
 from __future__ import annotations
 
+import unicodedata
+
 import arabic_reshaper
 from bidi.algorithm import get_display
 
@@ -16,7 +18,7 @@ from .jalali import normalize_digits, to_persian_digits
 
 __all__ = [
     "rtl", "fa_digits", "en_digits", "num", "set_digit_mode", "digit_mode",
-    "bidi_isolate",
+    "bidi_isolate", "first_strong_dir", "auto_isolate",
 ]
 
 # Unicode isolate controls — wrap a structured token (a signed number, a
@@ -24,6 +26,7 @@ __all__ = [
 # and never floats its sign/separators to the wrong side inside RTL text.
 _LRI = "⁦"  # LEFT-TO-RIGHT ISOLATE
 _PDI = "⁩"  # POP DIRECTIONAL ISOLATE
+_FSI = "⁨"  # FIRST STRONG ISOLATE — base direction taken from 1st strong char
 
 
 def bidi_isolate(text: str) -> str:
@@ -31,6 +34,31 @@ def bidi_isolate(text: str) -> str:
     if not text:
         return text
     return f"{_LRI}{text}{_PDI}"
+
+
+def first_strong_dir(text: str) -> str | None:
+    """``"ltr"`` / ``"rtl"`` / ``None`` from the first strong directional char.
+
+    This is what decides whether a free-text field like a task description
+    should read left-to-right ("Meeting with Arash") or right-to-left
+    ("جلسه با آرش"), independent of the app's global layout direction.
+    """
+    for ch in text:
+        bidi = unicodedata.bidirectional(ch)
+        if bidi == "L":
+            return "ltr"
+        if bidi in ("R", "AL"):
+            return "rtl"
+    return None
+
+
+def auto_isolate(text: str) -> str:
+    """Wrap *text* in a FIRST STRONG ISOLATE so the bidi algorithm picks its
+    base direction from its own first strong character — a Latin phrase renders
+    LTR and a Persian phrase RTL even inside an otherwise RTL paragraph."""
+    if not text:
+        return text
+    return f"{_FSI}{text}{_PDI}"
 
 _PERSIAN_DIGITS_DEFAULT = True
 _state = {"persian_digits": _PERSIAN_DIGITS_DEFAULT}

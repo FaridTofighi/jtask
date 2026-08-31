@@ -160,7 +160,7 @@ def test_settings_dialog_persists_notification_prefs(qtbot, settings):
     assert settings.quiet_hours == (23, 6)
 
 
-def test_app_icon_loads():
+def test_app_icon_loads(qapp):
     from jtask_gui.app import app_icon
 
     assert not app_icon().isNull()

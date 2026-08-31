@@ -382,6 +382,30 @@ def report_calendar(
     )
 
 
+def recurring_templates(filter_args=None) -> list[dict]:
+    """Recurring *parent* tasks — the templates new instances are spawned from.
+
+    Returns ``{uuid, description, recur, project, tags, due, due_gregorian}``;
+    dates are Jalali strings (with the raw Gregorian kept alongside).
+    """
+    tasks = taskwarrior.export([*(filter_args or []), "status:recurring"])
+    out: list[dict] = []
+    for t in shape_task_list(tasks):
+        out.append(
+            {
+                "uuid": t.get("uuid", ""),
+                "description": t.get("description", ""),
+                "recur": t.get("recur", ""),
+                "project": t.get("project", ""),
+                "tags": [x for x in (t.get("tags") or []) if not x.isupper()],
+                "due": t.get("due", ""),
+                "due_gregorian": t.get("due_gregorian", ""),
+            }
+        )
+    out.sort(key=lambda r: r["description"])
+    return out
+
+
 _MODIFIER_RE = re.compile(r"\.(age|relative|countdown|remaining|indicator)$")
 
 

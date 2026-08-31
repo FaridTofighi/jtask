@@ -64,6 +64,79 @@ def test_sidebar_dock_side_follows_language(in_language, qapp, qtbot, tw_env):
 
 
 @pytest.mark.parametrize("in_language", ["fa", "en"], indirect=True)
+def test_sidebar_side_survives_a_stale_persisted_layout(in_language, qapp, qtbot, tw_env):
+    """A dock layout saved under the other language (or an older build) must not
+    keep the sidebar on the wrong edge — _enforce_sidebar_side() self-heals it."""
+    from PyQt6.QtCore import QSettings
+
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    QSettings("jtask", "jtask-gui").clear()
+
+    # build a window in the *opposite* direction and stash its dock state
+    other = "fa" if in_language == "en" else "en"
+    from jtask_gui import i18n
+
+    i18n.set_language(other)
+    qapp.setLayoutDirection(
+        Qt.LayoutDirection.RightToLeft if other == "fa" else Qt.LayoutDirection.LeftToRight
+    )
+    s = Settings()
+    s.language = other
+    tmp = MainWindow(s)
+    qtbot.addWidget(tmp)
+    poisoned = tmp.saveState()
+
+    # now pretend that state was saved under the CURRENT language's bucket
+    i18n.set_language(in_language)
+    qapp.setLayoutDirection(
+        Qt.LayoutDirection.RightToLeft if in_language == "fa" else Qt.LayoutDirection.LeftToRight
+    )
+    s2 = Settings()
+    s2.language = in_language
+    s2.save_window(tmp.saveGeometry(), poisoned, language=in_language)
+
+    w = MainWindow(s2)
+    qtbot.addWidget(w)
+    for _ in range(4):
+        qapp.processEvents()
+        wait_for_done(4000)
+        qapp.processEvents()
+
+    want = (
+        Qt.DockWidgetArea.RightDockWidgetArea
+        if in_language == "fa"
+        else Qt.DockWidgetArea.LeftDockWidgetArea
+    )
+    assert w.dockWidgetArea(w._sidebar_dock) == want
+
+
+@pytest.mark.parametrize("in_language", ["fa", "en"], indirect=True)
+def test_closeevent_saves_state_under_the_built_language(in_language, qapp, qtbot, tw_env):
+    """Switching language then closing without restarting must not poison the
+    new language's saved layout with the old (still-rendered) one."""
+    from PyQt6.QtCore import QSettings
+
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+
+    QSettings("jtask", "jtask-gui").clear()
+    s = Settings()
+    s.language = in_language
+    w = MainWindow(s)
+    qtbot.addWidget(w)
+
+    switched = "fa" if in_language == "en" else "en"
+    s.language = switched          # user picks a new language, defers the restart
+    w.close()                      # closeEvent fires
+
+    assert Settings()._s.value(f"win/state_{in_language}") is not None
+    assert Settings()._s.value(f"win/state_{switched}") is None
+
+
+@pytest.mark.parametrize("in_language", ["fa", "en"], indirect=True)
 def test_dialogs_inherit_app_direction(in_language, qapp, qtbot, tw_env):
     from jtask_gui.widgets.bulk_edit import BulkEditDialog
     from jtask_gui.widgets.error_dialog import ErrorDialog

@@ -28,6 +28,7 @@ from .i18n import t
 from .models.task_model import TaskTableModel
 from .settings import Settings
 from .theme import other_theme, render_qss
+from .widgets.annotations_view import AnnotationsView
 from .widgets.command_console import CommandConsole
 from .widgets.confirm import confirm
 from .widgets.detail_panel import DetailPanel
@@ -54,6 +55,13 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: Settings | None = None) -> None:
         super().__init__()
         self.settings = settings or Settings()
+        from .i18n import lang as _ui_lang
+
+        # The language this window was laid out for. A language change is
+        # restart-gated, so if the user switches then closes without restarting,
+        # the window state must still be saved under the *old* language's bucket
+        # — not the newly-persisted one (that would poison the other layout).
+        self._built_language = _ui_lang()
         icons.set_theme(self.settings.theme)
         set_digit_mode(self.settings.persian_digits)
         self.setWindowTitle(t("win.title"))
@@ -73,6 +81,7 @@ class MainWindow(QMainWindow):
         self._detail = DetailPanel()
         self._history_view = TaskHistoryView()
         self._raw_view = RawDataView()
+        self._annotations_view = AnnotationsView()
         self._reports = ReportsView(self.settings.theme)
 
         self._really_quit = False
@@ -107,6 +116,7 @@ class MainWindow(QMainWindow):
         self._detail_host.setObjectName("DetailTabs")
         self._detail_host.setDocumentMode(True)
         self._detail_host.addTab(self._detail, t("detail.tab.edit"))
+        self._detail_host.addTab(self._annotations_view, t("detail.tab.annotations"))
         self._detail_host.addTab(self._history_view, t("detail.tab.history"))
         self._detail_host.addTab(self._raw_view, t("detail.tab.raw"))
 
@@ -148,9 +158,6 @@ class MainWindow(QMainWindow):
         row1.setIconSize(QSize(18, 18))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row1)
 
-        add_lbl = QLabel(t("toolbar.quick_add"))
-        add_lbl.setObjectName("ToolLabel")
-        row1.addWidget(add_lbl)
         self._quick_add = QuickAddBar()
         self._quick_add.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         row1.addWidget(self._quick_add)
@@ -164,9 +171,6 @@ class MainWindow(QMainWindow):
         row2.setIconSize(QSize(18, 18))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row2)
 
-        flt_lbl = QLabel(t("toolbar.filter"))
-        flt_lbl.setObjectName("ToolLabel")
-        row2.addWidget(flt_lbl)
         self._filter_bar = FilterBar()
         self._filter_bar.setMinimumWidth(320)
         self._filter_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -174,9 +178,6 @@ class MainWindow(QMainWindow):
 
         row2.addSeparator()
 
-        grp_lbl = QLabel(t("toolbar.group_by"))
-        grp_lbl.setObjectName("ToolLabel")
-        row2.addWidget(grp_lbl)
         self._group_combo = QComboBox()
         for label, key in [
             (t("group.none"), "none"), (t("group.project"), "project"),
@@ -185,6 +186,7 @@ class MainWindow(QMainWindow):
         ]:
             self._group_combo.addItem(label, key)
         self._group_combo.setToolTip(t("toolbar.group.tip"))
+        self._group_combo.setMinimumWidth(150)
         self._group_combo.currentIndexChanged.connect(
             lambda: self._table.set_group_key(self._group_combo.currentData())
         )
@@ -413,25 +415,29 @@ class MainWindow(QMainWindow):
         self._table.prependRequested.connect(
             lambda uuids: self._append_like(uuids, "prepend", t("verb.prepend"))
         )
+        self._table.annotateRequested.connect(self._annotate_bulk)
         self._table.purgeRequested.connect(self._purge)
         self._table.bulkEditRequested.connect(self._bulk_edit)
         self._table.startStopRequested.connect(self._start_stop)
         self._reports.filterRequested.connect(self._drill_into_filter)
         self._reports._calendar.taskRescheduled.connect(self._reschedule)
         self._sidebar.tasksDroppedOnProject.connect(self._reassign_project)
+        self._sidebar.tasksDroppedOnTag.connect(self._add_tag_to)
+        self._sidebar.tagRenameRequested.connect(self._rename_tag)
+        self._sidebar.tagRemoveRequested.connect(self._remove_tag)
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
         self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
         self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
-        self._detail.annotateRequested.connect(
+        self._annotations_view.annotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "annotate", [text]),
                 t("msg.note_added"),
             )
         )
-        self._detail.denotateRequested.connect(
+        self._annotations_view.denotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "denotate", [text]),
                 t("msg.note_removed"),
@@ -463,6 +469,7 @@ class MainWindow(QMainWindow):
 
     def _show_detail(self, task: dict) -> None:
         self._detail.load_task(task)
+        self._annotations_view.load_task(task)
         self._history_view.load_task(task)
         self._raw_view.load_task(task)
         self._detail_host.setVisible(True)
@@ -484,6 +491,62 @@ class MainWindow(QMainWindow):
             functools.partial(taskwarrior.command, uuids, "modify", [f"due:{gregorian}"]),
             t("msg.due_updated"),
         )
+
+    # --- tag management -----------------------------------
+
+    def _add_tag_to(self, uuids: list[str], tag: str) -> None:
+        """Drop tasks onto a sidebar tag → add that tag to them."""
+        self._write(
+            functools.partial(taskwarrior.command, uuids, "modify", [f"+{tag}"]),
+            t("msg.tagged", tag=tag),
+        )
+
+    def _rename_tag(self, old: str, new: str) -> None:
+        def check() -> int:
+            return taskwarrior.tag_count(old)
+
+        def ask(n: int) -> None:
+            if n == 0:
+                self._toast.show_message(t("msg.tag_unused", tag=old))
+                return
+            if not confirm(
+                self,
+                title=t("sidebar.tag_rename.title"),
+                body=t("confirm.tag_rename.body", old=old, new=new),
+                count=n,
+                count_noun=t("confirm.tag.noun"),
+            ):
+                return
+            self._write(
+                functools.partial(taskwarrior.rename_tag, old, new),
+                t("msg.tag_renamed", old=old, new=new),
+            )
+
+        submit(check, ask, self._error)
+
+    def _remove_tag(self, tag: str) -> None:
+        def check() -> int:
+            return taskwarrior.tag_count(tag)
+
+        def ask(n: int) -> None:
+            if n == 0:
+                self._toast.show_message(t("msg.tag_unused", tag=tag))
+                return
+            if not confirm(
+                self,
+                title=t("sidebar.tag_remove.title"),
+                body=t("confirm.tag_remove.body", tag=tag),
+                count=n,
+                count_noun=t("confirm.tag.noun"),
+                destructive=True,
+            ):
+                return
+            self._write(
+                functools.partial(taskwarrior.remove_tag, tag),
+                t("msg.tag_removed", tag=tag),
+            )
+
+        submit(check, ask, self._error)
 
     def _save_filter(self, name: str, raw: str) -> None:
         self.settings.save_filter(name, raw)
@@ -643,7 +706,13 @@ class MainWindow(QMainWindow):
     def _open_tools(self) -> None:
         from .widgets.tools_dialog import ToolsDialog
 
-        ToolsDialog(self).exec()
+        dlg = ToolsDialog(self)
+        dlg.sendToConsole.connect(self._send_to_console)
+        dlg.exec()
+
+    def _send_to_console(self, text: str) -> None:
+        self._reveal_console()
+        self._console.prefill(text)
 
     def _open_task_form(self, mode: str) -> None:
         from .widgets.task_form import TaskFormDialog
@@ -726,6 +795,28 @@ class MainWindow(QMainWindow):
         self._write(
             functools.partial(taskwarrior.command, uuids, verb, [text]),
             t("msg.description_updated"),
+        )
+
+    def _annotate_bulk(self, uuids: list[str]) -> None:
+        if not uuids:
+            return
+        from PyQt6.QtWidgets import QInputDialog
+
+        title = t("verb.annotate")
+        text, ok = QInputDialog.getText(self, title, t("detail.annotation.new"))
+        text = text.strip()
+        if not ok or not text:
+            return
+        if len(uuids) > 1 and not confirm(
+            self,
+            title=title,
+            body=t("confirm.append.body", text=text, verb=title),
+            count=len(uuids),
+        ):
+            return
+        self._write(
+            functools.partial(taskwarrior.command, uuids, "annotate", [text]),
+            t("msg.note_added"),
         )
 
     def _purge(self, uuids: list[str]) -> None:
@@ -930,14 +1021,34 @@ class MainWindow(QMainWindow):
         state = self.settings.window_state()
         if state:
             self.restoreState(state)
+        self._enforce_sidebar_side()
         self._console_action.setChecked(self._console_dock.isVisible())
+
+    def _enforce_sidebar_side(self) -> None:
+        """The nav sidebar always sits on the reading-start edge for the current
+        language — right for RTL (fa), left for LTR (en). A persisted dock
+        layout from another language (or an older build) must never win here."""
+        from .i18n import is_rtl
+
+        want = (
+            Qt.DockWidgetArea.RightDockWidgetArea
+            if is_rtl()
+            else Qt.DockWidgetArea.LeftDockWidgetArea
+        )
+        if (
+            self._sidebar_dock.isFloating()
+            or self.dockWidgetArea(self._sidebar_dock) != want
+        ):
+            self.addDockWidget(want, self._sidebar_dock)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
         self._toast.parent_resized()
 
     def closeEvent(self, event) -> None:  # noqa: N802
-        self.settings.save_window(self.saveGeometry(), self.saveState())
+        self.settings.save_window(
+            self.saveGeometry(), self.saveState(), language=self._built_language
+        )
         self.settings.save_columns(self._model.visible_columns(), [], {})
         self.settings.sync()
         # keep running in the tray so notifications continue, unless the user

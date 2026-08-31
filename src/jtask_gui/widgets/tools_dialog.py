@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -71,6 +71,8 @@ class _DiagnosticsTab(QWidget):
 
 
 class _HelpTab(QWidget):
+    sendToConsole = pyqtSignal(str)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         lay = QVBoxLayout(self)
@@ -92,10 +94,32 @@ class _HelpTab(QWidget):
             1, QHeaderView.ResizeMode.Stretch
         )
         lay.addWidget(self._table, 1)
+
+        row = QHBoxLayout()
+        row.addStretch(1)
+        self._to_console = QPushButton(t("tools.help.to_console"))
+        self._to_console.setEnabled(False)
+        self._to_console.clicked.connect(self._emit_to_console)
+        row.addWidget(self._to_console)
+        lay.addLayout(row)
+
+        self._table.itemSelectionChanged.connect(self._on_selection)
+        self._table.itemDoubleClicked.connect(lambda _i: self._emit_to_console())
         self._rows: list[tuple[str, str]] = []
 
     def load(self) -> None:
         submit(taskwarrior.command_reference, self._set, lambda _e: None)
+
+    def _on_selection(self) -> None:
+        self._to_console.setEnabled(bool(self._table.selectedItems()))
+
+    def _emit_to_console(self) -> None:
+        items = self._table.selectedItems()
+        if not items:
+            return
+        invocation = self._table.item(items[0].row(), 0)
+        if invocation and invocation.text().strip():
+            self.sendToConsole.emit(invocation.text().strip())
 
     def _set(self, rows: list[tuple[str, str]]) -> None:
         self._rows = rows
@@ -158,6 +182,8 @@ class _CalcTab(QWidget):
 
 
 class ToolsDialog(QDialog):
+    sendToConsole = pyqtSignal(str)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("ToolsDialog")
@@ -182,5 +208,11 @@ class ToolsDialog(QDialog):
         )
         lay.addWidget(btns)
 
+        self.help.sendToConsole.connect(self._forward_to_console)
+
         self.diagnostics.load()
         self.help.load()
+
+    def _forward_to_console(self, text: str) -> None:
+        self.sendToConsole.emit(text)
+        self.accept()

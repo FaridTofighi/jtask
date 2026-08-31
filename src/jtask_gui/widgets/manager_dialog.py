@@ -14,6 +14,7 @@ from .. import tokens as tok
 from ..i18n import t
 from .config_manager import ConfigManager
 from .context_manager import ContextManager
+from .hook_manager import HookManager
 from .report_manager import ReportManager
 from .uda_manager import UdaManager
 
@@ -36,13 +37,16 @@ class ManagerDialog(QDialog):
         self.contexts = ContextManager()
         self.udas = UdaManager()
         self.reports = ReportManager()
+        self.hooks = HookManager()
         self._tabs.addTab(self.config, t("manage.tab.config"))
         self._tabs.addTab(self.contexts, t("manage.tab.contexts"))
         self._tabs.addTab(self.udas, t("manage.tab.udas"))
         self._tabs.addTab(self.reports, t("manage.tab.reports"))
+        self._tabs.addTab(self.hooks, t("manage.tab.hooks"))
         lay.addWidget(self._tabs, 1)
 
-        for tab in (self.config, self.contexts, self.udas, self.reports):
+        self._all_tabs = (self.config, self.contexts, self.udas, self.reports, self.hooks)
+        for tab in self._all_tabs:
             tab.changed.connect(self.changed)
 
         btns = QDialogButtonBox()
@@ -51,5 +55,5 @@ class ManagerDialog(QDialog):
         )
         lay.addWidget(btns)
 
-        for tab in (self.config, self.contexts, self.udas, self.reports):
+        for tab in self._all_tabs:
             tab.reload()

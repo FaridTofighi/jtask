@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 from jtask import taskwarrior
 
 from .. import tokens as tok
+from ..bidi import bind_auto_direction
 from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
@@ -109,6 +110,7 @@ class TaskFormDialog(QDialog):
         self._description = QLineEdit()
         self._description.setPlaceholderText(t("form.description.placeholder"))
         self._description.textChanged.connect(self._revalidate)
+        bind_auto_direction(self._description)
         form.addRow(t("word.description"), self._description)
 
         self._project = QComboBox()
@@ -138,14 +140,24 @@ class TaskFormDialog(QDialog):
 
         self._recur = RecurrenceBuilder()
         self._recur.recurrenceChanged.connect(self._revalidate)
-        form.addRow(t("word.recurrence"), self._recur)
+        recur_row = QHBoxLayout()
+        recur_row.setContentsMargins(0, 0, 0, 0)
+        recur_row.setSpacing(tok.SP_6)
+        recur_row.addWidget(self._recur, 1)
+        self._recur_template_btn = QPushButton(t("form.recur.from_template"))
+        self._recur_template_btn.clicked.connect(self._pick_recur_template)
+        recur_row.addWidget(self._recur_template_btn)
+        recur_wrap = QWidget()
+        recur_wrap.setLayout(recur_row)
+        self._recur_wrap = recur_wrap
+        form.addRow(t("word.recurrence"), recur_wrap)
 
         self._depends = _DependsField()
         form.addRow(t("word.dependencies"), self._depends)
 
         if mode == "log":
             # a task logged as already-done cannot meaningfully recur
-            form.setRowVisible(self._recur, False)
+            form.setRowVisible(self._recur_wrap, False)
 
         root.addLayout(form)
 
@@ -204,6 +216,44 @@ class TaskFormDialog(QDialog):
         self._show_problems(problems)
         if not problems:
             self.accept()
+
+    # -- recurrence templates -------------------------------------------
+
+    def _pick_recur_template(self) -> None:
+        from ..workers import submit
+
+        def fetch() -> list[dict]:
+            from jtask import reports
+
+            return reports.recurring_templates()
+
+        def choose(templates: list[dict]) -> None:
+            if not templates:
+                QInputDialog.getItem(
+                    self, t("form.recur.templates.title"),
+                    t("form.recur.templates.none"), [""], 0, False,
+                )
+                return
+            labels = [
+                f"{tpl['description']}  ·  {tpl['recur']}" for tpl in templates
+            ]
+            text, ok = QInputDialog.getItem(
+                self, t("form.recur.templates.title"),
+                t("form.recur.templates.label"), labels, 0, False,
+            )
+            if not ok or not text:
+                return
+            tpl = templates[labels.index(text)]
+            if not self._description.text().strip():
+                self._description.setText(tpl["description"])
+            if tpl.get("project"):
+                self._project.setCurrentText(tpl["project"])
+            if tpl.get("tags"):
+                self._tags.set_tags(sorted(set(self._tags.tags()) | set(tpl["tags"])))
+            self._recur.set_value(tpl["recur"])
+            self._revalidate()
+
+        submit(fetch, choose)
 
     # -- result -----------------------------------------------------
 

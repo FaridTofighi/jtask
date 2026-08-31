@@ -108,6 +108,48 @@ class FilterBuilder(QDialog):
         self._regex.textChanged.connect(self._update)
         form.addRow(t("fb.regex"), self._regex)
 
+        self._uda_rows: list[tuple[str, str, QWidget, QComboBox | None]] = []
+        try:
+            udas = taskwarrior.uda_definitions()
+        except Exception:  # noqa: BLE001
+            udas = {}
+        for name, spec in sorted(udas.items()):
+            utype = spec.get("type", "string")
+            values = [v for v in (spec.get("values") or "").split(",") if v]
+            op: QComboBox | None = None
+            if utype == "date":
+                editor: QWidget = JalaliDatePicker()
+                editor.dateChanged.connect(self._update)
+                op = self._op_combo(
+                    [("fb.op.before", "before"), ("fb.op.after", "after")]
+                )
+            elif utype == "numeric":
+                editor = QLineEdit()
+                editor.textChanged.connect(self._update)
+                op = self._op_combo(
+                    [("fb.op.is", ""), ("fb.op.over", "over"), ("fb.op.under", "under")]
+                )
+            elif values:
+                editor = QComboBox()
+                editor.addItem("")
+                editor.addItems(values)
+                editor.currentIndexChanged.connect(self._update)
+            else:
+                editor = QLineEdit()
+                editor.textChanged.connect(self._update)
+            if op is not None:
+                op.currentIndexChanged.connect(self._update)
+                wrap = QWidget()
+                h = QHBoxLayout(wrap)
+                h.setContentsMargins(0, 0, 0, 0)
+                h.setSpacing(tok.SP_6)
+                h.addWidget(op)
+                h.addWidget(editor, 1)
+                form.addRow(spec.get("label", name), wrap)
+            else:
+                form.addRow(spec.get("label", name), editor)
+            self._uda_rows.append((name, utype, editor, op))
+
         from PyQt6.QtWidgets import QGridLayout, QToolButton
 
         vt_wrap = QWidget()
@@ -156,6 +198,33 @@ class FilterBuilder(QDialog):
             self._extra.setText(initial_raw)
         self._update()
 
+    def _op_combo(self, options: list[tuple[str, str]]) -> QComboBox:
+        combo = QComboBox()
+        for label_key, val in options:
+            combo.addItem(t(label_key), val)
+        return combo
+
+    def _uda_tokens(self) -> list[str]:
+        tokens: list[str] = []
+        for name, utype, editor, op in self._uda_rows:
+            if utype == "date":
+                if editor.value() is None:
+                    continue
+                modifier = op.currentData() if op is not None else "before"
+                tokens.append(f"{name}.{modifier}:{editor.gregorian_string()}")
+            elif isinstance(editor, QComboBox):
+                val = editor.currentText().strip()
+                if val:
+                    tokens.append(f"{name}:{val}")
+            else:
+                val = editor.text().strip()
+                if not val:
+                    continue
+                modifier = op.currentData() if op is not None else ""
+                key = f"{name}.{modifier}" if modifier else name
+                tokens.append(f"{key}:{val}")
+        return tokens
+
     # --- composition -------------------------------------------
 
     def _raw_tokens(self) -> list[str]:
@@ -186,6 +255,7 @@ class FilterBuilder(QDialog):
         for b in self._vtags:
             if b.isChecked():
                 tokens.append(f"+{b.property('vtag')}")
+        tokens.extend(self._uda_tokens())
         if self._extra.text().strip():
             tokens.extend(self._extra.text().split())
         return tokens

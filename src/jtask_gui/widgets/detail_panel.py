@@ -10,8 +10,6 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QListWidget,
-    QListWidgetItem,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -19,10 +17,11 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import taskwarrior
-from jtask.rtl import bidi_isolate
+from jtask.rtl import auto_isolate, bidi_isolate
 
 from .. import fmt
 from .. import tokens as tok
+from ..bidi import bind_auto_direction
 from ..calendar_system import active
 from ..i18n import t
 from .chips import TagChipEditor
@@ -43,8 +42,6 @@ _DATE_FIELDS = [("due", "word.due", True), ("scheduled", "word.scheduled", True)
 
 class DetailPanel(QScrollArea):
     saveRequested = pyqtSignal(str, list)      # uuid, modification tokens
-    annotateRequested = pyqtSignal(str, str)   # uuid, text
-    denotateRequested = pyqtSignal(str, str)
     opened = pyqtSignal()
     closed = pyqtSignal()
 
@@ -81,6 +78,7 @@ class DetailPanel(QScrollArea):
         outer.addLayout(form)
 
         self._description = QLineEdit()
+        bind_auto_direction(self._description)
         form.addRow(t("word.description"), self._description)
 
         self._project = QComboBox()
@@ -119,22 +117,12 @@ class DetailPanel(QScrollArea):
         dep_wrap.setLayout(dep_row)
         form.addRow(t("word.dependencies"), dep_wrap)
 
-        # annotations
+        # annotations — read-only summary here; full editing is the «یادداشت‌ها» tab
         outer.addWidget(QLabel(t("detail.annotations")))
-        self._annotations = QListWidget()
-        self._annotations.setMaximumHeight(140)
-        outer.addWidget(self._annotations)
-        ann_row = QHBoxLayout()
-        self._ann_input = QLineEdit()
-        self._ann_input.setPlaceholderText(t("detail.annotation.new"))
-        ann_add = QPushButton(t("btn.add"))
-        ann_add.clicked.connect(self._add_annotation)
-        ann_del = QPushButton(t("detail.annotation.delete"))
-        ann_del.clicked.connect(self._del_annotation)
-        ann_row.addWidget(self._ann_input, 1)
-        ann_row.addWidget(ann_add)
-        ann_row.addWidget(ann_del)
-        outer.addLayout(ann_row)
+        self._ann_summary = QLabel("—")
+        self._ann_summary.setObjectName("Muted")
+        self._ann_summary.setWordWrap(True)
+        outer.addWidget(self._ann_summary)
 
         # UDAs
         self._uda_form = QFormLayout()
@@ -273,14 +261,17 @@ class DetailPanel(QScrollArea):
         return "   ·   ".join(parts)
 
     def _load_annotations(self, task: dict) -> None:
-        self._annotations.clear()
-        for ann in task.get("annotations") or []:
-            when = ann.get("entry", "")
-            if when and not when.startswith("۱"):  # raw gregorian -> jalali
-                when = active().format_utc(when, "short")
-            item = QListWidgetItem(f"{when} — {ann.get('description', '')}")
-            item.setData(Qt.ItemDataRole.UserRole, ann.get("description", ""))
-            self._annotations.addItem(item)
+        anns = task.get("annotations") or []
+        if not anns:
+            self._ann_summary.setText(t("detail.annotations.empty"))
+            return
+        first = auto_isolate(anns[0].get("description", ""))
+        if len(anns) > 1:
+            self._ann_summary.setText(
+                t("detail.annotations.summary", first=first, more=fmt.num(len(anns) - 1))
+            )
+        else:
+            self._ann_summary.setText(first)
 
     def _load_udas(self, task: dict) -> None:
         while self._uda_form.rowCount():
@@ -326,16 +317,6 @@ class DetailPanel(QScrollArea):
                 self._depends.setText(",".join(cur))
 
         submit(fetch, choose)
-
-    def _add_annotation(self) -> None:
-        if self._task and self._ann_input.text().strip():
-            self.annotateRequested.emit(self._task["uuid"], self._ann_input.text().strip())
-            self._ann_input.clear()
-
-    def _del_annotation(self) -> None:
-        item = self._annotations.currentItem()
-        if self._task and item:
-            self.denotateRequested.emit(self._task["uuid"], item.data(Qt.ItemDataRole.UserRole))
 
     def _save(self) -> None:
         if not self._task:

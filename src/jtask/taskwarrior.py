@@ -32,6 +32,12 @@ __all__ = [
     "import_file",
     "sync_status",
     "synchronize",
+    "hooks",
+    "hooks_location",
+    "hook_set_enabled",
+    "tag_count",
+    "rename_tag",
+    "remove_tag",
     "config_names",
     "config_defaults",
     "config_set",
@@ -180,6 +186,62 @@ def synchronize() -> str:
     return run(["synchronize"]).stdout.strip()
 
 
+_HOOK_EVENTS = ("on-launch", "on-exit", "on-add", "on-modify")
+
+
+def hooks_location() -> str:
+    """Absolute path of Taskwarrior's hooks directory."""
+    override = "".join(_lines(["_get", "rc.hooks.location"])).strip()
+    if override:
+        return os.path.expanduser(override)
+    data = (
+        "".join(_lines(["_get", "rc.data.location"])).strip()
+        or os.environ.get("TASKDATA", "")
+        or "~/.task"
+    )
+    return os.path.join(os.path.expanduser(data), "hooks")
+
+
+def hooks() -> list[dict]:
+    """Installed hook scripts.
+
+    ``[{name, path, event, enabled}]`` — *enabled* is the executable bit
+    (Taskwarrior only runs executable files in the hooks directory). Editing a
+    hook's body stays a console / ``$EDITOR`` job; this is a read + enable/
+    disable surface.
+    """
+    location = hooks_location()
+    if not os.path.isdir(location):
+        return []
+    out: list[dict] = []
+    for name in sorted(os.listdir(location)):
+        path = os.path.join(location, name)
+        if not os.path.isfile(path):
+            continue
+        event = next((e for e in _HOOK_EVENTS if name.startswith(e)), "")
+        out.append(
+            {
+                "name": name,
+                "path": path,
+                "event": event,
+                "enabled": os.access(path, os.X_OK),
+            }
+        )
+    return out
+
+
+def hook_set_enabled(path: str, enabled: bool) -> None:
+    """Toggle a hook script's executable bit (u+x / u-x, keeping other bits)."""
+    import stat
+
+    mode = os.stat(path).st_mode
+    if enabled:
+        mode |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    else:
+        mode &= ~(stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    os.chmod(path, mode)
+
+
 def command(
     filter_args: list[str], verb: str, verb_args: list[str] | None = None
 ) -> str:
@@ -191,6 +253,40 @@ def command(
 def log(args: list[str]) -> str:
     """``task log <args>`` — create an already-completed task."""
     return run(["log", *args], extra_rc=["rc.verbose=new-id"]).stdout.strip()
+
+
+_MODIFIED_RE = re.compile(r"Modif\w+ (\d+) task")
+
+
+def tag_count(tag: str) -> int:
+    """How many non-deleted tasks carry *tag* (a plain name, no leading ``+``)."""
+    tag = tag.lstrip("+")
+    for line in _lines(["status.not:deleted", f"+{tag}", "count"]):
+        if line.strip().isdigit():
+            return int(line.strip())
+    return 0
+
+
+def rename_tag(old: str, new: str) -> int:
+    """Rename tag *old* → *new* on every non-deleted task. Returns the count."""
+    old, new = old.lstrip("+"), new.lstrip("+")
+    if not old or not new or old == new or tag_count(old) == 0:
+        return 0
+    out = command(
+        ["status.not:deleted", f"+{old}"], "modify", [f"-{old}", f"+{new}"]
+    )
+    m = _MODIFIED_RE.search(out)
+    return int(m.group(1)) if m else 0
+
+
+def remove_tag(tag: str) -> int:
+    """Strip *tag* from every non-deleted task. Returns the count."""
+    tag = tag.lstrip("+")
+    if not tag or tag_count(tag) == 0:
+        return 0
+    out = command(["status.not:deleted", f"+{tag}"], "modify", [f"-{tag}"])
+    m = _MODIFIED_RE.search(out)
+    return int(m.group(1)) if m else 0
 
 
 def duplicate(filter_args: list[str], mods: list[str] | None = None) -> dict:

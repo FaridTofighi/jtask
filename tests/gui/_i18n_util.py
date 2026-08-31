@@ -42,6 +42,8 @@ def normalize_for_snapshot(s: str) -> str:
     from jtask.jalali import MONTH_NAMES, WEEKDAY_NAMES
 
     out = s
+    # absolute filesystem paths are machine-specific data, not wording
+    out = re.sub(r"(?<![\w])[~/][\w./~-]{2,}", "‹path›", out)
     # longest first: "شنبه" (Saturday) is a substring of "یک‌شنبه", "دوشنبه", …
     for name in sorted(WEEKDAY_NAMES, key=len, reverse=True):
         out = out.replace(name, "‹D›")

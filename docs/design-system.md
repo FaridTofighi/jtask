@@ -1,8 +1,12 @@
 # jtask-gui — design system
 
-The enforced visual conventions. Established in mission **d** (d1–d7); every
-future feature follows these rather than re-deriving them. Colours live in
-`src/jtask_gui/theme.py`; everything else in `src/jtask_gui/tokens.py`.
+The enforced visual conventions. Established in mission **d** (d1–d7), then
+given a visible modernization pass (mission **m**): a layered palette with a
+deliberate accent, a modern table (no zebra, hairline rows, accent selection,
+quiet secondary columns), a cleaner toolbar (no label prefixes) and sidebar,
+consistent focus rings. Every future feature follows these rather than
+re-deriving them. Colours live in `src/jtask_gui/theme.py`; everything else in
+`src/jtask_gui/tokens.py`.
 
 ---
 
@@ -51,14 +55,33 @@ Two palettes (`_SHAB` dark, `_RUZ` light), identical key sets, WCAG-AA checked
 text is the `on_danger` role; charts colour their series by role
 (`CHART_SERIES_ROLES`), never a flat list.
 
-### Elevation — one approach: **raised surface + 1-px edge** (not shadows)
-A dialog / popover / card is set apart from the window background by the
-`elevated` colour role (dark `#1e222a`, a visible lift off `#16181d`; light
-`#ffffff`) plus a `border` edge. Within a raised surface, **inputs recede**
-(`field` fill) and **buttons lift** (`surface` fill) so they still read as
-controls. `tokens.shadow(widget)` exists for a genuine free-floating overlay
-but nothing needs it yet. *Known follow-up:* a deeper light-theme lift needs a
-base-tone shift (light `bg` → an off-white), deferred.
+### Elevation layers — each surface sits visibly above the one behind it
+
+| role | dark | light | used for |
+|---|---|---|---|
+| `bg` | `#0e1014` | `#f4f6fa` | the window / toolbar / status bar |
+| `bg_alt` | `#15181e` | `#e9edf3` | sidebar, reports rail, table **header** |
+| `surface` | `#1b1f27` | `#ffffff` | table body, cards, buttons, tree/console |
+| `elevated` | `#232833` | `#ffffff` | dialogs, menus, tooltips, popovers, toast |
+| `field` | `#12151b` | `#f1f4f8` | text inputs (a recessed well) |
+
+`border` is the visible divider, `border_soft` the near-invisible hairline
+(row lines, splitter, section dividers). Inputs recede (`field`), buttons lift
+(`surface`) even on a raised dialog.
+
+### The accent is used deliberately — `primary`
+
+Dark `#6ea8fe`, light `#3565d0` (`primary_fg` is the text on top; `primary_soft`
+is the low-alpha wash). It appears in exactly these places and nowhere else:
+selection (table row + menu item = `primary_soft` fill), the primary action
+button, the focus ring (`focus` == `primary`), the active sidebar row
+(`primary_soft` bg + `primary` text + a 2-px left bar), the detail-tab
+underline, progress-bar fill, and the running-timer chip.
+
+The light theme's base is a soft off-white (`bg = #f4f6fa`), not pure white, so
+`surface` (`#ffffff`) cards lift off it. Contrast for body/secondary text and
+the `overdue` / `due_soon` state colours against the base is still
+WCAG-AA (`tests/gui/test_theme.py`).
 
 ---
 
@@ -128,6 +151,17 @@ the calendar. Any LTR-structured token rendered inside RTL text — signed
 numbers, dates, **file paths, URLs, UUIDs** — is wrapped in
 `jtask.rtl.bidi_isolate()` so it stays atomic (`U+2066 … U+2069`).
 
+**Free text follows its own direction, not the paragraph's.** A task
+description or annotation is rendered with its base direction taken from its
+first strong character (`jtask.rtl.first_strong_dir`): "Meeting with Arash"
+reads left-to-right and left-aligned, "جلسه با آرش" right-to-left and
+right-aligned, in either UI language. Read-only text is wrapped in a FIRST
+STRONG ISOLATE (`jtask.rtl.auto_isolate`, `U+2068 … U+2069`) and the task-table
+`description` column sets its `TextAlignmentRole` from the same check
+(`_AUTO_DIR_KEYS` in `models/task_model.py`). Editable fields (description /
+annotation / quick-add) use `jtask_gui.bidi.bind_auto_direction`, which flips
+the widget's `layoutDirection` on every keystroke (empty → the app default).
+
 ---
 
 ## 9. Terminology
@@ -137,6 +171,42 @@ Taskwarrior's own vocabulary exactly; priority is **بالا / متوسط / پا
 **High / Medium / Low** (never «بحرانی»/"Critical" — Taskwarrior has only three
 levels). New user-facing strings go through `i18n.t()`; raw Persian literals in
 widget files fail `tests/test_no_new_hardcoded_strings.py`.
+
+---
+
+## 10. Motion
+
+Exactly **one** animated pane: the detail panel slides in/out (a
+`QVariantAnimation` on the splitter sizes, `main_window._animate_detail`,
+0 ms under the `offscreen` platform). This is deliberate — it is the only panel
+that appears *over* the working area in response to a selection. The sidebar,
+console dock and reports view swap instantly; adding slide transitions there
+was evaluated and rejected as motion for its own sake. Any *new* panel that
+overlays the workspace should reuse `_animate_detail`'s curve/duration.
+
+---
+
+## 11. The task table
+
+The primary surface, so its rendering rules are specific (`models/task_model.py`):
+
+- **No label prefixes on toolbar controls.** The quick-add, filter and group-by
+  controls carry their own placeholder / first-item text; a separate `QLabel:`
+  in front of an input is not used.
+- **No zebra striping.** Rows separate on a `border_soft` hairline only. Hover
+  is a `hover` wash; selection is `primary_soft` + a 2-px `primary` left bar.
+- **The description leads.** It is normal-weight-plus (`DemiBold`) `text`;
+  everything else is quieter — `id` and `urgency` render in `text_muted`,
+  `priority` in its own colour (`H`→`overdue`, `M`→`due_soon`, `L`→muted),
+  `status` is **blank for `pending`** (the default state is not worth a column
+  of repeated text) and only shows waiting / completed / deleted / recurring.
+- **Alignment follows direction, per column.** `id` / `urgency` always trail
+  (number convention); `description` follows its own first-strong direction
+  (§8); every other column aligns to the reading-start edge for the active
+  language (`_halign`).
+- Row state (overdue / blocked / due-soon / waiting / completed) still drives a
+  full-row background wash and the `due` / description text colour, unchanged
+  from the row-state precedence rules.
 
 ---
 

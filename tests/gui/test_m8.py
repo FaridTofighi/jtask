@@ -184,16 +184,51 @@ def test_report_manager_edits_custom_report(qapp, tw_env, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_manager_dialog_has_four_tabs_and_bubbles_changed(qapp, tw_env):
+def test_manager_dialog_has_all_tabs_and_bubbles_changed(qapp, tw_env):
     from jtask_gui.widgets.manager_dialog import ManagerDialog
 
     d = ManagerDialog()
     _drain(qapp)
-    assert d._tabs.count() == 4
+    assert d._tabs.count() == 5  # config · contexts · udas · reports · hooks
     fired = []
     d.changed.connect(lambda: fired.append(1))
     d.config.changed.emit()
-    assert fired == [1]
+    d.hooks.changed.emit()
+    assert fired == [1, 1]
+
+
+def test_hook_manager_lists_and_toggles(qapp, tw_env, tmp_path, monkeypatch):
+    import os
+
+    from jtask_gui.widgets.hook_manager import HookManager
+
+    hooks_dir = tmp_path / "td" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    script = hooks_dir / "on-add-ping.sh"
+    script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    os.chmod(script, 0o755)
+
+    m = HookManager()
+    m.reload()
+    _drain(qapp)
+    assert m._table.rowCount() == 1
+    assert m._table.item(0, 0).text() == "on-add-ping.sh"
+    assert m._table.item(0, 1).text() == "on-add"
+
+    m._table.selectRow(0)
+    m._toggle_selected()
+    _drain(qapp)
+    assert not os.access(str(script), os.X_OK)
+
+
+def test_hook_manager_empty_state(qapp, tw_env):
+    from jtask_gui.widgets.hook_manager import HookManager
+
+    m = HookManager()
+    m.reload()
+    _drain(qapp)
+    assert m._table.isHidden()
+    assert not m._empty.isHidden()
 
 
 def test_main_window_opens_manager(win, qapp, monkeypatch):

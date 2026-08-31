@@ -8,7 +8,7 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtGui import QColor, QFont
 
 from jtask import jalali
-from jtask.rtl import bidi_isolate, en_digits
+from jtask.rtl import auto_isolate, bidi_isolate, en_digits, first_strong_dir
 
 from ..theme import palette
 from .column_spec import COLUMNS, Column
@@ -20,6 +20,9 @@ _STATE_ROLE = Qt.ItemDataRole.UserRole + 3
 _INDICATOR_ICON = {"annotations": "annotation", "recur": "recur", "depends": "depends"}
 # hyphen-separated / colon-separated tokens that bidi must not reorder
 _STRUCTURED_KEYS = frozenset({"due", "scheduled", "wait", "until", "start", "entry", "end"})
+# free-text columns that follow their *own* content direction, not the app's:
+# "Meeting with Arash" reads LTR, "جلسه با آرش" reads RTL.
+_AUTO_DIR_KEYS = frozenset({"description"})
 
 
 def _mix(a: str, b: str, t: float) -> str:
@@ -117,11 +120,7 @@ class TaskTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DecorationRole:
             return self._decoration(task, col)
         if role == Qt.ItemDataRole.TextAlignmentRole:
-            flag = Qt.AlignmentFlag.AlignVCenter | (
-                Qt.AlignmentFlag.AlignHCenter if col.indicator
-                else Qt.AlignmentFlag.AlignRight
-            )
-            return int(flag)
+            return int(Qt.AlignmentFlag.AlignVCenter | self._halign(task, col))
         if role == Qt.ItemDataRole.ForegroundRole:
             return self._foreground(task, col)
         if role == Qt.ItemDataRole.BackgroundRole:
@@ -139,6 +138,28 @@ class TaskTableModel(QAbstractTableModel):
         return None
 
     # --- rendering helpers --------------------------------------
+
+    @staticmethod
+    def _leading() -> Qt.AlignmentFlag:
+        """The reading-start edge for the current app layout direction."""
+        from PyQt6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        rtl = app is not None and app.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        return Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
+
+    def _halign(self, task: dict, col: Column) -> Qt.AlignmentFlag:
+        if col.indicator:
+            return Qt.AlignmentFlag.AlignHCenter
+        if col.is_id or col.numeric:
+            return Qt.AlignmentFlag.AlignRight        # numeric convention
+        if col.key in _AUTO_DIR_KEYS:
+            d = first_strong_dir(task.get(col.key) or "")
+            if d == "ltr":
+                return Qt.AlignmentFlag.AlignLeft
+            if d == "rtl":
+                return Qt.AlignmentFlag.AlignRight
+        return self._leading()
 
     def _display(self, task: dict, col: Column) -> str:
         if col.indicator:
@@ -164,6 +185,9 @@ class TaskTableModel(QAbstractTableModel):
         # them atomic so bidi never floats a '-' or a separator to the wrong end.
         if text and (col.is_id or col.numeric or col.key in _STRUCTURED_KEYS):
             return bidi_isolate(digits)
+        # free text follows its own first-strong direction, not the paragraph's
+        if text and col.key in _AUTO_DIR_KEYS:
+            return auto_isolate(digits)
         return digits
 
     def _decoration(self, task: dict, col: Column):
@@ -213,6 +237,14 @@ class TaskTableModel(QAbstractTableModel):
             return QColor(self._pal[state])
         if col.key == "description" and state == "blocked":
             return QColor(self._pal["blocked"])
+        # secondary / derived columns read as muted so the description leads
+        if col.key in ("urgency", "id"):
+            return QColor(self._pal["text_muted"])
+        if col.key == "priority":
+            pr = task.get("priority", "")
+            return QColor(self._pal[
+                {"H": "overdue", "M": "due_soon"}.get(pr, "text_muted")
+            ])
         return None
 
     def _background(self, task: dict) -> QColor | None:

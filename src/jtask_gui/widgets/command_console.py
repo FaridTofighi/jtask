@@ -70,6 +70,12 @@ class CommandConsole(QWidget):
 
         self._append(t("console.intro"))
 
+    def prefill(self, text: str) -> None:
+        """Put *text* in the input line and focus it — do not run it."""
+        self._in.setText(text)
+        self._in.setFocus()
+        self._in.end(False)
+
     def _append(self, text: str) -> None:
         self._out.appendPlainText(text.rstrip("\n"))
 

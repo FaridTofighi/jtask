@@ -73,6 +73,52 @@ def test_columns_and_saved_filters_survive_restart(store):
     assert s2.saved_filters() == {"مهم": "+مهم status:pending"}
 
 
+def test_taskwarrior_overrides_survive_restart(store):
+    s1 = _fresh()
+    assert s1.task_bin == "" and s1.taskdata == "" and s1.taskrc == ""
+    s1.task_bin = "/opt/task/bin/task"
+    s1.taskdata = "/data/tw"
+    s1.taskrc = "/home/x/.taskrc"
+    del s1
+
+    s2 = _fresh()
+    assert s2.task_bin == "/opt/task/bin/task"
+    assert s2.taskdata == "/data/tw"
+    assert s2.taskrc == "/home/x/.taskrc"
+
+
+def test_reset_columns_forgets_persisted_layout(store):
+    s1 = _fresh()
+    s1.save_columns(["id", "description"], ["urgency"], {"id": 60})
+    s1.reset_columns()
+    del s1
+
+    order, hidden, widths = _fresh().columns()
+    assert order == [] and hidden == [] and widths == {}
+
+
+def test_app_applies_taskwarrior_overrides_before_use(store):
+    import os
+
+    from jtask_gui import app
+
+    s = _fresh()
+    s.task_bin = "/custom/task"
+    s.taskdata = "/custom/data"
+
+    saved = {k: os.environ.get(k) for k in ("JTASK_TASK_BIN", "TASKDATA", "TASKRC")}
+    try:
+        app._apply_taskwarrior_overrides(s)
+        assert os.environ["JTASK_TASK_BIN"] == "/custom/task"
+        assert os.environ["TASKDATA"] == "/custom/data"
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
 def test_settings_dialog_reopened_shows_saved_values(qtbot, store):
     from jtask_gui.settings import Settings
     from jtask_gui.settings_dialog import SettingsDialog
@@ -110,13 +156,17 @@ def test_settings_always_targets_the_jtask_store(store):
     assert "jtask-gui" in s._s.fileName()
 
 
-def test_app_bootstrap_sets_identity_before_first_settings_use():
-    """build_application sets the identity, then creates Settings."""
+def test_app_identity_is_set_before_qapplication_construction():
+    """The org / app / desktop-file identity is set before the QApplication is
+    constructed — re-setting it afterwards makes Qt re-register the app-id with
+    the desktop portal (a noisy warning)."""
     import inspect
 
     from jtask_gui import app
 
     src = inspect.getsource(app.build_application)
-    org_at = src.index("setOrganizationName")
-    settings_at = src.index("Settings()")
-    assert org_at < settings_at, "org/app name must be set before Settings() is built"
+    construct_at = src.index("QApplication.instance() or QApplication(")
+    for setter in ("setApplicationName", "setOrganizationName", "setDesktopFileName"):
+        first = src.index(setter)
+        assert first < construct_at, f"{setter} runs after QApplication is constructed"
+        assert src.count(setter) == 1, f"{setter} is set more than once"

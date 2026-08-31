@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import (
 )
 
 from ..i18n import t
+from ..models.group_proxy import (
+    GROUP_HEADER_ROLE,
+    GROUP_KEY_ROLE,
+    GroupProxyModel,
+)
 from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
 
 UUID_MIME = "application/x-jtask-uuids"
@@ -62,6 +67,7 @@ class TaskTable(QTableView):
     duplicateRequested = pyqtSignal(list)    # list[uuid]
     appendRequested = pyqtSignal(list)       # list[uuid] — caller prompts for text
     prependRequested = pyqtSignal(list)      # list[uuid]
+    annotateRequested = pyqtSignal(list)     # list[uuid] — caller prompts for text
     purgeRequested = pyqtSignal(list)        # list[uuid] (deleted tasks only)
     bulkEditRequested = pyqtSignal(list)     # list[uuid]
 
@@ -70,6 +76,10 @@ class TaskTable(QTableView):
         self._model = model
         self._proxy = _GroupProxy()
         self._proxy.setSourceModel(model)
+        self._group_model = GroupProxyModel(self)
+        self._group_model.setSourceModel(self._proxy)
+        self._group_model.modelReset.connect(self._apply_group_spans)
+        self._grouped = False
         self.setModel(self._proxy)
 
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -97,7 +107,8 @@ class TaskTable(QTableView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._context_menu)
         self.doubleClicked.connect(self._on_double)
-        self.selectionModel().selectionChanged.connect(self._on_selection)
+        self.clicked.connect(self._on_click)
+        self._connect_selection()
 
         self._empty = QLabel("", self.viewport())
         self._empty.setObjectName("EmptyState")
@@ -157,40 +168,74 @@ class TaskTable(QTableView):
     # --- API ---------------------------------------------------
 
     def set_group_key(self, key: str) -> None:
-        self._proxy.set_group_key(_GROUP_KEYS.get(key))
+        group = _GROUP_KEYS.get(key)
+        self._proxy.set_group_key(group)
+        want_grouped = group is not None
+        if want_grouped:
+            self._group_model.set_group_key(key)
+        if want_grouped != self._grouped:
+            self._grouped = want_grouped
+            self.setModel(self._group_model if want_grouped else self._proxy)
+            self._connect_selection()
+        if want_grouped:
+            self._apply_group_spans()
+
+    def _connect_selection(self) -> None:
+        self.selectionModel().selectionChanged.connect(self._on_selection)
+
+    def _apply_group_spans(self) -> None:
+        if self.model() is not self._group_model:
+            return
+        cols = self._group_model.columnCount()
+        for r in range(self._group_model.rowCount()):
+            if self._group_model.is_header(r):
+                self.setSpan(r, 0, 1, cols)
+
+    def _map_to_flat(self, index):
+        """Map a view index (through whatever proxies) to a source-model index."""
+        m = index.model()
+        idx = index
+        from PyQt6.QtCore import QAbstractProxyModel
+
+        while isinstance(m, QAbstractProxyModel):
+            idx = m.mapToSource(idx)
+            m = idx.model()
+        return idx
+
+    def _selected_flat_rows(self):
+        seen = set()
+        for i in self.selectionModel().selectedRows():
+            src = self._map_to_flat(i)
+            if src.isValid() and src.row() not in seen:
+                seen.add(src.row())
+                yield src
 
     def selected_uuids(self) -> list[str]:
-        rows = {i.row() for i in self.selectionModel().selectedRows()}
-        out = []
-        for r in rows:
-            src = self._proxy.mapToSource(self._proxy.index(r, 0))
-            uuid = self._model.data(src, UUID_ROLE)
-            if uuid:
-                out.append(uuid)
-        return out
+        return [
+            u for src in self._selected_flat_rows()
+            if (u := self._model.data(src, UUID_ROLE))
+        ]
 
     def current_task(self) -> dict | None:
-        idx = self.currentIndex()
-        if not idx.isValid():
-            return None
-        src = self._proxy.mapToSource(idx)
-        return self._model.data(src, TASK_ROLE)
+        src = self._map_to_flat(self.currentIndex())
+        return self._model.data(src, TASK_ROLE) if src.isValid() else None
 
     def selected_tasks(self) -> list[dict]:
-        rows = {i.row() for i in self.selectionModel().selectedRows()}
-        out = []
-        for r in rows:
-            src = self._proxy.mapToSource(self._proxy.index(r, 0))
-            task = self._model.data(src, TASK_ROLE)
-            if task:
-                out.append(task)
-        return out
+        return [
+            task for src in self._selected_flat_rows()
+            if (task := self._model.data(src, TASK_ROLE))
+        ]
+
+    def _on_click(self, index) -> None:
+        if self.model() is self._group_model and index.data(GROUP_HEADER_ROLE):
+            self._group_model.toggle(index.data(GROUP_KEY_ROLE))
+            self._apply_group_spans()
 
     # --- events -----------------------------------------------
 
     def _on_double(self, index) -> None:
-        src = self._proxy.mapToSource(index)
-        task = self._model.data(src, TASK_ROLE)
+        src = self._map_to_flat(index)
+        task = self._model.data(src, TASK_ROLE) if src.isValid() else None
         if task:
             self.taskActivated.emit(task)
 
@@ -215,6 +260,7 @@ class TaskTable(QTableView):
         act_bulk = menu.addAction(t("table.menu.bulk_edit", n=n))
         act_append = menu.addAction(t("table.menu.append"))
         act_prepend = menu.addAction(t("table.menu.prepend"))
+        act_annotate = menu.addAction(t("table.menu.annotate"))
         menu.addSeparator()
         act_start = menu.addAction(t("table.menu.start"))
         act_stop = menu.addAction(t("table.menu.stop"))
@@ -238,6 +284,8 @@ class TaskTable(QTableView):
             self.appendRequested.emit(uuids)
         elif chosen == act_prepend:
             self.prependRequested.emit(uuids)
+        elif chosen == act_annotate:
+            self.annotateRequested.emit(uuids)
         elif chosen == act_start:
             self.startStopRequested.emit(uuids[0], True)
         elif chosen == act_stop:

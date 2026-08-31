@@ -1595,3 +1595,146 @@ Suite 407 → **431**. Deferred, as agreed: a deeper light-theme elevation
 still the only slide-in). The two "bugs" the audit surfaced — dialog empty
 space, grey Purge button — were confirmed to be screenshot-script / correct
 disabled-state artifacts, and are now guarded against regression anyway.
+
+---
+
+# Verifiability + deferred-gaps mission (2026-08-31)
+
+Prompted by "many milestones seem not implemented". A full scan found the
+opposite — **every milestone above is implemented, wired, and tested** — but two
+real problems:
+
+## Phase A — the suite could not run here
+
+- **`pytest-qt` was absent** → ~250 GUI tests errored at setup
+  (`fixture 'qapp' not found`); `test_m4.py::test_app_icon_loads` built a
+  `QIcon` with no `QGuiApplication` and Qt `abort()`ed the whole run.
+- Fixes: `tests/gui/conftest.py` now ships minimal `qapp` / `qtbot` stand-ins
+  used **only when `pytest-qt` is missing** (so the suite is self-sufficient);
+  `test_app_icon_loads` requests `qapp`; `pyproject.toml` pins
+  `qt_api = "pyqt6"` (installing `pytest-qt` pulls in PySide6, whose older
+  `libQt6Core` otherwise breaks `import PyQt6`); `docs/ENVIRONMENT.md` records
+  the assumed stack (Taskwarrior ≥ 3.5, matplotlib + libraqm, PyQt6-only);
+  `tests/test_environment.py` skips — not fails — below Taskwarrior 3.5 and
+  records the active chart-text path.
+- With the deps present: **`pytest -q` → 431 passed**, exactly matching the
+  historical claim.
+- **Restart crash fixed.** Confirming the language/calendar restart aborted with
+  `RuntimeError: wrapped C/C++ object of type _Signals has been deleted` — a
+  pooled worker outlived the event loop and touched a freed signal object.
+  Three-part fix: (1) `workers.TaskRunnable.run` guards the whole emit path
+  (reaching `self.signals.<name>` raises just like `.emit()` on a torn-down
+  sip wrapper) and swallows `RuntimeError` — nothing is listening by then;
+  (2) `workers.shutdown()`, wired to `app.aboutToQuit`, drains the pool and the
+  event queue before exit; (3) `NotificationManager.stop()` sets a `_stopped`
+  flag so a pending `QTimer.singleShot` first-poll can't schedule a worker
+  after the drain. Regression: `tests/gui/test_shutdown.py`.
+- **`qt.qpa.services … Could not register app ID: Connection already associated`
+  fixed.** Two causes: (a) the identity (`setApplicationName` /
+  `setOrganizationName` / `setDesktopFileName`) was set **after** the
+  `QApplication` was constructed, so Qt re-registered the app-id with
+  `xdg-desktop-portal` on an already-associated connection — now set once,
+  before construction, at the top of `build_application`; `settings.py` only
+  fills a gap and never re-sets; (b) the restart spawned a second overlapping
+  process — replaced with a re-exec (`app.request_restart()` → flag + `quit()`,
+  `main()` → `os.execv` after `app.exec()` returns; one process, one fresh
+  D-Bus connection, no window flash). A Qt message handler
+  (`_install_qt_message_handler`) routes Qt logs to the `jtask_gui.qt` logger
+  and drops this specific benign line as a backstop across Qt versions.
+- **English sidebar was stuck on the right.** Root cause: if the user switched
+  language and closed the window *without* restarting, `closeEvent` saved the
+  still-RTL dock layout into the *new* language's `win/state_<lang>` bucket, so
+  the next launch restored the sidebar on the wrong edge. Two-part fix:
+  `MainWindow` records `_built_language` and `closeEvent` saves the window state
+  under that (not the freshly-picked one); and `_restore_state` now calls
+  `_enforce_sidebar_side()` after `restoreState`, which re-docks the nav sidebar
+  to the reading-start edge for the current language (right = RTL/fa,
+  left = LTR/en) — self-healing any already-poisoned state. Regression:
+  `test_i3_layout_direction.py` (stale-layout + close-after-switch cases).
+- **Description text now follows its own direction.** Previously every
+  description rendered RTL because the view forced it. Now the base direction
+  comes from the text's first strong character: "Meeting with Arash" reads
+  LTR/left-aligned, "جلسه با آرش" RTL/right-aligned, in both UI languages.
+  `jtask.rtl.first_strong_dir` / `auto_isolate` (FIRST STRONG ISOLATE) +
+  `_AUTO_DIR_KEYS` in the table model; `jtask_gui.bidi.bind_auto_direction`
+  flips the description / annotation / quick-add line edits per keystroke.
+  Tests: `tests/test_bidi_direction.py`, `tests/gui/test_auto_direction.py`,
+  `test_task_model.py::test_description_direction_follows_content`.
+
+## Phase B — the genuinely deferred sub-features, now built
+
+| # | feature | where |
+|---|---|---|
+| B1 | Settings: `task` binary / `TASKDATA` / `TASKRC` overrides + column reset | `settings.py`, `settings_dialog.py`, `app._apply_taskwarrior_overrides` |
+| B2 | `until` row in the bulk-edit dialog | `widgets/bulk_edit.py` |
+| B3 | **collapsible group headers** in the task table | `models/group_proxy.py` (`GroupProxyModel`), `widgets/task_table.py` — flat path unchanged; the proxy is only bound while a group-by is active |
+| B4 | dedicated **Annotations tab** + **bulk annotate** | `widgets/annotations_view.py` (4th detail tab), `task_table` context menu → `_annotate_bulk`; the edit form keeps a read-only summary |
+| B5 | recurrence-template browser | `reports.recurring_templates()`, "از الگوی موجود…" in `widgets/task_form.py` |
+| B6 | typed **UDA rows** in the filter builder | `widgets/filter_builder.py` — per-type control (string/enum/numeric+op/date+op) → `name[.mod]:value` tokens |
+| B7 | **send-to-console** from the M9 command reference | `command_console.prefill()`, `tools_dialog` button → `main_window._send_to_console` |
+| B8 | **Hook Manager** (5th Manager tab) | `taskwarrior.hooks()` / `hook_set_enabled()`, `widgets/hook_manager.py` — list + enable/disable + reveal; editing stays console/`$EDITOR` |
+| B9 | light-theme base-tone shift (real elevation); motion policy documented | `theme.py` (`_RUZ.bg → #f3f5f9`), `docs/design-system.md` §2 + new §10 |
+
+Each landed with tests in the matching `tests/gui/test_m*.py` / core file; the
+fa/Jalali i18n snapshot was regenerated only for the intended new strings; the
+no-hardcoded-string ceiling held. Suite **431 → 449 passed** (+1 skipped:
+the Taskwarrior-version guard on this 3.4.1 box).
+
+Still out of scope (console-only by design, unchanged): `execute`, `news`,
+`colors`/`logo`, `task edit`, undo-of-a-specific-past-change, per-variable
+config source path, a structured boolean filter builder. Not built:
+cross-session persistence of collapsed-group state (retained within a session).
+
+---
+
+# Mission "m" — visible UI modernization
+
+Mission **d** standardized the design system but was deliberately invisible
+(tokenization, guards, docs — "pixel-identical bar data drift"). This pass makes
+the redesign actually *show*, keeping every guard test green.
+
+- **Palette (`theme.py`) — elevation layers + a real accent.** Dark and light
+  both rebuilt as `bg < bg_alt < surface < elevated` layers so panels read as
+  distinct depths (the old dark theme was one muddy value). New `primary`
+  (blue: dark `#6ea8fe`, light `#3565d0`) is used *only* for selection, the
+  primary action, focus, active nav and the tab underline. New roles:
+  `border_soft` (hairline), `primary_soft` (selection wash), `focus`. WCAG-AA
+  contrast still enforced (`test_theme.py`).
+- **`app.qss` rewrite.** Modern table (no zebra; `border_soft` row lines;
+  `primary_soft` selection + 2-px left bar; `bg_alt` sticky header), sidebar
+  with muted section captions and no boxed "Reports" entry, single-feel
+  toolbar, consistent `@focus@` rings, `elevated` menus/tooltips/toast, thinner
+  scrollbars. Still token-only (`test_qss_uses_tokens` green).
+- **Toolbar (`main_window.py`).** Dropped the three `QLabel:` prefixes
+  ("Quick add", "Filter", "Group by") — the controls carry their own
+  placeholder / first-item text. One Persian snapshot line removed (intended).
+- **Task table (`task_model.py` / `column_spec.py`).** `status` is blank for
+  `pending` (the default state was column-wide noise); `id` / `urgency` render
+  muted; `priority` is colour-coded (H/M/L); tag `#` prefix dropped; per-column
+  alignment follows the layout direction (`_halign`); columns re-widthed. New
+  §11 in `docs/design-system.md`.
+- **Sidebar (`sidebar.py`).** Section captions render in `text_muted` with
+  slight tracking; the saved-filter hint is muted and non-interactive.
+
+Suite **464 passed / 1 skipped**, ruff clean. The fa snapshot changed only by
+the one removed toolbar label; `test_qss_uses_tokens` / `test_theme.py` / the
+contrast checks all green. The `_i18n_util` snapshot normaliser now also masks
+absolute paths (`‹path›`) so the Hook Manager's location label can't make the
+gate machine-specific.
+
+## Sidebar tag management
+
+The sidebar Tags section is now a management surface, not just a filter list
+(matching how project rows already accept drops):
+
+- **Add** — drop selected task rows onto a tag → `task <uuids> modify +<tag>`
+  (`Sidebar.tasksDroppedOnTag` → `main_window._add_tag_to`).
+- **Rename / remove across every task** — right-click a tag →
+  `taskwarrior.rename_tag(old,new)` / `remove_tag(tag)` (a scoped
+  `status.not:deleted +<tag> modify …`), guarded by the standard `confirm()`
+  dialog with the affected `tag_count`. Unused tag → a no-op toast.
+
+Per-task tag editing (the detail-panel chip editor, quick-add `+tag`, the
+bulk-edit add/remove rows) is unchanged. Core: `taskwarrior.tag_count` /
+`rename_tag` / `remove_tag` (`tests/test_tag_ops.py`); GUI wiring in
+`tests/gui/test_m3.py`.

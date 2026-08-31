@@ -118,6 +118,32 @@ def test_filter_builder_virtual_tags_regex_ids(qapp, tw_env):
     assert "+OVERDUE" in tokens
 
 
+def test_filter_builder_typed_uda_rows(qapp, tw_env):
+    from jtask import taskwarrior
+    from jtask_gui.widgets.filter_builder import FilterBuilder
+
+    taskwarrior.uda_set("effort", "type", "numeric")
+    taskwarrior.uda_set("effort", "label", "Effort")
+    taskwarrior.uda_set("size", "type", "string")
+    taskwarrior.uda_set("size", "values", "S,M,L")
+    taskwarrior.refresh_lookups()
+
+    b = FilterBuilder()
+    names = {n for n, *_ in b._uda_rows}
+    assert {"effort", "size"} <= names
+
+    for name, _utype, editor, op in b._uda_rows:
+        if name == "effort":
+            editor.setText("3")
+            op.setCurrentIndex(op.findData("over"))
+        elif name == "size":
+            editor.setCurrentText("M")
+
+    tokens = b._raw_tokens()
+    assert "effort.over:3" in tokens
+    assert "size:M" in tokens
+
+
 def test_filter_builder_still_emits_gregorian_dates(qapp, tw_env):
     import jdatetime
 
@@ -138,12 +164,39 @@ def test_main_window_shows_version_and_opens_tools(win, qapp, monkeypatch):
     assert win._status_binary.text().startswith("Taskwarrior")
 
     calls = []
+
+    class _FakeTools:
+        sendToConsole = _NoSignal()
+
+        def exec(self):
+            calls.append(1)
+
     monkeypatch.setattr(
-        "jtask_gui.widgets.tools_dialog.ToolsDialog",
-        lambda *a, **k: type("D", (), {"exec": lambda s: calls.append(1)})(),
+        "jtask_gui.widgets.tools_dialog.ToolsDialog", lambda *a, **k: _FakeTools()
     )
     win._open_tools()
     assert calls == [1]
+
+
+class _NoSignal:
+    def connect(self, *_a):
+        pass
+
+
+def test_help_send_to_console_reveals_and_prefills(win, qapp, qtbot):
+    from jtask_gui.widgets.tools_dialog import ToolsDialog
+
+    dlg = ToolsDialog(win)
+    dlg.help._set([("task add <mods>", "Add a new task")])
+    dlg.help._table.selectRow(0)
+    dlg.sendToConsole.connect(win._send_to_console)
+
+    with qtbot.waitSignal(dlg.sendToConsole, timeout=1000):
+        dlg.help._emit_to_console()
+
+    assert not win._console_dock.isHidden()
+    assert win._console_action.isChecked()
+    assert win._console._in.text() == "task add <mods>"
 
 
 @pytest.fixture
