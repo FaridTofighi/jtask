@@ -311,6 +311,77 @@ def test_main_window_tag_management_flow(qtbot, tw_env, qapp, monkeypatch):
     assert "keep" not in tw.list_tags()
 
 
+def test_sidebar_project_context_menu_signals(qtbot, monkeypatch):
+    import PyQt6.QtWidgets as W
+
+    from jtask_gui.widgets.sidebar import Sidebar
+
+    sb = Sidebar()
+    qtbot.addWidget(sb)
+    sb.populate_projects([{"project": "Work", "open": 3}])
+    renamed, deleted = [], []
+    sb.projectRenameRequested.connect(lambda o, n: renamed.append((o, n)))
+    sb.projectDeleteRequested.connect(deleted.append)
+
+    made: list = []
+    monkeypatch.setattr(
+        W.QMenu, "addAction", lambda self, text: made.append(object()) or made[-1]
+    )
+    monkeypatch.setattr(
+        W.QInputDialog, "getText", staticmethod(lambda *a, **k: ("Client.", True))
+    )
+    pos = sb.visualItemRect(sb._projects.child(0)).center()
+
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[0])   # rename
+    sb._context_menu(pos)
+    assert renamed == [("Work", "Client")]  # trailing '.' stripped
+
+    made.clear()
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[1])   # delete
+    sb._context_menu(pos)
+    assert deleted == ["Work"]
+
+
+def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask import taskwarrior as tw
+    from jtask_gui import main_window as mw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    for p in ("Work", "Work.Admin", "Workshop"):
+        tw.add([f"t-{p}", f"project:{p}"])
+
+    win = MainWindow(Settings())
+    qtbot.addWidget(win)
+
+    def _drain():
+        for _ in range(8):
+            qapp.processEvents()
+            wait_for_done(4000)
+            qapp.processEvents()
+
+    _drain()
+    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+
+    # rename: Work + Work.Admin -> Client + Client.Admin ; Workshop untouched
+    win._rename_project("Work", "Client")
+    _drain()
+    tw.refresh_lookups()
+    assert set(tw.list_projects()) >= {"Client", "Client.Admin", "Workshop"}
+    assert "Work" not in tw.list_projects()
+
+    # delete: Client + Client.Admin gone, Workshop kept
+    win._delete_project("Client")
+    _drain()
+    tw.refresh_lookups()
+    open_projects = {t.get("project") for t in tw.export(["status.not:deleted"])}
+    assert open_projects == {"Workshop"}
+
+
 def test_calendar_day_drop_emits_gregorian_date(qtbot, tw_env, qapp):
     from PyQt6.QtCore import QPointF, Qt
     from PyQt6.QtGui import QDropEvent

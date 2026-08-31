@@ -1800,6 +1800,28 @@ bulk-edit add/remove rows) is unchanged. Core: `taskwarrior.tag_count` /
 `rename_tag` / `remove_tag` (`tests/test_tag_ops.py`); GUI wiring in
 `tests/gui/test_m3.py`.
 
+## Sidebar project management
+
+Right-click a project row (proposed → approved: "B + hard confirm"):
+
+- **Rename project…** — `QInputDialog` for the new name → a standard
+  `confirm()` with the affected count → `taskwarrior.rename_project(old,new)`.
+  The **sub-hierarchy is preserved**: a task in `Work.Admin` lands in
+  `Client.Admin`. Per-task `modify` so the dotted structure survives (a bulk
+  `modify project:X` would flatten it).
+- **Delete project and its sub-tasks…** — a **hard** `confirm()`:
+  `destructive=True`, the exact affected count, *and* a type-the-project-name
+  gate (`require_phrase=name`, same as `purge`) → `taskwarrior.delete_project`.
+  A normal `task delete` — **reversible with `task undo`**, not `purge`.
+
+Both scope to `( project.is:<name> or project:<name>. )` +
+`status.not:deleted` — the exact form matters: a bare `project:Work` filter is a
+prefix match and would also hit `Workshop`. An empty / unknown project → a
+no-op toast. Core: `taskwarrior.project_task_count` / `delete_project` /
+`rename_project` (`tests/test_project_ops.py`); GUI in `tests/gui/test_m3.py`
+(`test_sidebar_project_context_menu_signals`,
+`test_main_window_project_management_flow`).
+
 ## Row-selection rendering fix
 
 Two reported defects in the selected-row appearance:

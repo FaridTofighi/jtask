@@ -705,6 +705,16 @@ CATALOG.update({
     "msg.tag_renamed": "Tag “{old}” renamed to “{new}”",
     "msg.tag_removed": "Tag “{tag}” removed",
     "msg.tag_unused": "No task carries the tag “{tag}”",
+    "sidebar.menu.project_rename": "Rename project…",
+    "sidebar.menu.project_delete": "Delete project and its sub-tasks…",
+    "sidebar.project_rename.title": "Rename project",
+    "sidebar.project_rename.label": "New name for project “{project}” (sub-projects move too):",
+    "sidebar.project_delete.title": "Delete project",
+    "confirm.project_rename.body": "Every task in project “{old}” (and its sub-projects) moves to “{new}”.",
+    "confirm.project_delete.body": "Every task in project “{project}” and its sub-projects will be deleted (reversible with Undo).",
+    "msg.project_renamed": "Project “{old}” renamed to “{new}”",
+    "msg.project_deleted": "Project “{project}” deleted",
+    "msg.project_empty": "Project “{project}” has no tasks",
 
     # ---- jalali date picker -----------
     "datepicker.placeholder": "{example} or “tomorrow”",

@@ -674,6 +674,16 @@ CATALOG: dict[str, str] = {
     "msg.tag_renamed": "برچسب «{old}» به «{new}» تغییر یافت",
     "msg.tag_removed": "برچسب «{tag}» حذف شد",
     "msg.tag_unused": "هیچ کاری برچسب «{tag}» را ندارد",
+    "sidebar.menu.project_rename": "تغییر نام پروژه…",
+    "sidebar.menu.project_delete": "حذف پروژه و زیرکارهایش…",
+    "sidebar.project_rename.title": "تغییر نام پروژه",
+    "sidebar.project_rename.label": "نام تازهٔ پروژهٔ «{project}» (زیرپروژه‌ها هم منتقل می‌شوند):",
+    "sidebar.project_delete.title": "حذف پروژه",
+    "confirm.project_rename.body": "همهٔ کارهای پروژهٔ «{old}» (و زیرپروژه‌هایش) به «{new}» منتقل می‌شوند.",
+    "confirm.project_delete.body": "همهٔ کارهای پروژهٔ «{project}» و زیرپروژه‌هایش حذف می‌شوند (با «واگرد» برگشت‌پذیر است).",
+    "msg.project_renamed": "پروژهٔ «{old}» به «{new}» تغییر یافت",
+    "msg.project_deleted": "پروژهٔ «{project}» حذف شد",
+    "msg.project_empty": "پروژهٔ «{project}» هیچ کاری ندارد",
 
     # ---- jalali date picker (widgets/jalali_date_picker.py) --
     "datepicker.placeholder": "{example} یا «فردا»",

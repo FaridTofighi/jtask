@@ -38,6 +38,9 @@ __all__ = [
     "tag_count",
     "rename_tag",
     "remove_tag",
+    "project_task_count",
+    "delete_project",
+    "rename_project",
     "config_names",
     "config_defaults",
     "config_set",
@@ -287,6 +290,69 @@ def remove_tag(tag: str) -> int:
     out = command(["status.not:deleted", f"+{tag}"], "modify", [f"-{tag}"])
     m = _MODIFIED_RE.search(out)
     return int(m.group(1)) if m else 0
+
+
+# --- project management --------------------------------------------------
+# Taskwarrior has no project entity — a project is an attribute. "The project
+# and its sub-tasks" is every task in ``name`` or a dotted sub-project
+# ``name.*``. A bare ``project:name`` filter is a *prefix* match (it would also
+# catch ``Workshop`` for ``Work``), so the exact form below is used instead.
+
+_DELETED_RE = re.compile(r"Deleted (\d+) task")
+
+
+def _project_filter(name: str) -> list[str]:
+    n = name.strip().rstrip(".")
+    return ["status.not:deleted", "(", f"project.is:{n}", "or", f"project:{n}.", ")"]
+
+
+def project_task_count(name: str) -> int:
+    """Non-deleted tasks in project *name* or any sub-project ``name.*``."""
+    if not name.strip():
+        return 0
+    for line in _lines([*_project_filter(name), "count"]):
+        if line.strip().isdigit():
+            return int(line.strip())
+    return 0
+
+
+def delete_project(name: str) -> int:
+    """Delete every non-deleted task in project *name* (+ sub-projects).
+
+    A normal ``task delete`` — reversible with ``task undo``, not ``purge``.
+    Returns the number of tasks deleted.
+    """
+    if project_task_count(name) == 0:
+        return 0
+    out = command(_project_filter(name), "delete")
+    m = _DELETED_RE.search(out)
+    return int(m.group(1)) if m else 0
+
+
+def rename_project(old: str, new: str) -> int:
+    """Move every non-deleted task from project *old* (+ sub-projects) to *new*,
+    keeping the sub-structure: a task in ``old.Sub`` lands in ``new.Sub``.
+    Returns the number of tasks moved.
+    """
+    old = old.strip().rstrip(".")
+    new = new.strip().rstrip(".")
+    if not old or not new or old == new:
+        return 0
+    moved = 0
+    for task in export(_project_filter(old)):
+        proj = task.get("project") or ""
+        uuid = task.get("uuid")
+        if not uuid:
+            continue
+        if proj == old:
+            target = new
+        elif proj.startswith(old + "."):
+            target = new + proj[len(old):]
+        else:
+            continue
+        command([uuid], "modify", [f"project:{target}"])
+        moved += 1
+    return moved
 
 
 def duplicate(filter_args: list[str], mods: list[str] | None = None) -> dict:

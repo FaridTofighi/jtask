@@ -1,0 +1,84 @@
+"""Project management — delete / rename a project and its sub-projects.
+
+Taskwarrior has no project entity; "the project and its sub-tasks" is every
+task in ``name`` or a dotted sub-project ``name.*``. A bare ``project:name``
+filter is a *prefix* match, so ``Work`` must not touch ``Workshop``.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from jtask import taskwarrior
+
+
+@pytest.fixture
+def tw_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("TASKDATA", str(tmp_path / "td"))
+    rc = tmp_path / "rc"
+    rc.write_text("", encoding="utf-8")
+    monkeypatch.setenv("TASKRC", str(rc))
+    taskwarrior.refresh_lookups()
+    yield
+    taskwarrior.refresh_lookups()
+
+
+def _seed() -> None:
+    for p in ("Work", "Work.Admin", "Work.Admin.Q3", "Workshop", "Home"):
+        taskwarrior.add([f"t-{p}", f"project:{p}"])
+
+
+def _projects_of_open_tasks() -> set[str]:
+    return {
+        tk.get("project", "")
+        for tk in taskwarrior.export(["status.not:deleted"])
+    }
+
+
+def test_project_task_count_covers_subprojects_not_prefix_siblings(tw_env):
+    _seed()
+    assert taskwarrior.project_task_count("Work") == 3        # Work + .Admin + .Admin.Q3
+    assert taskwarrior.project_task_count("Work.Admin") == 2  # .Admin + .Admin.Q3
+    assert taskwarrior.project_task_count("Workshop") == 1    # NOT caught by "Work"
+    assert taskwarrior.project_task_count("Nope") == 0
+    assert taskwarrior.project_task_count("") == 0
+
+
+def test_delete_project_removes_it_and_subtasks_only(tw_env):
+    _seed()
+    taskwarrior.command(["1"], "done")  # a completed task still counts as non-deleted
+
+    n = taskwarrior.delete_project("Work")
+    assert n == 3
+    taskwarrior.refresh_lookups()
+    assert _projects_of_open_tasks() == {"Workshop", "Home"}
+    # the deleted tasks are in the 'deleted' state, not purged
+    deleted = [t for t in taskwarrior.export(["status:deleted"])]
+    assert {t["project"] for t in deleted} == {"Work", "Work.Admin", "Work.Admin.Q3"}
+    # reversible
+    assert taskwarrior.undo_preview()["empty"] is False
+
+
+def test_delete_unknown_project_is_a_noop(tw_env):
+    _seed()
+    assert taskwarrior.delete_project("Ghost") == 0
+    assert taskwarrior.delete_project("") == 0
+    taskwarrior.refresh_lookups()
+    assert len(taskwarrior.export(["status.not:deleted"])) == 5
+
+
+def test_rename_project_preserves_the_hierarchy(tw_env):
+    _seed()
+    n = taskwarrior.rename_project("Work", "Client")
+    assert n == 3
+    taskwarrior.refresh_lookups()
+    assert _projects_of_open_tasks() == {"Client", "Client.Admin", "Client.Admin.Q3",
+                                         "Workshop", "Home"}
+
+
+def test_rename_project_noop_cases(tw_env):
+    _seed()
+    assert taskwarrior.rename_project("Work", "Work") == 0
+    assert taskwarrior.rename_project("Ghost", "X") == 0
+    assert taskwarrior.rename_project("", "X") == 0
+    assert taskwarrior.rename_project("Work", "") == 0

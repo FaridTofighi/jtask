@@ -58,7 +58,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | Attribute | Native edit | Native display | Gap → milestone |
 |---|---|---|---|
 | description | ✅ detail + quick-add | ✅ table + detail | — |
-| project (dotted) | ✅ combo + drag-drop + **bulk edit** (M5) | ✅ table + sidebar tree | single-cell inline edit → later |
+| project (dotted) | ✅ combo + drag-drop + **bulk edit** (M5) + **sidebar project management** (right-click a project → rename it and its sub-projects, or delete it and all its sub-tasks — hard type-the-name confirm, reversible via Undo) | ✅ table + sidebar tree | single-cell inline edit → later |
 | tags | ✅ chip editor + **bulk add/remove** + **sidebar tag management** (drop tasks on a tag to add it; right-click a tag → rename / remove across every task) | ✅ table | — |
 | priority | ✅ combo + **bulk** (M5) | ✅ table | — |
 | due / scheduled / wait / until | ✅ Jalali pickers + **bulk date change / clear** (due·scheduled·wait·**until**) | ✅ table (Jalali) | — |

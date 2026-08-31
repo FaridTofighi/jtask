@@ -425,6 +425,8 @@ class MainWindow(QMainWindow):
         self._sidebar.tasksDroppedOnTag.connect(self._add_tag_to)
         self._sidebar.tagRenameRequested.connect(self._rename_tag)
         self._sidebar.tagRemoveRequested.connect(self._remove_tag)
+        self._sidebar.projectRenameRequested.connect(self._rename_project)
+        self._sidebar.projectDeleteRequested.connect(self._delete_project)
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
         self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
         self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
@@ -544,6 +546,56 @@ class MainWindow(QMainWindow):
             self._write(
                 functools.partial(taskwarrior.remove_tag, tag),
                 t("msg.tag_removed", tag=tag),
+            )
+
+        submit(check, ask, self._error)
+
+    # --- project management ------------------------------
+
+    def _rename_project(self, old: str, new: str) -> None:
+        def check() -> int:
+            return taskwarrior.project_task_count(old)
+
+        def ask(n: int) -> None:
+            if n == 0:
+                self._toast.show_message(t("msg.project_empty", project=old))
+                return
+            if not confirm(
+                self,
+                title=t("sidebar.project_rename.title"),
+                body=t("confirm.project_rename.body", old=old, new=new),
+                count=n,
+                count_noun=t("confirm.tag.noun"),
+            ):
+                return
+            self._write(
+                functools.partial(taskwarrior.rename_project, old, new),
+                t("msg.project_renamed", old=old, new=new),
+            )
+
+        submit(check, ask, self._error)
+
+    def _delete_project(self, name: str) -> None:
+        def check() -> int:
+            return taskwarrior.project_task_count(name)
+
+        def ask(n: int) -> None:
+            if n == 0:
+                self._toast.show_message(t("msg.project_empty", project=name))
+                return
+            if not confirm(
+                self,
+                title=t("sidebar.project_delete.title"),
+                body=t("confirm.project_delete.body", project=name),
+                count=n,
+                count_noun=t("confirm.tag.noun"),
+                destructive=True,
+                require_phrase=name,
+            ):
+                return
+            self._write(
+                functools.partial(taskwarrior.delete_project, name),
+                t("msg.project_deleted", project=name),
             )
 
         submit(check, ask, self._error)

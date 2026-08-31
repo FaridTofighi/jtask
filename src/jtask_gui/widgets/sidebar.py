@@ -60,6 +60,8 @@ class Sidebar(QTreeWidget):
     tasksDroppedOnTag = pyqtSignal(list, str)  # (uuids, tag) — add the tag
     tagRenameRequested = pyqtSignal(str, str)  # (old, new) — across all tasks
     tagRemoveRequested = pyqtSignal(str)  # tag — strip from all tasks
+    projectRenameRequested = pyqtSignal(str, str)  # (old, new) — incl. sub-projects
+    projectDeleteRequested = pyqtSignal(str)  # project — delete it and its sub-tasks
     savedFilterActivated = pyqtSignal(str)  # raw filter string
     savedFilterDeleteRequested = pyqtSignal(str)  # name
     savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
@@ -246,7 +248,7 @@ class Sidebar(QTreeWidget):
             self.tasksDroppedOnTag.emit(uuids, spec["tag"])
             event.acceptProposedAction()
 
-    # --- context menu (saved filters + tags) -----------------
+    # --- context menu (saved filters + tags + projects) ------
 
     def _context_menu(self, pos) -> None:
         from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
@@ -254,6 +256,24 @@ class Sidebar(QTreeWidget):
         item = self.itemAt(pos)
         spec = item.data(0, _SPEC_ROLE) if item else None
         if not spec:
+            return
+
+        if spec.get("drop") == "project":
+            name = spec["title"]
+            menu = QMenu(self)
+            act_rename = menu.addAction(t("sidebar.menu.project_rename"))
+            act_delete = menu.addAction(t("sidebar.menu.project_delete"))
+            chosen = menu.exec(self.viewport().mapToGlobal(pos))
+            if chosen == act_rename:
+                new, ok = QInputDialog.getText(
+                    self, t("sidebar.project_rename.title"),
+                    t("sidebar.project_rename.label", project=name), text=name,
+                )
+                new = new.strip().rstrip(".")
+                if ok and new and new != name:
+                    self.projectRenameRequested.emit(name, new)
+            elif chosen == act_delete:
+                self.projectDeleteRequested.emit(name)
             return
 
         if spec.get("drop") == "tag":
