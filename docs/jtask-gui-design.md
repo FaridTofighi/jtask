@@ -1738,3 +1738,27 @@ Per-task tag editing (the detail-panel chip editor, quick-add `+tag`, the
 bulk-edit add/remove rows) is unchanged. Core: `taskwarrior.tag_count` /
 `rename_tag` / `remove_tag` (`tests/test_tag_ops.py`); GUI wiring in
 `tests/gui/test_m3.py`.
+
+## Row-selection rendering fix
+
+Two reported defects in the selected-row appearance:
+
+1. **Per-cell boxed grid.** The mission-m QSS put `border-left: 2px solid
+   @primary@` on `QTableView::item:selected`, so *every* cell in the row drew
+   that border → vertical divider lines between cells. Fixed: the selection
+   rule is now `background-color` only. The single leading-edge accent bar is
+   painted once per row in `TaskTable.paintEvent` (`_bar_x()` = left in LTR,
+   right in RTL), so it can never render as a per-cell border. `TaskTable`
+   gained `set_theme()` to keep the bar colour in sync (wired in
+   `_apply_theme`).
+2. **Selection extended past `Status` into blank cells.** Those were the three
+   separate `annotations` / `recur` / `depends` indicator columns (empty
+   headers, 36 px each) trailing the row. Merged into **one** `indicators`
+   column placed right after `description` — the model composites the 1–3
+   present marker icons into a single pixmap (`_decoration`). `status` is now
+   the last visible column; the selection band ends exactly there.
+
+`tests/gui/test_task_table_selection.py` (7): no `border` in the selection
+QSS, accent bar on the correct edge per direction, `status` is last with no
+empty-header trailing column, selection extent matches the visible-column
+range with a default *and* a reduced column set. Suite 478 passed / 1 skipped.

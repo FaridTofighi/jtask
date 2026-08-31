@@ -138,11 +138,12 @@ QTableView::item {
     border: none;
     border-bottom: 1px solid @row_line@;
 }
+/* selection is background-only — one continuous band across the whole row.
+   The leading-edge accent bar is painted by TaskTable.paintEvent (direction
+   aware) so it never renders as a per-cell border. */
 QTableView::item:hover { background-color: @hover@; }
-QTableView::item:selected {
-    background-color: @primary_soft@;
-    border-left: 2px solid @primary@;
-}
+QTableView::item:selected { background-color: @primary_soft@; }
+QTableView::item:selected:hover { background-color: @selection@; }
 QHeaderView { background: transparent; }
 QHeaderView::section {
     background-color: @bg_alt@;

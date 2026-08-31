@@ -937,6 +937,7 @@ class MainWindow(QMainWindow):
         else:  # pragma: no cover
             self.setStyleSheet(render_qss(name))
         self._model.set_theme(name)
+        self._table.set_theme(name)
         self._detail.set_theme(name)
         self._sidebar.retint()
         self._filter_bar.retint()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QMimeData, QSortFilterProxyModel, Qt, pyqtSignal
-from PyQt6.QtGui import QDrag
+from PyQt6.QtGui import QColor, QDrag, QPainter
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QTableView,
 )
 
+from .. import icons
 from ..i18n import t
 from ..models.group_proxy import (
     GROUP_HEADER_ROLE,
@@ -20,6 +21,7 @@ from ..models.group_proxy import (
     GroupProxyModel,
 )
 from ..models.task_model import TASK_ROLE, UUID_ROLE, TaskTableModel
+from ..theme import palette
 
 UUID_MIME = "application/x-jtask-uuids"
 
@@ -116,6 +118,15 @@ class TaskTable(QTableView):
         self._empty.setWordWrap(True)
         self._empty.hide()
 
+        self._accent = QColor(palette(icons._theme)["primary"])
+
+    _SELECTION_BAR_W = 3
+
+    def set_theme(self, name: str) -> None:
+        """Keep the selected-row accent bar in sync with the active theme."""
+        self._accent = QColor(palette(name)["primary"])
+        self.viewport().update()
+
     def _apply_column_sizing(self) -> None:
         from ..models.column_spec import BY_KEY
 
@@ -153,6 +164,31 @@ class TaskTable(QTableView):
     def resizeEvent(self, event):  # noqa: N802
         super().resizeEvent(event)
         self._position_empty()
+
+    def _bar_x(self) -> int:
+        """Left offset of the selected-row accent bar — the reading-start edge:
+        left in LTR, right in RTL (reuses the app's layout direction)."""
+        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        return self.viewport().width() - self._SELECTION_BAR_W if rtl else 0
+
+    def paintEvent(self, event):  # noqa: N802
+        super().paintEvent(event)
+        sel = self.selectionModel()
+        if sel is None or not sel.hasSelection():
+            return
+        rows = {i.row() for i in sel.selectedRows()}
+        if not rows:
+            return
+        x, w, vp_h = self._bar_x(), self._SELECTION_BAR_W, self.viewport().height()
+        p = QPainter(self.viewport())
+        for r in rows:
+            if self.model() is self._group_model and self._group_model.is_header(r):
+                continue
+            y = self.rowViewportPosition(r)
+            h = self.rowHeight(r)
+            if h > 0 and -h < y < vp_h:
+                p.fillRect(x, y, w, h, self._accent)
+        p.end()
 
     def startDrag(self, actions):  # noqa: N802
         uuids = self.selected_uuids()

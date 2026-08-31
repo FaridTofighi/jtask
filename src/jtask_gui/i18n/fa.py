@@ -704,6 +704,7 @@ CATALOG: dict[str, str] = {
     "col.has_annotation": "یادداشت دارد",
     "col.is_recurring": "کار تکرارشونده",
     "col.has_dependency": "وابستگی دارد",
+    "col.indicators": "نشانه‌ها: یادداشت · تکرار · وابستگی",
 
     # ---- charts (widgets/charts/*) -----------------------
     "chart.no_data": "داده کافی برای این نمودار وجود ندارد.",

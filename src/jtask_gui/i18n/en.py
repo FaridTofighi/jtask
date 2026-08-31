@@ -735,6 +735,7 @@ CATALOG.update({
     "col.has_annotation": "Has annotation",
     "col.is_recurring": "Recurring task",
     "col.has_dependency": "Has dependency",
+    "col.indicators": "Markers: annotation · recurrence · dependency",
 
     # ---- charts --------------------
     "chart.no_data": "Not enough data for this chart.",

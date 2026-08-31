@@ -73,10 +73,11 @@ text is the `on_danger` role; charts colour their series by role
 
 Dark `#6ea8fe`, light `#3565d0` (`primary_fg` is the text on top; `primary_soft`
 is the low-alpha wash). It appears in exactly these places and nowhere else:
-selection (table row + menu item = `primary_soft` fill), the primary action
-button, the focus ring (`focus` == `primary`), the active sidebar row
-(`primary_soft` bg + `primary` text + a 2-px left bar), the detail-tab
-underline, progress-bar fill, and the running-timer chip.
+selection (table row + menu item = `primary_soft` fill; the table adds a 3-px
+`primary` leading-edge bar painted in `TaskTable.paintEvent`, see §11), the
+primary action button, the focus ring (`focus` == `primary`), the active
+sidebar row (`primary_soft` bg + `primary` text), the detail-tab underline,
+progress-bar fill, and the running-timer chip.
 
 The light theme's base is a soft off-white (`bg = #f4f6fa`), not pure white, so
 `surface` (`#ffffff`) cards lift off it. Contrast for body/secondary text and
@@ -194,7 +195,19 @@ The primary surface, so its rendering rules are specific (`models/task_model.py`
   controls carry their own placeholder / first-item text; a separate `QLabel:`
   in front of an input is not used.
 - **No zebra striping.** Rows separate on a `border_soft` hairline only. Hover
-  is a `hover` wash; selection is `primary_soft` + a 2-px `primary` left bar.
+  is a `hover` wash.
+- **Selection is one continuous band, never per-cell boxes.**
+  `QTableView::item:selected` is `background-color` **only** — no `border`
+  (a per-item border draws a line on every internal cell edge). The single
+  3-px `primary` accent bar on the row's **leading edge** (left in LTR, right
+  in RTL) is painted once per selected row in `TaskTable.paintEvent`
+  (`_bar_x()` picks the side from `layoutDirection()`), not by QSS.
+  `tests/gui/test_task_table_selection.py` guards both.
+- **One `indicators` column, not three.** The annotation / recurrence /
+  dependency markers share a single narrow column placed right after
+  `description` (the model composites 1–3 tinted icons into one pixmap via
+  `DecorationRole`), so `status` stays the last visible column and the
+  selection band never extends past it into blank-header cells.
 - **The description leads.** It is normal-weight-plus (`DemiBold`) `text`;
   everything else is quieter — `id` and `urgency` render in `text_muted`,
   `priority` in its own colour (`H`→`overdue`, `M`→`due_soon`, `L`→muted),

@@ -42,21 +42,16 @@ def _status(task: dict) -> str:
     }.get(st, st)
 
 
-def _annot(task: dict) -> str:
-    return "✎" if task.get("annotations") else ""
-
-
-def _recur(task: dict) -> str:
-    return "↻" if task.get("recur") else ""
-
-
-def _dep(task: dict) -> str:
-    return "⛓" if task.get("depends") else ""
+# The three per-task markers (annotation / recurrence / dependency) share ONE
+# narrow column, placed right after the description so `status` stays the last
+# visible column — the model paints 1-3 tinted icons into it via DecorationRole.
+INDICATOR_MARKS = ("annotations", "recur", "depends")
 
 
 COLUMNS: list[Column] = [
     Column("id", t("col.id"), 56, is_id=True),
-    Column("description", t("col.description"), 340),
+    Column("description", t("col.description"), 320),
+    Column("indicators", "", 60, indicator=True),
     Column("project", t("col.project"), 130),
     Column("tags", t("col.tags"), 130, formatter=_tags),
     Column("priority", t("col.priority"), 96, formatter=_priority),
@@ -65,15 +60,10 @@ COLUMNS: list[Column] = [
     Column("wait", t("col.wait"), 110, default_visible=False),
     Column("urgency", t("col.urgency"), 84, numeric=True),
     Column("status", t("col.status"), 96, formatter=_status),
-    Column("annotations", "", 36, indicator=True, formatter=_annot),
-    Column("recur", "", 36, indicator=True, formatter=_recur),
-    Column("depends", "", 36, indicator=True, formatter=_dep),
 ]
 
 INDICATOR_TOOLTIP = {
-    "annotations": t("col.has_annotation"),
-    "recur": t("col.is_recurring"),
-    "depends": t("col.has_dependency"),
+    "indicators": t("col.indicators"),
 }
 
 BY_KEY = {c.key: c for c in COLUMNS}

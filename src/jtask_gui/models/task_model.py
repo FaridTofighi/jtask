@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
 
 from jtask import jalali
 from jtask.rtl import auto_isolate, bidi_isolate, en_digits, first_strong_dir
@@ -191,16 +191,23 @@ class TaskTableModel(QAbstractTableModel):
         return digits
 
     def _decoration(self, task: dict, col: Column):
-        if not col.indicator:
+        if col.key != "indicators":
             return None
-        present = bool(task.get(col.key))
-        if not present:
+        marks = [m for m in ("annotations", "recur", "depends") if task.get(m)]
+        if not marks:
             return None
         from ..icons import icon
 
         state = self._row_state(task)
         role = state if state in ("overdue", "blocked", "waiting") else "text_muted"
-        return icon(_INDICATOR_ICON.get(col.key, "annotation"), role)
+        px, gap = 15, 3
+        pm = QPixmap((px + gap) * len(marks) - gap, px)
+        pm.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pm)
+        for i, m in enumerate(marks):
+            icon(_INDICATOR_ICON[m], role).paint(p, i * (px + gap), 0, px, px)
+        p.end()
+        return pm
 
     def _due_dt(self, task: dict) -> datetime.datetime | None:
         raw = task.get("due_gregorian")
