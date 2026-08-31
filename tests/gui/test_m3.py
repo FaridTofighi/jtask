@@ -312,6 +312,8 @@ def test_main_window_tag_management_flow(qtbot, tw_env, qapp, monkeypatch):
 
 
 def test_sidebar_project_context_menu_signals(qtbot, monkeypatch):
+    from unittest.mock import MagicMock
+
     import PyQt6.QtWidgets as W
 
     from jtask_gui.widgets.sidebar import Sidebar
@@ -325,8 +327,9 @@ def test_sidebar_project_context_menu_signals(qtbot, monkeypatch):
 
     made: list = []
     monkeypatch.setattr(
-        W.QMenu, "addAction", lambda self, text: made.append(object()) or made[-1]
+        W.QMenu, "addAction", lambda self, text: made.append(MagicMock()) or made[-1]
     )
+    monkeypatch.setattr(W.QMenu, "addSeparator", lambda self: None)
     monkeypatch.setattr(
         W.QInputDialog, "getText", staticmethod(lambda *a, **k: ("Client.", True))
     )
@@ -337,9 +340,83 @@ def test_sidebar_project_context_menu_signals(qtbot, monkeypatch):
     assert renamed == [("Work", "Client")]  # trailing '.' stripped
 
     made.clear()
-    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[1])   # delete
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[-1])   # delete (last)
     sb._context_menu(pos)
     assert deleted == ["Work"]
+
+
+def test_sidebar_project_colour_menu_and_dot(qtbot, monkeypatch):
+    from unittest.mock import MagicMock
+
+    import PyQt6.QtWidgets as W
+
+    from jtask_gui.widgets import project_color_dialog as pcd
+    from jtask_gui.widgets.sidebar import _COLOUR_ROLE, Sidebar
+
+    sb = Sidebar()
+    qtbot.addWidget(sb)
+    # a project that already has a colour → the row shows a dot, not the glyph
+    sb.populate_projects([{"project": "Work", "open": 3}], {"Work": "bright blue"})
+    item = sb._projects.child(0)
+    assert item.data(0, _COLOUR_ROLE) == "bright blue"
+    assert not item.icon(0).isNull()
+
+    set_calls, clear_calls = [], []
+    sb.projectColorRequested.connect(lambda n, c: set_calls.append((n, c)))
+    sb.projectColorClearRequested.connect(clear_calls.append)
+
+    made: list = []
+    monkeypatch.setattr(
+        W.QMenu, "addAction", lambda self, text: made.append(MagicMock()) or made[-1]
+    )
+    monkeypatch.setattr(W.QMenu, "addSeparator", lambda self: None)
+    pos = sb.visualItemRect(item).center()
+
+    # choose "Set colour…" (index 1) → dialog returns a colour string
+    fake_dlg = MagicMock()
+    fake_dlg.exec.return_value = 1
+    fake_dlg.result_color.return_value = "rgb520"
+    monkeypatch.setattr(pcd, "ProjectColorDialog", lambda *a, **k: fake_dlg)
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[1])
+    sb._context_menu(pos)
+    assert set_calls == [("Work", "rgb520")]
+
+    # choose "Clear colour" (index 2)
+    made.clear()
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[2])
+    sb._context_menu(pos)
+    assert clear_calls == ["Work"]
+
+
+def test_main_window_project_colour_flow(qtbot, tw_env, qapp, monkeypatch):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask import taskwarrior as tw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    tw.add(["t-Work", "project:Work"])
+    win = MainWindow(Settings())
+    qtbot.addWidget(win)
+
+    def _drain():
+        for _ in range(8):
+            qapp.processEvents()
+            wait_for_done(4000)
+            qapp.processEvents()
+
+    _drain()
+    win._set_project_color("Work", "bright blue")
+    _drain()
+    tw.refresh_lookups()
+    assert tw.project_colors() == {"Work": "bright blue"}
+
+    win._clear_project_color("Work")
+    _drain()
+    tw.refresh_lookups()
+    assert tw.project_colors() == {}
 
 
 def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):

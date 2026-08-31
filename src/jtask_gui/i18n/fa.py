@@ -684,6 +684,16 @@ CATALOG: dict[str, str] = {
     "msg.project_renamed": "پروژهٔ «{old}» به «{new}» تغییر یافت",
     "msg.project_deleted": "پروژهٔ «{project}» حذف شد",
     "msg.project_empty": "پروژهٔ «{project}» هیچ کاری ندارد",
+    "sidebar.menu.project_color": "تعیین رنگ…",
+    "sidebar.menu.project_color_clear": "پاک کردن رنگ",
+    "project_color.title": "رنگ پروژهٔ «{project}»",
+    "project_color.pick": "یک رنگ انتخاب کنید:",
+    "project_color.raw": "رنگ Taskwarrior",
+    "project_color.raw.placeholder": "مثلاً blue، bright red، color5، rgb520",
+    "project_color.clear": "پاک کردن رنگ",
+    "project_color.tooltip": "رنگ: {color}",
+    "msg.project_colored": "رنگ پروژهٔ «{project}» تعیین شد",
+    "msg.project_color_cleared": "رنگ پروژهٔ «{project}» پاک شد",
 
     # ---- jalali date picker (widgets/jalali_date_picker.py) --
     "datepicker.placeholder": "{example} یا «فردا»",

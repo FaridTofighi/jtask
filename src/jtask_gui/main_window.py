@@ -427,6 +427,8 @@ class MainWindow(QMainWindow):
         self._sidebar.tagRemoveRequested.connect(self._remove_tag)
         self._sidebar.projectRenameRequested.connect(self._rename_project)
         self._sidebar.projectDeleteRequested.connect(self._delete_project)
+        self._sidebar.projectColorRequested.connect(self._set_project_color)
+        self._sidebar.projectColorClearRequested.connect(self._clear_project_color)
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
         self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
         self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
@@ -600,6 +602,18 @@ class MainWindow(QMainWindow):
 
         submit(check, ask, self._error)
 
+    def _set_project_color(self, name: str, color: str) -> None:
+        self._write(
+            functools.partial(taskwarrior.set_project_color, name, color),
+            t("msg.project_colored", project=name),
+        )
+
+    def _clear_project_color(self, name: str) -> None:
+        self._write(
+            functools.partial(taskwarrior.clear_project_color, name),
+            t("msg.project_color_cleared", project=name),
+        )
+
     def _save_filter(self, name: str, raw: str) -> None:
         self.settings.save_filter(name, raw)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
@@ -624,7 +638,11 @@ class MainWindow(QMainWindow):
         taskwarrior.refresh_lookups()
         self._quick_add.refresh_completions()
         self._filter_bar.refresh_completions()
-        submit(reports.report_projects, self._sidebar.populate_projects, self._error)
+        submit(
+            lambda: (reports.report_projects(), taskwarrior.project_colors()),
+            lambda r: self._sidebar.populate_projects(*r),
+            self._error,
+        )
         submit(reports.report_tags, self._sidebar.populate_tags, self._error)
         submit(
             lambda: (taskwarrior.list_contexts(), taskwarrior.current_context()),

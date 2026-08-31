@@ -41,6 +41,9 @@ __all__ = [
     "project_task_count",
     "delete_project",
     "rename_project",
+    "project_colors",
+    "set_project_color",
+    "clear_project_color",
     "config_names",
     "config_defaults",
     "config_set",
@@ -353,6 +356,44 @@ def rename_project(old: str, new: str) -> int:
         command([uuid], "modify", [f"project:{target}"])
         moved += 1
     return moved
+
+
+def project_colors() -> dict[str, str]:
+    """``{project: <taskwarrior colour string>}`` from ``color.project.*``.
+
+    jtask forces ``rc.color=off`` for its own reads, so these values only take
+    effect because the GUI reads them here and renders a swatch — they still
+    also apply in a raw ``task`` shell that has colour on.
+    """
+    out: dict[str, str] = {}
+    for key, value in _show_config().items():
+        if key.startswith("color.project.") and value:
+            out[key[len("color.project.") :]] = value
+    return out
+
+
+def set_project_color(name: str, color: str) -> str:
+    """``config color.project.<name> <color>`` — *color* is any Taskwarrior
+    colour string (``blue`` / ``bright red`` / ``rgb520`` / …). Empty clears."""
+    name = name.strip().rstrip(".")
+    color = color.strip()
+    if not name:
+        return ""
+    if not color:
+        return clear_project_color(name)
+    out = config_set(f"color.project.{name}", color)
+    _show_config.cache_clear()
+    return out
+
+
+def clear_project_color(name: str) -> str:
+    """Remove a project's colour override (``config color.project.<name>``)."""
+    name = name.strip().rstrip(".")
+    if not name:
+        return ""
+    out = config_unset(f"color.project.{name}")
+    _show_config.cache_clear()
+    return out
 
 
 def duplicate(filter_args: list[str], mods: list[str] | None = None) -> dict:

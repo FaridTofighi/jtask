@@ -1822,6 +1822,28 @@ no-op toast. Core: `taskwarrior.project_task_count` / `delete_project` /
 (`test_sidebar_project_context_menu_signals`,
 `test_main_window_project_management_flow`).
 
+### Project colour (proposed → approved: "curated palette + raw field; sidebar dot only")
+
+- **Set colour… / Clear colour** on the same project context menu.
+- **Store:** Taskwarrior's own `color.project.<name>` config, written via
+  `task config` — so a raw `task` shell with colour on picks it up too. jtask
+  reads it back with `taskwarrior.project_colors()` and clears the `_show`
+  cache on write. Core helpers `set_project_color` / `clear_project_color`
+  (empty value → clear); `tests/test_project_ops.py`.
+- **Picker** (`widgets/project_color_dialog.py`): a grid of ~14 curated named
+  TW colours **plus** a free-text "Taskwarrior colour" field for power users
+  (`bright red`, `color5`, `rgb520`, `gray10`, `<fg> on <bg>` …). Clicking a
+  swatch fills the field; a live preview dot; **Clear colour** unsets.
+- **Render:** sidebar only — a filled swatch dot replaces the folder glyph on a
+  coloured project row. `tw_color.to_hex()` is a best-effort parse of the
+  common TW colour forms (named / `bright` / 256-cube / grayscale / `rgbRGB`);
+  an unparseable string still stores, it just shows no dot
+  (`tests/test_tw_color.py`). The task **table is deliberately not tinted** —
+  keeping the colour a lightweight sidebar cue, not a second row-state channel
+  competing with due/priority/blocked.
+- GUI: `test_sidebar_project_colour_menu_and_dot`,
+  `test_main_window_project_colour_flow` in `tests/gui/test_m3.py`.
+
 ## Row-selection rendering fix
 
 Two reported defects in the selected-row appearance:

@@ -715,6 +715,16 @@ CATALOG.update({
     "msg.project_renamed": "Project “{old}” renamed to “{new}”",
     "msg.project_deleted": "Project “{project}” deleted",
     "msg.project_empty": "Project “{project}” has no tasks",
+    "sidebar.menu.project_color": "Set colour…",
+    "sidebar.menu.project_color_clear": "Clear colour",
+    "project_color.title": "Colour for “{project}”",
+    "project_color.pick": "Pick a colour:",
+    "project_color.raw": "Taskwarrior colour",
+    "project_color.raw.placeholder": "e.g. blue, bright red, color5, rgb520",
+    "project_color.clear": "Clear colour",
+    "project_color.tooltip": "Colour: {color}",
+    "msg.project_colored": "Colour set for “{project}”",
+    "msg.project_color_cleared": "Colour cleared for “{project}”",
 
     # ---- jalali date picker -----------
     "datepicker.placeholder": "{example} or “tomorrow”",

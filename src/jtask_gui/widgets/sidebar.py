@@ -5,18 +5,33 @@ from __future__ import annotations
 import datetime
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from .. import icons
 from ..calendar_system import active
 from ..i18n import t
 from ..theme import palette
+from ..tw_color import to_hex
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
 _SECTION_ROLE = Qt.ItemDataRole.UserRole + 6
+_COLOUR_ROLE = Qt.ItemDataRole.UserRole + 7
 UUID_MIME = "application/x-jtask-uuids"
+
+
+def _colour_dot(hex_colour: str, size: int = 10) -> QIcon:
+    """A filled round swatch as a row icon."""
+    pm = QPixmap(size, size)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(hex_colour))
+    p.drawEllipse(0, 0, size - 1, size - 1)
+    p.end()
+    return QIcon(pm)
 
 
 def _this_week_filter() -> list[str]:
@@ -62,6 +77,8 @@ class Sidebar(QTreeWidget):
     tagRemoveRequested = pyqtSignal(str)  # tag — strip from all tasks
     projectRenameRequested = pyqtSignal(str, str)  # (old, new) — incl. sub-projects
     projectDeleteRequested = pyqtSignal(str)  # project — delete it and its sub-tasks
+    projectColorRequested = pyqtSignal(str, str)  # (project, taskwarrior colour string)
+    projectColorClearRequested = pyqtSignal(str)  # project — unset its colour
     savedFilterActivated = pyqtSignal(str)  # raw filter string
     savedFilterDeleteRequested = pyqtSignal(str)  # name
     savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
@@ -140,8 +157,12 @@ class Sidebar(QTreeWidget):
         pal = palette(icons._theme)
         muted = QColor(pal["text_muted"])
         for item in self._iter_items(self.invisibleRootItem()):
+            tw = item.data(0, _COLOUR_ROLE)
             glyph = item.data(0, _ICON_ROLE)
-            if glyph:
+            hx = to_hex(tw) if tw else None
+            if hx:
+                item.setIcon(0, _colour_dot(hx))
+            elif glyph:
                 item.setIcon(0, icons.icon(glyph, "text_muted"))
             if item.data(0, _SECTION_ROLE):
                 item.setForeground(0, muted)
@@ -155,17 +176,25 @@ class Sidebar(QTreeWidget):
 
     # --- dynamic population ------------------------------------
 
-    def populate_projects(self, rows: list[dict]) -> None:
+    def populate_projects(
+        self, rows: list[dict], colors: dict[str, str] | None = None
+    ) -> None:
+        colors = colors or {}
         self._projects.takeChildren()
         for row in rows:
-            label = f"{row['project']}  ·  {row['open']}"
+            name = row["project"]
+            label = f"{name}  ·  {row['open']}"
             spec = {
                 "kind": "filter",
                 "drop": "project",
-                "title": row["project"],
-                "filter": [f"project:{row['project']}", "status:pending"],
+                "title": name,
+                "filter": [f"project:{name}", "status:pending"],
             }
-            self._leaf(self._projects, label, spec, "project")
+            item = self._leaf(self._projects, label, spec, "project")
+            tw = colors.get(name, "")
+            if tw:
+                item.setData(0, _COLOUR_ROLE, tw)
+                item.setToolTip(0, t("project_color.tooltip", color=tw))
         self.retint()
 
     def populate_tags(self, rows: list[dict]) -> None:
@@ -260,8 +289,13 @@ class Sidebar(QTreeWidget):
 
         if spec.get("drop") == "project":
             name = spec["title"]
+            current = item.data(0, _COLOUR_ROLE) or ""
             menu = QMenu(self)
             act_rename = menu.addAction(t("sidebar.menu.project_rename"))
+            act_color = menu.addAction(t("sidebar.menu.project_color"))
+            act_color_clear = menu.addAction(t("sidebar.menu.project_color_clear"))
+            act_color_clear.setEnabled(bool(current))
+            menu.addSeparator()
             act_delete = menu.addAction(t("sidebar.menu.project_delete"))
             chosen = menu.exec(self.viewport().mapToGlobal(pos))
             if chosen == act_rename:
@@ -272,6 +306,17 @@ class Sidebar(QTreeWidget):
                 new = new.strip().rstrip(".")
                 if ok and new and new != name:
                     self.projectRenameRequested.emit(name, new)
+            elif chosen == act_color:
+                from .project_color_dialog import ProjectColorDialog
+
+                dlg = ProjectColorDialog(name, current, self)
+                if dlg.exec() and (res := dlg.result_color()) is not None:
+                    if res:
+                        self.projectColorRequested.emit(name, res)
+                    else:
+                        self.projectColorClearRequested.emit(name)
+            elif chosen == act_color_clear:
+                self.projectColorClearRequested.emit(name)
             elif chosen == act_delete:
                 self.projectDeleteRequested.emit(name)
             return

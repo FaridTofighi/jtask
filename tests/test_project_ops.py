@@ -82,3 +82,36 @@ def test_rename_project_noop_cases(tw_env):
     assert taskwarrior.rename_project("Ghost", "X") == 0
     assert taskwarrior.rename_project("", "X") == 0
     assert taskwarrior.rename_project("Work", "") == 0
+
+
+def test_project_colour_set_change_and_clear(tw_env):
+    _seed()
+    assert taskwarrior.project_colors() == {}
+
+    taskwarrior.set_project_color("Work", "bright blue")
+    assert taskwarrior.project_colors() == {"Work": "bright blue"}
+
+    # changing just overwrites
+    taskwarrior.set_project_color("Work", "rgb520")
+    assert taskwarrior.project_colors() == {"Work": "rgb520"}
+
+    # a second project is independent
+    taskwarrior.set_project_color("Home", "green")
+    assert taskwarrior.project_colors() == {"Work": "rgb520", "Home": "green"}
+
+    # clear via empty string, and via clear_project_color
+    taskwarrior.set_project_color("Work", "")
+    assert taskwarrior.project_colors() == {"Home": "green"}
+    taskwarrior.clear_project_color("Home")
+    assert taskwarrior.project_colors() == {}
+
+
+def test_project_colour_noop_cases(tw_env):
+    _seed()
+    assert taskwarrior.set_project_color("", "red") == ""
+    # a trailing dot on the project name is normalised away
+    taskwarrior.set_project_color("Work.", "cyan")
+    assert taskwarrior.project_colors() == {"Work": "cyan"}
+    # clearing an unknown project is a tolerated no-op
+    taskwarrior.clear_project_color("Ghost")
+    assert taskwarrior.project_colors() == {"Work": "cyan"}
