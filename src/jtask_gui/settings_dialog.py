@@ -7,10 +7,13 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -126,6 +129,31 @@ class SettingsDialog(QDialog):
         qw.setLayout(quiet_row)
         nform.addRow(t("settings.notify.quiet_hours"), qw)
 
+        tw_sec = QLabel(t("settings.taskwarrior"))
+        tw_sec.setObjectName("Section")
+        root.addWidget(tw_sec)
+        twform = QFormLayout()
+        root.addLayout(twform)
+
+        self._tw_bin = _PathRow(directory=False)
+        self._tw_bin.set_path(settings.task_bin)
+        twform.addRow(t("settings.tw.bin"), self._tw_bin)
+        self._tw_data = _PathRow(directory=True)
+        self._tw_data.set_path(settings.taskdata)
+        twform.addRow(t("settings.tw.data"), self._tw_data)
+        self._tw_rc = _PathRow(directory=False)
+        self._tw_rc.set_path(settings.taskrc)
+        twform.addRow(t("settings.tw.rc"), self._tw_rc)
+
+        hint = QLabel(t("settings.tw.hint"))
+        hint.setObjectName("Muted")
+        hint.setWordWrap(True)
+        twform.addRow("", hint)
+
+        self._reset_cols = QPushButton(t("settings.tw.reset_columns"))
+        self._reset_cols.clicked.connect(self._do_reset_columns)
+        twform.addRow("", self._reset_cols)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -153,14 +181,31 @@ class SettingsDialog(QDialog):
 
         new_lang = self._language.currentData()
         new_cal = self._calendar.currentData()
-        needs_restart = new_lang != s.language or new_cal != s.calendar
+        tw_bin, tw_data, tw_rc = (
+            self._tw_bin.path(), self._tw_data.path(), self._tw_rc.path(),
+        )
+        needs_restart = (
+            new_lang != s.language
+            or new_cal != s.calendar
+            or tw_bin != s.task_bin
+            or tw_data != s.taskdata
+            or tw_rc != s.taskrc
+        )
         s.language = new_lang
         s.calendar = new_cal
+        s.task_bin = tw_bin
+        s.taskdata = tw_data
+        s.taskrc = tw_rc
         s.sync()
 
         self.accept()
         if needs_restart:
             self._prompt_restart()
+
+    def _do_reset_columns(self) -> None:
+        self._settings.reset_columns()
+        self._reset_cols.setText(t("settings.tw.reset_columns.done"))
+        self._reset_cols.setEnabled(False)
 
     def _prompt_restart(self) -> None:
         box = QMessageBox(self.parent() or self)
@@ -171,10 +216,35 @@ class SettingsDialog(QDialog):
         box.addButton(t("settings.restart.later"), QMessageBox.ButtonRole.RejectRole)
         box.exec()
         if box.clickedButton() is now:
-            import sys
+            from .app import request_restart
 
-            from PyQt6.QtCore import QProcess
-            from PyQt6.QtWidgets import QApplication
+            request_restart()
 
-            QProcess.startDetached(sys.executable, sys.argv)
-            QApplication.quit()
+
+class _PathRow(QWidget):
+    """A line edit plus a browse button for a file (or directory) path."""
+
+    def __init__(self, *, directory: bool, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._directory = directory
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        self._edit = QLineEdit()
+        row.addWidget(self._edit, 1)
+        browse = QPushButton(t("btn.choose"))
+        browse.clicked.connect(self._browse)
+        row.addWidget(browse)
+
+    def _browse(self) -> None:
+        if self._directory:
+            picked = QFileDialog.getExistingDirectory(self, t("btn.choose"), self.path())
+        else:
+            picked, _ = QFileDialog.getOpenFileName(self, t("btn.choose"), self.path())
+        if picked:
+            self._edit.setText(picked)
+
+    def set_path(self, value: str) -> None:
+        self._edit.setText(value or "")
+
+    def path(self) -> str:
+        return self._edit.text().strip()

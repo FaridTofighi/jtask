@@ -38,6 +38,10 @@ packages = ["src/jtask", "src/jtask_gui"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The GUI layer is PyQt6-only. Pin pytest-qt to it so a stray PySide6 / PyQt5
+# in the environment can't be picked up first (that loads an older libQt6Core
+# and breaks `import PyQt6`). See docs/ENVIRONMENT.md.
+qt_api = "pyqt6"
 
 [tool.ruff]
 line-length = 100

@@ -15,8 +15,10 @@ def _row(model, col_key):
 
 
 def _plain(text: str) -> str:
-    """Strip the bidi isolate wrapper for readable assertions."""
-    return text.replace("⁦", "").replace("⁩", "")
+    """Strip the bidi isolate wrappers (LRI / FSI / PDI) for readable assertions."""
+    for ch in ("⁦", "⁨", "⁩"):
+        text = text.replace(ch, "")
+    return text
 
 
 def _display(model, row, key):
@@ -93,6 +95,29 @@ def test_completed_task_is_struck_through_and_dimmed():
     assert m.data(idx, Qt.ItemDataRole.FontRole).strikeOut() is True
     assert m.data(idx, Qt.ItemDataRole.ForegroundRole).name().lower() == \
         palette("شب")["completed"].lower()
+
+
+def test_description_direction_follows_content():
+    m = TaskTableModel()
+    m.set_tasks([
+        {"id": 1, "description": "Meeting with Arash", "status": "pending"},
+        {"id": 2, "description": "جلسه با آرش", "status": "pending"},
+    ])
+    col = _row(m, "description")
+
+    en = m.data(m.index(0, col), Qt.ItemDataRole.TextAlignmentRole)
+    fa = m.data(m.index(1, col), Qt.ItemDataRole.TextAlignmentRole)
+    assert en & int(Qt.AlignmentFlag.AlignLeft)
+    assert fa & int(Qt.AlignmentFlag.AlignRight)
+
+    # the display text is wrapped in a FIRST STRONG ISOLATE either way
+    for r in (0, 1):
+        disp = _display(m, r, "description")
+        assert disp.startswith("⁨") and disp.endswith("⁩")
+
+    # a date column stays right-aligned regardless
+    assert m.data(m.index(0, _row(m, "id")), Qt.ItemDataRole.TextAlignmentRole) \
+        & int(Qt.AlignmentFlag.AlignRight)
 
 
 def test_set_tasks_resets_model(qtbot):

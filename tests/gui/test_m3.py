@@ -151,6 +151,45 @@ def test_task_table_drag_produces_uuid_mime(qtbot):
     assert UUID_MIME  # format constant is shared with the drop targets
 
 
+def test_task_table_collapsible_group_headers(qtbot):
+    from jtask_gui.models.group_proxy import GROUP_HEADER_ROLE, GROUP_KEY_ROLE
+    from jtask_gui.models.task_model import TaskTableModel
+    from jtask_gui.widgets.task_table import TaskTable
+
+    model = TaskTableModel()
+    model.set_tasks([
+        {"id": 1, "uuid": "a", "description": "x", "status": "pending", "project": "خانه"},
+        {"id": 2, "uuid": "b", "description": "y", "status": "pending", "project": "خانه"},
+        {"id": 3, "uuid": "c", "description": "z", "status": "pending", "project": "کار"},
+    ])
+    table = TaskTable(model)
+    qtbot.addWidget(table)
+
+    table.set_group_key("project")
+    gm = table._group_model
+    # 2 header rows + 3 task rows
+    assert gm.rowCount() == 5
+    header_rows = gm.header_rows()
+    assert len(header_rows) == 2
+    assert gm.index(header_rows[0], 0).data(GROUP_HEADER_ROLE) is True
+
+    # collapse the first group -> its 2 children disappear
+    first_key = gm.index(header_rows[0], 0).data(GROUP_KEY_ROLE)
+    gm.toggle(first_key)
+    assert gm.rowCount() == 3  # 2 headers + 1 remaining child
+
+    # selection still resolves to real tasks, never a header
+    table.set_group_key("project")
+    table.selectRow(gm.header_rows()[-1] + 1)
+    assert table.selected_uuids() and all(
+        u in {"a", "b", "c"} for u in table.selected_uuids()
+    )
+
+    # back to flat
+    table.set_group_key("none")
+    assert table.model() is table._proxy
+
+
 def test_sidebar_project_drop_emits_reassign(qtbot):
     from PyQt6.QtCore import QMimeData
     from PyQt6.QtGui import QDropEvent
@@ -173,6 +212,103 @@ def test_sidebar_project_drop_emits_reassign(qtbot):
                     Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
     sb.dropEvent(ev)
     assert got == [(["u1", "u2"], "وب")]
+
+
+def test_sidebar_tag_drop_emits_add_tag(qtbot):
+    from PyQt6.QtCore import QMimeData, QPointF, Qt
+    from PyQt6.QtGui import QDropEvent
+
+    from jtask_gui.widgets.sidebar import UUID_MIME, Sidebar
+
+    sb = Sidebar()
+    qtbot.addWidget(sb)
+    sb.populate_tags([{"tag": "مهم", "count": 2}])
+    got = []
+    sb.tasksDroppedOnTag.connect(lambda u, tag: got.append((u, tag)))
+
+    rect = sb.visualItemRect(sb._tags.child(0))
+    mime = QMimeData()
+    mime.setData(UUID_MIME, b"a b c")
+    ev = QDropEvent(QPointF(rect.center()), Qt.DropAction.MoveAction, mime,
+                    Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    sb.dropEvent(ev)
+    assert got == [(["a", "b", "c"], "مهم")]
+
+
+def test_sidebar_tag_context_menu_signals(qtbot, monkeypatch):
+    import PyQt6.QtWidgets as W
+
+    from jtask_gui.widgets.sidebar import Sidebar
+
+    sb = Sidebar()
+    qtbot.addWidget(sb)
+    sb.populate_tags([{"tag": "کار", "count": 5}])
+    renamed, removed = [], []
+    sb.tagRenameRequested.connect(lambda o, n: renamed.append((o, n)))
+    sb.tagRemoveRequested.connect(removed.append)
+
+    made: list = []
+    monkeypatch.setattr(
+        W.QMenu, "addAction", lambda self, text: made.append(object()) or made[-1]
+    )
+    monkeypatch.setattr(
+        W.QInputDialog, "getText", staticmethod(lambda *a, **k: ("#urgent", True))
+    )
+    pos = sb.visualItemRect(sb._tags.child(0)).center()
+
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[0])   # first = rename
+    sb._context_menu(pos)
+    assert renamed == [("کار", "urgent")]  # '#' stripped
+
+    made.clear()
+    monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[1])   # second = remove
+    sb._context_menu(pos)
+    assert removed == ["کار"]
+
+
+def test_main_window_tag_management_flow(qtbot, tw_env, qapp, monkeypatch):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask import taskwarrior as tw
+    from jtask_gui import main_window as mw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    tw.add(["alpha task", "+draft"])
+    tw.add(["beta task", "+draft", "+keep"])
+
+    win = MainWindow(Settings())
+    qtbot.addWidget(win)
+
+    def _drain():
+        for _ in range(8):
+            qapp.processEvents()
+            wait_for_done(4000)
+            qapp.processEvents()
+
+    _drain()
+
+    # add: drop two tasks onto a tag row
+    uuids = [t["uuid"] for t in tw.export(["status:pending"])]
+    win._add_tag_to(uuids, "sprint")
+    _drain()
+    for u in uuids:
+        assert "sprint" in (tw.export([u])[0].get("tags") or [])
+
+    # rename: confirm dialog auto-accepts
+    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    win._rename_tag("draft", "review")
+    _drain()
+    tw.refresh_lookups()
+    assert "draft" not in tw.list_tags() and "review" in tw.list_tags()
+
+    # remove
+    win._remove_tag("keep")
+    _drain()
+    tw.refresh_lookups()
+    assert "keep" not in tw.list_tags()
 
 
 def test_calendar_day_drop_emits_gregorian_date(qtbot, tw_env, qapp):

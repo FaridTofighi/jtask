@@ -9,6 +9,7 @@ from jtask import taskwarrior
 
 from .. import icons
 from .. import tokens as tok
+from ..bidi import bind_auto_direction
 from ..i18n import t
 from ..quickadd import ParsedQuickAdd, parse_quick_add, preview_text
 from .autocomplete import make_token_completer
@@ -34,6 +35,7 @@ class QuickAddBar(QWidget):
         self._edit.setPlaceholderText(t("quickadd.bar.placeholder"))
         self._edit.textChanged.connect(self._update_preview)
         self._edit.returnPressed.connect(self._commit)
+        bind_auto_direction(self._edit)
         lay.addWidget(self._edit)
 
         self._preview = QLabel()

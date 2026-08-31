@@ -61,16 +61,22 @@ class NotificationManager(QObject):
         self._seen: dict[str, str] = {}  # uuid -> last state notified
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.poll)
+        self._stopped = False
         tray.messageClicked.connect(self.taskActivated)
 
     # --- lifecycle --------------------------------------------
 
     def start(self) -> None:
         interval = max(1, self._settings.notify_interval_min) * 60_000
+        self._stopped = False
         self._timer.start(interval)
         QTimer.singleShot(4000, self.poll)  # a first check shortly after launch
 
     def stop(self) -> None:
+        # Also blocks the pending ``QTimer.singleShot`` first-check and the
+        # ``_evaluate`` callback, so nothing schedules a worker after teardown
+        # has drained the pool (which would emit onto a freed signal → Aborted).
+        self._stopped = True
         self._timer.stop()
 
     def reconfigure(self) -> None:
@@ -81,7 +87,11 @@ class NotificationManager(QObject):
     # --- polling ---------------------------------------------
 
     def poll(self) -> None:
-        if not self._settings.notifications_enabled or self._in_quiet_hours():
+        if (
+            self._stopped
+            or not self._settings.notifications_enabled
+            or self._in_quiet_hours()
+        ):
             return
         submit(lambda: reports.report_next(["+PENDING"]), self._evaluate)
 

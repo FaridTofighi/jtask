@@ -84,6 +84,71 @@ def test_history_view_populates_from_real_task(win, qapp):
     assert any("یادداشت" in t for t in texts)
 
 
+def test_annotations_tab_lists_and_adds(win, qapp, qtbot):
+    from jtask import taskwarrior as tw
+    from jtask_gui.workers import wait_for_done
+
+    tw.add(["کار با یادداشت"])
+    uuid = tw.export()[0]["uuid"]
+    tw.command([uuid], "annotate", ["یادداشت یک"])
+
+    view = win._annotations_view
+    win._show_detail(tw.export([uuid])[0])
+    assert view._list.count() == 1
+    assert "یادداشت یک" in view._list.item(0).text()
+
+    # the edit form shows a read-only summary, not an editor
+    assert "یادداشت یک" in win._detail._ann_summary.text()
+
+    view._input.setText("یادداشت دو")
+    with qtbot.waitSignal(view.annotateRequested, timeout=1000) as sig:
+        view._add()
+    assert sig.args == [uuid, "یادداشت دو"]
+
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(4000)
+        qapp.processEvents()
+    assert len(tw.export([uuid])[0].get("annotations") or []) == 2
+
+
+def test_annotations_tab_empty_state(qapp):
+    from jtask_gui.widgets.annotations_view import AnnotationsView
+
+    v = AnnotationsView()
+    v.load_task({"uuid": "x", "description": "d"})
+    assert v._list.isHidden()
+    assert not v._empty.isHidden()
+
+    v.load_task({"uuid": "x", "annotations": [{"description": "n", "entry": ""}]})
+    assert not v._list.isHidden()
+    assert v._empty.isHidden()
+
+
+def test_bulk_annotate_from_table_menu(win, qapp, monkeypatch):
+    from jtask import taskwarrior as tw
+    from jtask_gui.workers import wait_for_done
+
+    tw.add(["کار الف"])
+    tw.add(["کار ب"])
+    uuids = [row["uuid"] for row in tw.export()]
+
+    monkeypatch.setattr(
+        "PyQt6.QtWidgets.QInputDialog.getText", lambda *a, **k: ("یادداشت گروهی", True)
+    )
+    monkeypatch.setattr("jtask_gui.main_window.confirm", lambda *a, **k: True)
+
+    win._annotate_bulk(uuids)
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(4000)
+        qapp.processEvents()
+
+    for u in uuids:
+        anns = tw.export([u])[0].get("annotations") or []
+        assert any(a["description"] == "یادداشت گروهی" for a in anns)
+
+
 def test_history_view_empty_state_for_taskless(qapp):
     from jtask_gui.widgets.history_view import TaskHistoryView
 
@@ -115,7 +180,7 @@ def test_raw_data_view_shows_json_without_derived_keys(qapp):
     assert '"due":' in text
 
 
-def test_show_detail_populates_all_three_tabs(win, qapp):
+def test_show_detail_populates_all_tabs(win, qapp):
     from jtask import taskwarrior as tw
     from jtask_gui.workers import wait_for_done
 
@@ -127,7 +192,7 @@ def test_show_detail_populates_all_three_tabs(win, qapp):
         wait_for_done(4000)
         qapp.processEvents()
 
-    assert win._detail_host.count() == 3
+    assert win._detail_host.count() == 4  # edit · annotations · history · raw
     assert "سه‌تب" in win._raw_view._text.toPlainText()
 
 

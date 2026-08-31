@@ -15,8 +15,15 @@ _APP = "jtask-gui"
 # created anywhere (including a bare ``QSettings()``) lands in the same store
 # regardless of import order.  ``Settings`` also always passes the pair
 # explicitly, so this is belt-and-braces.
-QCoreApplication.setOrganizationName(_ORG)
-QCoreApplication.setApplicationName(_APP)
+#
+# Only set what isn't set yet: re-setting the application name *after* a
+# QApplication exists makes Qt re-register the app-id with the desktop portal
+# ("Connection already associated with an application ID"). ``app.py`` sets
+# these before construction; here we just fill gaps.
+if not QCoreApplication.organizationName():
+    QCoreApplication.setOrganizationName(_ORG)
+if not QCoreApplication.applicationName():
+    QCoreApplication.setApplicationName(_APP)
 
 
 class Settings:
@@ -106,12 +113,14 @@ class Settings:
     # Dock layout ("state") is layout-direction-dependent, so it is namespaced by
     # language — an fa (sidebar right) layout must not be restored into an en
     # (sidebar left) window. Geometry (size/position) is direction-agnostic.
-    def _state_key(self) -> str:
-        return f"win/state_{self.language}"
+    def _state_key(self, language: str | None = None) -> str:
+        return f"win/state_{language or self.language}"
 
-    def save_window(self, geometry: QByteArray, state: QByteArray) -> None:
+    def save_window(
+        self, geometry: QByteArray, state: QByteArray, language: str | None = None
+    ) -> None:
         self._s.setValue("win/geometry", geometry)
-        self._s.setValue(self._state_key(), state)
+        self._s.setValue(self._state_key(language), state)
 
     def window_geometry(self) -> QByteArray | None:
         return self._s.value("win/geometry")
@@ -133,6 +142,43 @@ class Settings:
         hidden = self._s.value("cols/hidden", [], list) or []
         widths = self._s.value("cols/widths", {}, dict) or {}
         return list(order), list(hidden), {k: int(v) for k, v in widths.items()}
+
+    def reset_columns(self) -> None:
+        """Forget any persisted column order / visibility / widths."""
+        for key in ("cols/order", "cols/hidden", "cols/widths"):
+            self._s.remove(key)
+        self._s.sync()
+
+    # --- Taskwarrior binary / data location overrides ---
+    # Empty string = "use the ambient environment / PATH". When set, applied to
+    # os.environ in app.build_application() *before* the first `task` call.
+    # Changing any of these needs a restart (like language / calendar).
+    @property
+    def task_bin(self) -> str:
+        return self._s.value("tw/bin", "", str)
+
+    @task_bin.setter
+    def task_bin(self, value: str) -> None:
+        self._s.setValue("tw/bin", str(value or ""))
+        self._s.sync()
+
+    @property
+    def taskdata(self) -> str:
+        return self._s.value("tw/data", "", str)
+
+    @taskdata.setter
+    def taskdata(self, value: str) -> None:
+        self._s.setValue("tw/data", str(value or ""))
+        self._s.sync()
+
+    @property
+    def taskrc(self) -> str:
+        return self._s.value("tw/rc", "", str)
+
+    @taskrc.setter
+    def taskrc(self, value: str) -> None:
+        self._s.setValue("tw/rc", str(value or ""))
+        self._s.sync()
 
     # --- console dock ---
     @property

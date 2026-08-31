@@ -90,6 +90,8 @@ class BulkEditDialog(QDialog):
         form.addRow(t("word.scheduled"), self._scheduled)
         self._wait = _DateRow()
         form.addRow(t("word.wait"), self._wait)
+        self._until = _DateRow()
+        form.addRow(t("word.until"), self._until)
 
         root.addLayout(form)
 
@@ -128,6 +130,7 @@ class BulkEditDialog(QDialog):
             ("due", self._due),
             ("scheduled", self._scheduled),
             ("wait", self._wait),
+            ("until", self._until),
         ):
             token = row.token(attr)
             if token is not None:

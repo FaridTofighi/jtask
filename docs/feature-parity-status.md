@@ -99,12 +99,18 @@ Commits: `26e1c74` (M5+M6) · `ef8c519` (M7) · `473eb00` (M8) · M9 (this).
 - A **structured boolean filter builder** (`and`/`or`/`xor` with nesting) — the
   builder's raw-extras box takes them verbatim.
 
-## Smaller items deferred (noted in the matrix, not blocking)
+## Smaller items — status
 
-single-cell inline table edit · bulk annotate · back-dating a logged task's
-`end` · `until` in the bulk dialog · dedicated Annotations tab · recurrence-
+**Built in the 2026-08-31 verifiability + deferred-gaps mission:** `until` in
+the bulk dialog · dedicated Annotations tab · bulk annotate · recurrence-
 template browser · typed UDA rows in the filter builder · send-to-console from
-the command reference · a hook list/editor.
+the command reference · hook list / enable-disable editor · Settings
+binary/`TASKDATA`/`TASKRC` overrides + column reset · collapsible task-table
+group headers.
+
+**Still deferred (low value, non-blocking):** single-cell inline table edit ·
+back-dating a logged task's `end` · full in-app hook *body* editing (stays
+`$EDITOR`/console) · cross-session persistence of collapsed-group state.
 
 ---
 

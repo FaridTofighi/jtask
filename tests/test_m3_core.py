@@ -64,6 +64,20 @@ def test_run_custom_report_unknown_name_raises(tw):
         reports.run_custom_report("does-not-exist")
 
 
+def test_recurring_templates_lists_parents_only(tw):
+    taskwarrior.add(["آبیاری گلدان‌ها", "recur:weekly", "due:2024-10-01", "project:خانه"])
+    taskwarrior.add(["کار یک‌باره"])
+
+    templates = reports.recurring_templates()
+    assert [t["description"] for t in templates] == ["آبیاری گلدان‌ها"]
+    tpl = templates[0]
+    assert tpl["recur"] == "weekly"
+    assert tpl["project"] == "خانه"
+    assert tpl["due"] == "۱۴۰۳-۰۷-۱۰"
+    assert tpl["due_gregorian"]  # raw Taskwarrior stamp kept alongside
+    assert tpl["uuid"]
+
+
 def test_urgency_terms_parsed_from_info(tw):
     taskwarrior.add(["مهم", "project:X", "priority:H", "+next", "due:tomorrow"])
     uuid = taskwarrior.export(["1"])[0]["uuid"]

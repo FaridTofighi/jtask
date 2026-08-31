@@ -25,6 +25,21 @@ log = logging.getLogger("jtask_gui")
 
 _FONT_FILES = ("Vazirmatn-Regular.ttf", "Vazirmatn-Medium.ttf", "Vazirmatn-Bold.ttf")
 
+_restart_requested = False
+
+
+def request_restart() -> None:
+    """Ask ``main()`` to re-exec the process once Qt has fully shut down.
+
+    Re-exec (rather than ``QProcess.startDetached`` from the still-live process)
+    keeps it a single process with one fresh D-Bus connection — no
+    ``xdg-desktop-portal`` "connection already associated with an application
+    ID" warning, no brief second window.
+    """
+    global _restart_requested
+    _restart_requested = True
+    QApplication.quit()
+
 
 def _load_fonts() -> str:
     """Load bundled Vazirmatn; return the family name (falls back gracefully)."""
@@ -63,20 +78,83 @@ def app_icon() -> QIcon:
     return icon
 
 
+_QT_HANDLER_INSTALLED = False
+
+# Benign Qt noise we don't want on the user's console. These are cosmetic —
+# the app-id registration failing only affects how the desktop portal labels
+# jtask, not any functionality.
+_QT_SUPPRESS = (
+    "Failed to register with host portal",
+    "Could not register app ID",
+)
+
+
+def _install_qt_message_handler() -> None:
+    global _QT_HANDLER_INSTALLED
+    if _QT_HANDLER_INSTALLED:
+        return
+    from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
+
+    _levels = {
+        QtMsgType.QtDebugMsg: logging.DEBUG,
+        QtMsgType.QtInfoMsg: logging.INFO,
+        QtMsgType.QtWarningMsg: logging.WARNING,
+        QtMsgType.QtCriticalMsg: logging.ERROR,
+        QtMsgType.QtFatalMsg: logging.CRITICAL,
+    }
+
+    def handler(mode, _context, message: str) -> None:
+        if any(s in message for s in _QT_SUPPRESS):
+            log.debug("suppressed Qt message: %s", message)
+            return
+        logging.getLogger("jtask_gui.qt").log(_levels.get(mode, logging.INFO), "%s", message)
+
+    qInstallMessageHandler(handler)
+    _QT_HANDLER_INSTALLED = True
+
+
+def _apply_taskwarrior_overrides(settings) -> None:
+    """Push the user's binary / TASKDATA / TASKRC overrides into the environment
+    before anything calls ``task``. Empty settings leave the ambient env alone.
+    ``jtask.taskwarrior.binary()`` already honours ``JTASK_TASK_BIN``."""
+    import os
+
+    for value, var in (
+        (settings.task_bin, "JTASK_TASK_BIN"),
+        (settings.taskdata, "TASKDATA"),
+        (settings.taskrc, "TASKRC"),
+    ):
+        if value:
+            os.environ[var] = value
+            log.info("taskwarrior override: %s=%s", var, value)
+
+
 def build_application(argv: list[str] | None = None) -> tuple[QApplication, object]:
+    _install_qt_message_handler()
+
+    # Identity (name / org / desktop file) MUST be set before the QApplication is
+    # constructed. Qt registers the app-id with the desktop portal once at
+    # construction; re-setting any of these afterwards makes it re-register on
+    # the same D-Bus connection → the portal rejects it with a noisy
+    # ``qt.qpa.services: … Connection already associated with an application ID``.
+    # In production ``QApplication.instance()`` is None here so this is
+    # pre-construction; under in-process pytest-qt an app already exists, which
+    # is harmless (offscreen, no portal) and covered by the message handler.
+    QApplication.setApplicationName("jtask-gui")
+    QApplication.setOrganizationName("jtask")
+    QApplication.setDesktopFileName("jtask-gui")  # StartupWMClass / Wayland app-id
+
     app = QApplication.instance() or QApplication(
         argv if argv is not None else sys.argv
     )
-    app.setApplicationName("jtask-gui")
-    app.setApplicationDisplayName("jtask")
-    app.setOrganizationName("jtask")
-    app.setDesktopFileName("jtask-gui")  # StartupWMClass / Wayland app-id
+    app.setApplicationDisplayName("jtask")  # cosmetic; never touches the app-id
     app.setWindowIcon(app_icon())
 
     family = _load_fonts()
     app.setFont(QFont(family, 10))
 
     settings = Settings()
+    _apply_taskwarrior_overrides(settings)
 
     from .i18n import is_rtl, set_language
 
@@ -107,6 +185,21 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
         app.setStyleSheet(render_qss(settings.theme))
 
     window = MainWindow(settings)
+
+    def _teardown() -> None:
+        # Stop polling and drain in-flight workers before the process exits, so
+        # a background thread can't emit onto a freed signal object (which
+        # aborts the interpreter). Covers normal quit and the restart flow.
+        from . import workers
+
+        try:
+            window._notify.stop()
+        except Exception:  # noqa: BLE001
+            pass
+        workers.shutdown()
+
+    app.aboutToQuit.connect(_teardown)
+
     window.show()
     return app, window
 
@@ -123,7 +216,25 @@ def main(argv: list[str] | None = None) -> int:
     except OSError:
         pass
     app, _window = build_application(argv)
-    return app.exec()
+    rc = app.exec()
+    if _restart_requested:
+        _reexec()
+    return rc
+
+
+def _reexec() -> None:
+    """Replace this process with a fresh instance (used by the restart flow)."""
+    import os
+
+    args = [sys.executable, *sys.argv]
+    log.info("re-exec for restart: %s", args)
+    try:
+        os.execv(sys.executable, args)
+    except OSError:  # pragma: no cover - extremely unlikely
+        import subprocess
+
+        subprocess.Popen(args)  # noqa: S603
+        raise SystemExit(0) from None
 
 
 if __name__ == "__main__":  # pragma: no cover

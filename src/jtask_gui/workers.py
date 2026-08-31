@@ -16,7 +16,13 @@ import traceback
 from collections.abc import Callable
 from typing import Any
 
-from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QObject,
+    QRunnable,
+    QThreadPool,
+    pyqtSignal,
+)
 
 from jtask.errors import JtaskError
 
@@ -46,18 +52,29 @@ class TaskRunnable(QRunnable):
         self._fn = fn
         self.signals = _Signals()
 
+    def _emit(self, name: str, payload) -> None:
+        # During app teardown the inner QObject's C++ side can already be gone —
+        # *reaching* ``self.signals.<name>`` raises RuntimeError just as much as
+        # ``.emit()`` does. On a pool thread that unwinds out of ``run()`` and
+        # aborts the process. Nothing is listening at that point, so drop it.
+        try:
+            getattr(self.signals, name).emit(payload)
+        except RuntimeError:
+            pass
+
     def run(self) -> None:  # noqa: D401 - Qt entry point
         try:
-            result = self._fn()
-        except JtaskError as exc:
-            self.signals.failed.emit(exc)
-        except Exception as exc:  # pragma: no cover - defensive
-            log.error("background task failed:\n%s", traceback.format_exc())
-            self.signals.failed.emit(
-                JtaskError(t("worker.unexpected", exc=exc))
-            )
-        else:
-            self.signals.finished.emit(result)
+            try:
+                result = self._fn()
+            except JtaskError as exc:
+                self._emit("failed", exc)
+            except Exception as exc:  # pragma: no cover - defensive
+                log.error("background task failed:\n%s", traceback.format_exc())
+                self._emit("failed", JtaskError(t("worker.unexpected", exc=exc)))
+            else:
+                self._emit("finished", result)
+        except RuntimeError:  # signal object torn down mid-shutdown
+            pass
 
 
 def submit(
@@ -80,3 +97,21 @@ def submit(
 def wait_for_done(msecs: int = 5000) -> bool:
     """Block until all pooled tasks finish (used by tests)."""
     return _pool.waitForDone(msecs)
+
+
+def shutdown(msecs: int = 3000) -> None:
+    """Wait for in-flight workers before the app exits.
+
+    Call this from ``QApplication.aboutToQuit`` (covers both a normal quit and
+    the language/calendar restart). Without it a worker thread can outlive the
+    event loop and emit onto a freed signal object → ``Aborted``.
+
+    We do *not* drop the ``_live`` refs by hand — a worker that just finished
+    has a queued ``finished``/``failed`` emission still in the event queue, and
+    freeing its signal object before that is delivered segfaults. Draining the
+    queue lets each runnable retire itself.
+    """
+    _pool.waitForDone(msecs)
+    app = QCoreApplication.instance()
+    if app is not None:
+        app.processEvents()

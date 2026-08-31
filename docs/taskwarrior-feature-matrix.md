@@ -41,7 +41,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `diagnostics` | ✅ Diagnostics tab — full `task diagnostics`, copy + save-to-file (M9) | ✅ | — | Implemented |
 | `information` / `task <id>` | ✅ detail panel + **History tab** (modification log → Jalali/Persian, raw line kept) + **Raw Data tab** (stored JSON) (M6) | ✅ | — | Implemented |
 | `version` | ✅ detected version in the status bar ("Taskwarrior 3.5.0") + Diagnostics tab (M9) | ✅ | — | Implemented |
-| `help` | ✅ "راهنمای فرمان‌ها" tab — searchable table parsed from `task help` (M9) | ✅ | send-to-console shortcut → later | Implemented |
+| `help` | ✅ "راهنمای فرمان‌ها" tab — searchable table parsed from `task help`, **"فرستادن به کنسول"** on the selected row | ✅ | — | Implemented |
 | `news` | ❌ | ✅ | (low value) console-only, documented | Console-only |
 | `execute` | ❌ | ✅ | intentionally console-only (arbitrary shell) | Console-only |
 | `calendar` | 🟡 CLI has it; GUI has its own Jalali calendar report (M2) | ✅ | GUI calendar is better; TW `calendar` stays console | Implemented |
@@ -59,19 +59,19 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 |---|---|---|---|
 | description | ✅ detail + quick-add | ✅ table + detail | — |
 | project (dotted) | ✅ combo + drag-drop + **bulk edit** (M5) | ✅ table + sidebar tree | single-cell inline edit → later |
-| tags | ✅ chip editor + **bulk add/remove** (M5) | ✅ table | — |
+| tags | ✅ chip editor + **bulk add/remove** + **sidebar tag management** (drop tasks on a tag to add it; right-click a tag → rename / remove across every task) | ✅ table | — |
 | priority | ✅ combo + **bulk** (M5) | ✅ table | — |
-| due / scheduled / wait / until | ✅ Jalali pickers + **bulk date change / clear** (M5) | ✅ table (Jalali) | `until` not yet in the bulk dialog |
+| due / scheduled / wait / until | ✅ Jalali pickers + **bulk date change / clear** (due·scheduled·wait·**until**) | ✅ table (Jalali) | — |
 | status | 🟡 via done/delete/start actions | ✅ table | — |
-| recur / rtype / mask / imask | ✅ recurrence builder (M3) | 🟡 indicator icon | recurrence-template browser → later (not in M8) |
+| recur / rtype / mask / imask | ✅ recurrence builder + **template browser** (Add Task → "از الگوی موجود…") | 🟡 indicator icon | — |
 | depends | ✅ picker + dep graph (M3) | ✅ indicator + graph | — |
-| annotations | ✅ detail + shown in History tab | 🟡 indicator icon | dedicated Annotations tab → later |
+| annotations | ✅ detail summary + **dedicated Annotations tab** + **bulk annotate** (context menu) + shown in History tab | 🟡 indicator icon | — |
 | urgency | ✅ read-only + "چرا؟" breakdown | ✅ table column | — |
 | entry / modified / end | ✅ audit line + **History tab** anchors (Jalali) (M6) | 🟡 | — |
 | start | ✅ start/stop + **live timer indicator** with elapsed (M6) | ✅ status bar | — |
 | uuid / id / parent | ✅ shown + **Raw Data tab** (M6) | ✅ | — |
 | template | ❌ | ❌ | rare; console-only, documented |
-| UDAs (any) | ✅ dynamic widgets in detail (M1) + **UDA Manager** CRUD of definitions (M8) | ✅ (if a column) | typed UDA rows in the filter builder → later |
+| UDAs (any) | ✅ dynamic widgets in detail (M1) + **UDA Manager** CRUD (M8) + **typed UDA rows in the filter builder** | ✅ (if a column) | — |
 
 ## C. Filtering grammar
 
@@ -84,7 +84,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `and` / `or` / `xor` / parentheses | 🟡 the builder's raw-extras box takes them verbatim, labelled as such (M9) | ✅ | a structured boolean builder is out of scope — documented |
 | id / id-range / uuid | ✅ dedicated "شناسه / UUID" field in the builder (M9) | ✅ | — |
 | virtual tags (`+OVERDUE`, `+BLOCKED`, …) | ✅ one-click picker in the builder (9 common tags) + quick views (M9) | ✅ | — |
-| UDA filters | 🟡 via the builder's raw-extras box | ✅ | typed UDA rows in the builder → later |
+| UDA filters | ✅ one typed row per UDA in the builder (string / enum / numeric+op / date+op) | ✅ | — |
 
 The raw filter bar already accepts **any** Taskwarrior filter string verbatim
 (with autocomplete), so no user is ever blocked — the gaps above are
@@ -95,12 +95,13 @@ convenience, not capability.
 | Area | Native GUI | Gap → milestone |
 |---|---|---|
 | theme / Persian digits / due-soon threshold / notifications | ✅ settings dialog (persisted) | — |
+| `task` binary path / `TASKDATA` / `TASKRC` overrides + column-layout reset | ✅ settings dialog "Taskwarrior" section (persisted, restart-applied via `os.environ`) | — |
 | Taskwarrior `rc.*` settings (dateformat, weekstart, confirmation, recurrence, hooks, verbosity, sync.*, color.*, …) | ✅ Configuration Manager (M8) — current / default / overridden, write/reset via `task config` | — |
 | contexts | ✅ Context Manager (M8) — full CRUD + activate + filters | — |
 | UDA definitions | ✅ UDA Manager (M8) — CRUD (name / label / type / values / default); delete warns data is kept | — |
 | report definitions | ✅ Reports Manager (M8) — all reports listed; custom reports editable (columns / labels / sort / filter / dateformat / description); built-ins read-only, overriding one needs explicit confirm | — |
 | aliases | 🟡 visible in the Config Manager (`alias.*` rows) | dedicated list in Command Browser → M9 |
-| hooks | 🟡 the Diagnostics tab shows the Hooks section of `task diagnostics` (location + enabled) | a dedicated hook list/editor → later |
+| hooks | ✅ **Hook Manager** (Manager dialog, 5th tab) — lists installed hooks with event + status, enable/disable (executable bit), reveal in folder; body editing stays `$EDITOR`/console | — |
 
 ---
 

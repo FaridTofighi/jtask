@@ -92,3 +92,30 @@ def test_report_set_edits_custom_report(tw_env):
 def test_builtin_reports_constant():
     assert "next" in taskwarrior.BUILTIN_REPORTS
     assert "mine" not in taskwarrior.BUILTIN_REPORTS
+
+
+def test_hooks_list_and_toggle(tw_env):
+    import os
+
+    hooks_dir = tw_env / "td" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    script = hooks_dir / "on-add-notify.sh"
+    script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    os.chmod(script, 0o755)
+    disabled = hooks_dir / "on-modify-audit.py"
+    disabled.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    os.chmod(disabled, 0o644)
+
+    hooks = {h["name"]: h for h in taskwarrior.hooks()}
+    assert hooks["on-add-notify.sh"]["event"] == "on-add"
+    assert hooks["on-add-notify.sh"]["enabled"] is True
+    assert hooks["on-modify-audit.py"]["enabled"] is False
+
+    taskwarrior.hook_set_enabled(str(disabled), True)
+    assert os.access(str(disabled), os.X_OK)
+    taskwarrior.hook_set_enabled(str(script), False)
+    assert not os.access(str(script), os.X_OK)
+
+
+def test_hooks_empty_when_no_directory(tw_env):
+    assert taskwarrior.hooks() == []

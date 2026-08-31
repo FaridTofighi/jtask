@@ -5,14 +5,17 @@ from __future__ import annotations
 import datetime
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from .. import icons
 from ..calendar_system import active
 from ..i18n import t
+from ..theme import palette
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
+_SECTION_ROLE = Qt.ItemDataRole.UserRole + 6
 UUID_MIME = "application/x-jtask-uuids"
 
 
@@ -54,6 +57,9 @@ class Sidebar(QTreeWidget):
     activated = pyqtSignal(dict)
     contextChangeRequested = pyqtSignal(str)  # "" clears the context
     tasksDroppedOnProject = pyqtSignal(list, str)  # (uuids, project)
+    tasksDroppedOnTag = pyqtSignal(list, str)  # (uuids, tag) — add the tag
+    tagRenameRequested = pyqtSignal(str, str)  # (old, new) — across all tasks
+    tagRemoveRequested = pyqtSignal(str)  # tag — strip from all tasks
     savedFilterActivated = pyqtSignal(str)  # raw filter string
     savedFilterDeleteRequested = pyqtSignal(str)  # name
     savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
@@ -109,9 +115,11 @@ class Sidebar(QTreeWidget):
     def _section(self, title: str) -> QTreeWidgetItem:
         item = QTreeWidgetItem([title])
         item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        item.setData(0, _SECTION_ROLE, True)
         font = item.font(0)
         font.setBold(True)
         font.setPointSizeF(font.pointSizeF() - 1)
+        font.setLetterSpacing(font.SpacingType.PercentageSpacing, 105)
         item.setFont(0, font)
         self.addTopLevelItem(item)
         return item
@@ -126,12 +134,16 @@ class Sidebar(QTreeWidget):
         return item
 
     def retint(self) -> None:
-        """Re-tint every row icon for the active theme."""
-        it = self._iter_items(self.invisibleRootItem())
-        for item in it:
+        """Re-tint row icons and section captions for the active theme."""
+        pal = palette(icons._theme)
+        muted = QColor(pal["text_muted"])
+        for item in self._iter_items(self.invisibleRootItem()):
             glyph = item.data(0, _ICON_ROLE)
             if glyph:
                 item.setIcon(0, icons.icon(glyph, "text_muted"))
+            if item.data(0, _SECTION_ROLE):
+                item.setForeground(0, muted)
+        self._hint_colour = muted
 
     def _iter_items(self, root):
         for i in range(root.childCount()):
@@ -147,6 +159,7 @@ class Sidebar(QTreeWidget):
             label = f"{row['project']}  ·  {row['open']}"
             spec = {
                 "kind": "filter",
+                "drop": "project",
                 "title": row["project"],
                 "filter": [f"project:{row['project']}", "status:pending"],
             }
@@ -161,6 +174,8 @@ class Sidebar(QTreeWidget):
                 f"#{row['tag']}  ·  {row['count']}",
                 {
                     "kind": "filter",
+                    "drop": "tag",
+                    "tag": row["tag"],
                     "title": f"#{row['tag']}",
                     "filter": [f"+{row['tag']}", "status:pending"],
                 },
@@ -186,8 +201,8 @@ class Sidebar(QTreeWidget):
         self._saved.takeChildren()
         if not filters:
             hint = QTreeWidgetItem([t("sidebar.saved.hint")])
-            hint.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            hint.setForeground(0, self.palette().brush(self.foregroundRole()))
+            hint.setFlags(Qt.ItemFlag.NoItemFlags)
+            hint.setForeground(0, getattr(self, "_hint_colour", QColor("#888")))
             self._saved.addChild(hint)
             return
         for name, raw in sorted(filters.items()):
@@ -207,8 +222,11 @@ class Sidebar(QTreeWidget):
     def dragMoveEvent(self, event):  # noqa: N802
         item = self.itemAt(event.position().toPoint())
         spec = item.data(0, _SPEC_ROLE) if item else None
-        if event.mimeData().hasFormat(UUID_MIME) and spec and spec.get("kind") == "filter" \
-                and spec.get("title") and "project:" in (spec.get("filter") or [""])[0]:
+        if (
+            event.mimeData().hasFormat(UUID_MIME)
+            and spec
+            and spec.get("drop") in ("project", "tag")
+        ):
             event.acceptProposedAction()
         else:
             event.ignore()
@@ -216,22 +234,47 @@ class Sidebar(QTreeWidget):
     def dropEvent(self, event):  # noqa: N802
         item = self.itemAt(event.position().toPoint())
         spec = item.data(0, _SPEC_ROLE) if item else None
-        if not spec or spec.get("kind") != "filter":
+        if not spec:
             return
         uuids = bytes(event.mimeData().data(UUID_MIME)).decode().split()
-        project = spec["title"]
-        if uuids and project:
-            self.tasksDroppedOnProject.emit(uuids, project)
+        if not uuids:
+            return
+        if spec.get("drop") == "project" and spec.get("title"):
+            self.tasksDroppedOnProject.emit(uuids, spec["title"])
+            event.acceptProposedAction()
+        elif spec.get("drop") == "tag" and spec.get("tag"):
+            self.tasksDroppedOnTag.emit(uuids, spec["tag"])
             event.acceptProposedAction()
 
-    # --- context menu (saved filters) ------------------------
+    # --- context menu (saved filters + tags) -----------------
 
     def _context_menu(self, pos) -> None:
         from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
 
         item = self.itemAt(pos)
         spec = item.data(0, _SPEC_ROLE) if item else None
-        if not spec or spec.get("kind") != "saved":
+        if not spec:
+            return
+
+        if spec.get("drop") == "tag":
+            tag = spec["tag"]
+            menu = QMenu(self)
+            act_rename = menu.addAction(t("sidebar.menu.tag_rename"))
+            act_remove = menu.addAction(t("sidebar.menu.tag_remove"))
+            chosen = menu.exec(self.viewport().mapToGlobal(pos))
+            if chosen == act_rename:
+                new, ok = QInputDialog.getText(
+                    self, t("sidebar.tag_rename.title"),
+                    t("sidebar.tag_rename.label", tag=tag), text=tag,
+                )
+                new = new.strip().lstrip("#+")
+                if ok and new and new != tag:
+                    self.tagRenameRequested.emit(tag, new)
+            elif chosen == act_remove:
+                self.tagRemoveRequested.emit(tag)
+            return
+
+        if spec.get("kind") != "saved":
             return
         name = spec["name"]
         menu = QMenu(self)

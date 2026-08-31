@@ -353,6 +353,21 @@ def test_bulk_edit_dialog_clear_priority_and_date(qapp):
     assert "due:" in mods
 
 
+def test_bulk_edit_dialog_until_row(qapp):
+    import datetime
+
+    from jtask_gui.widgets.bulk_edit import BulkEditDialog
+
+    d = BulkEditDialog(2)
+    d._until._clear.setChecked(True)
+    assert "until:" in d.mods()
+
+    d2 = BulkEditDialog(2)
+    d2._until._picker.set_value(datetime.date(2026, 9, 4))
+    tok = [m for m in d2.mods() if m.startswith("until:")]
+    assert tok == ["until:2026-09-04"]
+
+
 def test_delete_flow_confirms_then_deletes(win, qapp, monkeypatch):
     from jtask import taskwarrior as tw
     from jtask_gui import main_window as mw
@@ -500,6 +515,37 @@ def test_task_form_recur_requires_due(qapp):
     d._dates["due"].set_value(jdatetime.date(1403, 7, 20))
     d._revalidate()
     assert d._ok.isEnabled()
+
+
+def test_task_form_recur_template_fills_fields(qapp, qtbot, monkeypatch):
+    from jtask_gui.widgets.task_form import TaskFormDialog
+    from jtask_gui.workers import wait_for_done
+
+    d = TaskFormDialog("add")
+    qtbot.addWidget(d)
+
+    monkeypatch.setattr(
+        "jtask.reports.recurring_templates",
+        lambda *a, **k: [
+            {"description": "آبیاری", "recur": "weekly", "project": "خانه",
+             "tags": ["گیاه"], "due": "", "due_gregorian": "", "uuid": "u1"}
+        ],
+    )
+    monkeypatch.setattr(
+        "PyQt6.QtWidgets.QInputDialog.getItem",
+        lambda *a, **k: ("آبیاری  ·  weekly", True),
+    )
+
+    d._pick_recur_template()
+    for _ in range(5):
+        qapp.processEvents()
+        wait_for_done(4000)
+        qapp.processEvents()
+
+    assert d._description.text() == "آبیاری"
+    assert d._project.currentText() == "خانه"
+    assert "گیاه" in d._tags.tags()
+    assert d._recur.value() == "weekly"
 
 
 def test_task_form_log_mode_runs_log(qapp, monkeypatch):
