@@ -1689,9 +1689,21 @@ cross-session persistence of collapsed-group state (retained within a session).
 
 # Mission "m" — visible UI modernization
 
+> **Process note (added retroactively, after the mission-d and mission-m
+> audits).** Unlike every other body of work in this project (M1–M9, the i18n
+> mission, mission d), mission "m" did **not** go through Phase 0 → proposed
+> scope → explicit approval → per-milestone evidence. It was applied directly
+> from informal conversational suggestions ("modernize the UI"), in a single
+> squashed commit (`7240e69`) bundled with unrelated work, and added **zero
+> guard tests of its own**. A confirmed regression it introduced (the per-cell
+> selection border, `78e88de`) was found only by accident while chasing an
+> unrelated bug, which prompted a full retroactive audit — findings below.
+> **Going forward, no implementation work proceeds without proposal → explicit
+> approval → implementation with evidence, regardless of how small the ask.**
+
 Mission **d** standardized the design system but was deliberately invisible
 (tokenization, guards, docs — "pixel-identical bar data drift"). This pass makes
-the redesign actually *show*, keeping every guard test green.
+the redesign actually *show*.
 
 - **Palette (`theme.py`) — elevation layers + a real accent.** Dark and light
   both rebuilt as `bg < bg_alt < surface < elevated` layers so panels read as
@@ -1716,11 +1728,44 @@ the redesign actually *show*, keeping every guard test green.
 - **Sidebar (`sidebar.py`).** Section captions render in `text_muted` with
   slight tracking; the saved-filter hint is muted and non-interactive.
 
-Suite **464 passed / 1 skipped**, ruff clean. The fa snapshot changed only by
-the one removed toolbar label; `test_qss_uses_tokens` / `test_theme.py` / the
-contrast checks all green. The `_i18n_util` snapshot normaliser now also masks
-absolute paths (`‹path›`) so the Hook Manager's location label can't make the
-gate machine-specific.
+## Mission "m" — retroactive audit
+
+Full line-by-line audit of the mission-m slice of `7240e69` + `78e88de`, held
+to the mission-d evidence standard. Full suite at audit time: **478 passed /
+1 skipped** (the skip is `test_environment.py` on Taskwarrior 3.4.1 < 3.5 — a
+Phase-A guard, unrelated). All 101 prior-convention guard tests (d1–d7 + i1–i6
++ bidi + snapshot + hardcoded-string) pass against the post-mission-m code.
+
+| Area | Change | Class | Status |
+|---|---|---|---|
+| `app.qss` inputs | `QComboBox::down-arrow { image: none }` — every combobox lost its dropdown arrow, reads as a plain text field | **regression** | **fixed in this audit** (rule removed → d7 default arrow) |
+| `app.qss` toolbuttons | `QToolButton::menu-indicator { image: none }` — the data/`⋯` menu buttons lost their ▾ caret | **regression** (minor) | **fixed in this audit** (rule removed) |
+| `app.qss` table | `QTableView::item:selected { border-left: 2px solid @primary@ }` → per-cell boxed grid | **regression** | already fixed (`78e88de`) |
+| `theme.py` palette | Accent changed **teal → blue** (`#6cc7dd`/`#0a6e8f` → `#6ea8fe`/`#3565d0`); both palettes fully re-toned; new `border_soft`/`primary_soft`/`focus` roles | needs-decision (identity change) + improvement (elevation layers) | **user decision** |
+| `app.qss` table | Zebra striping removed (`alternate-background-color` = `surface`) | needs-decision (M1 spec said "alternate rows") | **user decision** |
+| `column_spec.py` | `_status` returns `""` for `pending` — the Status column is blank on the common case | needs-decision (changes a documented column's content) | **user decision** |
+| `column_spec.py` | `_tags` drops the `#` prefix (`#work` → `work`) | needs-decision (Taskwarrior convention) | **user decision** |
+| `task_model.py` | `_foreground` — `id`/`urgency` render muted, `priority` colour-coded (H→red, M→amber); no test | needs-decision (visual change to core table, untested) | **user decision** |
+| `app.qss` toolbar | Toolbar bg `@bg_alt@` → `@bg@` (blends with window, no longer a distinct bar); status bar likewise | needs-decision (visual change to d4-stabilised area) | **user decision** |
+| `app.qss` sidebar | Active nav row `@primary@` full-bleed → `@primary_soft@` tint + `@primary@` bold text; `#ReportsEntry` de-boxed | needs-decision | **user decision** |
+| `app.qss` buttons | `:hover` border `@primary@`→`@text_muted@`; `#Primary:pressed` / `#Danger:pressed` lose the distinct `@accent@` press colour | needs-decision (minor) | **user decision** |
+| `app.qss` misc | scrollbars 12→10 px, progress-bar/chip radius `@r_md@`→`@r_pill@`, tooltip border `@primary@`→`@border@` | needs-decision (minor cosmetic) | **user decision** |
+| `task_model.py` | `_halign` — per-column alignment follows layout direction; **was `AlignRight` for everything, wrong for LTR/English** | **improvement / fix** (closed an i3 gap; partial guard via the bidi test) | keep |
+| `main_window.py` toolbar | 3 `QLabel:` prefixes removed; `_group_combo.setMinimumWidth(150)`. Deliberate and correct — controls self-describe via placeholder / first-item text. Leaves 3 orphaned catalog keys (`toolbar.quick_add/filter/group_by`) and a dead `QLabel#ToolLabel` QSS rule. | improvement | keep (catalog/QSS cruft: harmless, cleanup optional) |
+| `column_spec.py` | Column width tweaks (`priority` 80→96 fixes the "Mediu…" truncation, etc.) | improvement | keep |
+| `app.qss` elevation | Card surfaces `@bg@`→`@surface@`, dividers `@border@`→`@border_soft@`, menus/tooltips/toast `@surface@`→`@elevated@` | improvement (elevation-layer consistency) | keep |
+| `app.qss` buttons | **new** `QPushButton#Primary:disabled` rule — a disabled primary button (Add-Task OK etc.) now actually looks disabled | improvement (d3-adjacent) | keep |
+| `sidebar.py` | Section captions muted + `letter-spacing 105%`; saved-filter hint made non-interactive + muted | improvement | keep |
+| `tests/gui/_i18n_util.py` | Snapshot normaliser masks absolute paths (`‹path›`) — driven by the Hook Manager (Phase B); only touches `~/.taskrc` in 2 catalog strings | improvement | keep |
+| — | **Mission m added zero guard tests.** `_halign` got incidental coverage from a bidi test; `_foreground` colouring and `_status` blanking have **none**; `test_task_table_selection.py` (7) exists only because `78e88de` fixed a regression found by chance | **process finding** | for the record |
+
+**Not touched by mission m (verified):** every Taskwarrior-facing verb
+(`add`/`modify`/`done`/`undo`/`purge`/`export`/`sync`/`config`/`context`), the
+`_RC` overrides, `taskwarrior.run()`, the detail-panel `_save()` diff-and-modify
+path, and every `report_*` / `shape_*` in `reports.py`. Mission m's own slice is
+presentation-only; the new `taskwarrior` functions in `7240e69`
+(`hooks*`, `tag_count`/`rename_tag`/`remove_tag`) belong to Phase B / tag
+management and each carries tests (`test_config_surface.py`, `test_tag_ops.py`).
 
 ## Sidebar tag management
 

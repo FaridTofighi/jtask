@@ -84,7 +84,6 @@ QToolButton {
 QToolButton:hover { background-color: @hover@; }
 QToolButton:pressed { background-color: @selection@; }
 QToolButton:checked { background-color: @primary_soft@; border-color: @primary@; }
-QToolButton::menu-indicator { image: none; width: 0; }
 
 /* ============================ inputs ======================== */
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTimeEdit {
@@ -112,7 +111,6 @@ QLineEdit#QuickAdd {
 QLineEdit#FilterEdit { font-family: "Vazirmatn"; }
 
 QComboBox::drop-down { border: none; width: 22px; }
-QComboBox::down-arrow { image: none; width: 0; height: 0; }
 QTimeEdit[compact="true"] { padding: @sp_6@ @sp_6@; }
 QComboBox QAbstractItemView {
     background-color: @elevated@;
