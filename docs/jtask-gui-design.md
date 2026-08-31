@@ -1501,3 +1501,31 @@ two new tooltip strings). Toolbar + flat `⋯` menu screenshots captured.
 
 _Next: d5 — priority بحرانی→بالا + glossary + baselines; dep-graph node sizing;
 bidi-safe paths._
+
+## d5 — implementation log (complete)
+
+### §5 — priority terminology (reverses an i5 choice)
+`priority H` fa **«بحرانی» → «بالا»** across all five key families
+(`priority.*`, `detail.*`, `fb.*`, `quickadd.*`, `col.*`); en stays "High".
+"بحرانی/Critical" implied a fourth level Taskwarrior doesn't have.
+`docs/i18n-glossary.md §1` + §8 updated; fa snapshot regenerated (one line).
+Guard: `test_d5` asserts «بالا»/"High" everywhere and no "بحرانی"/"Critical"
+in any priority value.
+
+### §7 — dependency-graph node text
+`_node()` now draws a `QGraphicsSimpleTextItem`, one line, `elidedText(…,
+ElideRight, _W − 2·SP_8)` — the label can never spill past the rounded-rect
+border. The full `#id  description` is the item's tooltip (hover). Node radius
+tokenised (`R_MD`).
+
+### §8 — bidi-safe LTR-structured strings in RTL
+`bidi_isolate()` now wraps: the Sync Manager's server **path/URL**
+(`_show_status`) and its last-sync timestamp, and the export "saved to {path}"
+status toast. Guard checks the path sits between `U+2066…U+2069` in the
+rendered line.
+
+### Evidence
+Full suite **424 passing** (420 + 4), ruff + mypy clean.
+
+_Next: d6 — toast/snackbar for positive non-destructive feedback;
+empty-state consistency pass._

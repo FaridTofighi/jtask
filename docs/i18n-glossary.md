@@ -26,9 +26,9 @@ it ships. `tests/gui/test_i5_english_catalog.py` enforces coverage, the
 | project | پروژه | Project | ✓ `project` (dotted hierarchy) |
 | tags | برچسب‌ها | Tags | ✓ `tags` (`+tag` / `-tag`) |
 | priority | اولویت | Priority | ✓ `priority` — values `H`/`M`/`L` |
-| priority H | زیاد / بحرانی\* | High | ✓ (`priority:H`) |
+| priority H | بالا | High | ✓ (`priority:H`) |
 | priority M | متوسط | Medium | ✓ (`priority:M`) |
-| priority L | کم / پایین\* | Low | ✓ (`priority:L`) |
+| priority L | پایین | Low | ✓ (`priority:L`) |
 | due | سررسید | Due | ✓ `due` |
 | scheduled | زمان‌بندی | Scheduled | ✓ `scheduled` |
 | wait | تاریخ انتظار / انتظار\* | Wait | ✓ `wait` |
@@ -48,7 +48,8 @@ it ships. `tests/gui/test_i5_english_catalog.py` enforces coverage, the
 
 \* jtask historically used two Persian wordings for priority/wait in different
 screens (detail panel vs. Add/bulk dialogs). i5 **unifies** to one per language:
-proposed fa = «بحرانی / متوسط / پایین», en = «High / Medium / Low»; wait = «تاریخ انتظار» / «Wait».
+unified fa = «بالا / متوسط / پایین», en = «High / Medium / Low»; wait = «تاریخ انتظار» / «Wait».
+(«بحرانی» was tried in i5 then reverted in d5 — «Critical» implies a 4th level Taskwarrior doesn't have.)
 
 ### Statuses (TW `status:` values)
 
@@ -204,7 +205,7 @@ Gregorian mode uses the locale's real names (January…, Monday…).
 ## 8. Wording clean-ups i5 must make (single wording per concept)
 
 - priority H/M/L: pick one fa set + one en set (see §1 note).
-  **Done (i5):** fa = «بحرانی / متوسط / پایین», en = «High / Medium / Low» —
+  **Done (i5, revised d5):** fa = «بالا / متوسط / پایین», en = «High / Medium / Low» —
   across `priority.*`, `detail.priority.*`, `fb.priority.*`, `quickadd.priority.*`,
   `col.priority.*`.
 - "completed" status: «انجام‌شده» everywhere (drop «تکمیل‌شده» as a *status*;

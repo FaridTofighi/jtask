@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali, taskwarrior
+from jtask.rtl import bidi_isolate
 
 from .. import tokens as tok
 from ..i18n import t
@@ -84,7 +85,7 @@ class SyncManagerDialog(QDialog):
             try:
                 d = dt.datetime.fromisoformat(raw)
                 shown = jalali.from_local(d.strftime("%Y-%m-%d %H:%M:%S"), "long")
-                self._last.setText(t("sync.last_success", shown=shown))
+                self._last.setText(t("sync.last_success", shown=bidi_isolate(shown)))
                 return
             except ValueError:
                 pass
@@ -97,8 +98,11 @@ class SyncManagerDialog(QDialog):
             self._go.setEnabled(False)
             return
         self._status.setText(t("sync.ready"))
+        # the target is a URL or a filesystem path — an LTR-structured token
+        # that must stay atomic inside the RTL line
         self._detail.setText(
-            f"{t(_KIND_KEY.get(st['kind'], st['kind']))}: {st['target']}"
+            f"{t(_KIND_KEY.get(st['kind'], st['kind']))}: "
+            f"{bidi_isolate(st['target'])}"
         )
         self._go.setEnabled(True)
 

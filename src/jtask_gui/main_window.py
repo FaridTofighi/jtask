@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from jtask import reports, taskwarrior
 from jtask.errors import TaskCommandError
-from jtask.rtl import set_digit_mode
+from jtask.rtl import bidi_isolate, set_digit_mode
 
 from . import fmt, icons
 from .i18n import t
@@ -593,7 +593,8 @@ class MainWindow(QMainWindow):
             self._end_busy()
             self._op_status.success(t("msg.export.done"))
             self.statusBar().showMessage(
-                t("msg.export.saved", n=fmt.num(res["count"]), path=res["path"]), 5000
+                t("msg.export.saved", n=fmt.num(res["count"]),
+                  path=bidi_isolate(res["path"])), 5000
             )
 
         submit(functools.partial(write_export, spec), done, self._op_failed)

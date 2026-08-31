@@ -3,19 +3,28 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QFontMetrics,
+    QPainter,
+    QPainterPath,
+    QPen,
+)
 from PyQt6.QtWidgets import (
     QGraphicsPathItem,
     QGraphicsScene,
-    QGraphicsTextItem,
+    QGraphicsSimpleTextItem,
     QGraphicsView,
     QLabel,
 )
 
+from .. import tokens as tok
 from ..i18n import t
 from ..theme import palette
 
 _W, _H, _GAP_X, _GAP_Y = 150, 44, 24, 70
+_PAD = tok.SP_8
 
 
 class DependencyGraph(QGraphicsView):
@@ -123,7 +132,7 @@ class DependencyGraph(QGraphicsView):
 
     def _node(self, scene, task, x, y, colour, pal):
         path = QPainterPath()
-        path.addRoundedRect(QRectF(x, y, _W, _H), 8, 8)
+        path.addRoundedRect(QRectF(x, y, _W, _H), tok.R_MD, tok.R_MD)
         item = QGraphicsPathItem(path)
         item.setBrush(QBrush(QColor(pal["surface"])))
         pen = QPen(QColor(colour))
@@ -131,11 +140,15 @@ class DependencyGraph(QGraphicsView):
         item.setPen(pen)
         scene.addItem(item)
 
-        desc = (task.get("description") or "")[:24]
-        label = QGraphicsTextItem(f"#{task.get('id', '?')}  {desc}")
-        label.setDefaultTextColor(QColor(pal["text"]))
-        label.setTextWidth(_W - 14)
-        label.setPos(x + 7, y + 5)
+        full = f"#{task.get('id', '?')}  {task.get('description') or ''}".rstrip()
+        label = QGraphicsSimpleTextItem()
+        label.setBrush(QBrush(QColor(pal["text"])))
+        fm = QFontMetrics(label.font())
+        # one clean line, ellipsised to the node's inner width — never spilling
+        # past the border; the full text is on hover
+        label.setText(fm.elidedText(full, Qt.TextElideMode.ElideRight, _W - 2 * _PAD))
+        label.setToolTip(full)
+        label.setPos(x + _PAD, y + (_H - fm.height()) / 2)
         scene.addItem(label)
 
     def _edge(self, scene, a: QPointF, b: QPointF, pen: QPen):

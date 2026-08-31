@@ -288,7 +288,7 @@ CATALOG: dict[str, str] = {
 
     # ---- priorities (unified i5 — glossary §1/§8) ---
     "priority.none": "بدون",
-    "priority.h": "بحرانی",
+    "priority.h": "بالا",
     "priority.m": "متوسط",
     "priority.l": "پایین",
 
@@ -388,7 +388,7 @@ CATALOG: dict[str, str] = {
     "status.recurring": "تکرارشونده",
 
     # ---- detail panel (widgets/detail_panel.py) ---
-    "detail.priority.h": "بحرانی",
+    "detail.priority.h": "بالا",
     "detail.priority.m": "متوسط",
     "detail.priority.l": "پایین",
     "detail.priority.none": "بدون",
@@ -507,7 +507,7 @@ CATALOG: dict[str, str] = {
     # ---- filter builder (widgets/filter_builder.py) ---------
     "fb.status.all": "همه",
     "fb.priority.all": "همه",
-    "fb.priority.h": "بحرانی",
+    "fb.priority.h": "بالا",
     "fb.priority.m": "متوسط",
     "fb.priority.l": "پایین",
     "fb.priority.none": "بدون",
@@ -573,7 +573,7 @@ CATALOG: dict[str, str] = {
     "table_reports.col.count": "تعداد",
 
     # ---- quick add (quickadd.py / widgets/quick_add.py) -----
-    "quickadd.priority.h": "بحرانی",
+    "quickadd.priority.h": "بالا",
     "quickadd.priority.m": "متوسط",
     "quickadd.priority.l": "پایین",
     "quickadd.prompt": "برای افزودن، شرح کار را بنویسید…",
@@ -633,7 +633,7 @@ CATALOG: dict[str, str] = {
     "depgraph.empty": "این کار وابستگی‌ای ندارد.",
 
     # ---- column spec (models/column_spec.py) --------------
-    "col.priority.h": "بحرانی",
+    "col.priority.h": "بالا",
     "col.priority.m": "متوسط",
     "col.priority.l": "پایین",
     "col.status.pending": "در جریان",
