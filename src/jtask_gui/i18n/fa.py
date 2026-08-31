@@ -196,6 +196,8 @@ CATALOG: dict[str, str] = {
     "confirm.undo.ok": "واگرد",
     "msg.undo_done": "واگرد انجام شد",
     "msg.context_changed": "زمینه تغییر کرد",
+    "msg.filter_saved": "فیلتر «{name}» ذخیره شد",
+    "msg.filter_renamed": "فیلتر به «{name}» تغییر نام یافت",
     "theme.switch_label": "پوستهٔ {name}",
     "theme.switch_tip": "تغییر پوسته به «{name}»",
 

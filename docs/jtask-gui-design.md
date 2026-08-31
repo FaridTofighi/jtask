@@ -1529,3 +1529,34 @@ Full suite **424 passing** (420 + 4), ruff + mypy clean.
 
 _Next: d6 — toast/snackbar for positive non-destructive feedback;
 empty-state consistency pass._
+
+## d6 — implementation log (complete)
+
+### Toast (`widgets/toast.py`)
+A non-blocking `QFrame#Toast` — one per main window, reused. `surface` fill +
+`border` + `EmptyState`-sized text with a check glyph, floating bottom-centre
+just above the status bar, opacity-fade in, auto-dismiss after 2.6 s.
+`WA_TransparentForMouseEvents` + `NoFocus` — it never blocks input and never
+asks a question. Wired at the one mutation funnel `_write()` (so every
+successful non-destructive command confirms) plus `_save_filter` /
+`_rename_filter`; the status-bar message stays as the persistent complement.
+**Destructive actions keep their blocking `confirm()` dialog** (guard test).
+Elevation is surface+border, not a shadow — a widget holds one `QGraphicsEffect`
+and the fade needs the opacity one.
+
+### Empty-state consistency
+Every "no data" fallback now uses the one designed look (`#EmptyState` /
+`#DepEmpty`), not a bare `#Muted` label: `summary_view` empty (was `#Muted`),
+and `timesheet_view` gained a real centred `#EmptyState` label (was overloading
+the summary line). Guard test greps for bare empty-state labels.
+
+### Catalog
+`msg.filter_saved` / `msg.filter_renamed` added (fa + en).
+
+### Evidence
+Full suite **430 passing** (424 + 6), ruff + mypy clean. Snapshot regenerated
+(the timesheet empty label is now a persistent widget). Toast screenshot
+captured.
+
+_Next: d7 — `docs/design-system.md`, corrected natural-size screenshots of every
+touched screen (both themes), final regression._

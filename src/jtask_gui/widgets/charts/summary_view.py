@@ -47,8 +47,9 @@ class SummaryView(QScrollArea):
 
         if not self._rows:
             lbl = QLabel(t("chart.summary.empty"))
-            lbl.setObjectName("Muted")
+            lbl.setObjectName("EmptyState")  # the one designed empty-state look
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl.setWordWrap(True)
             self._grid.addWidget(lbl, 0, 0, 1, 3)
             return
 

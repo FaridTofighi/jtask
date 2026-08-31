@@ -11,6 +11,7 @@ import datetime as dt
 import shutil
 
 import jdatetime
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -80,6 +81,13 @@ class TimesheetView(QWidget):
         self._tree.setColumnWidth(0, 320)
         lay.addWidget(self._tree, 1)
 
+        self._empty = QLabel(t("ts.empty"))
+        self._empty.setObjectName("EmptyState")
+        self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty.setWordWrap(True)
+        self._empty.hide()
+        lay.addWidget(self._empty, 1)
+
         self._summary = QLabel("")
         self._summary.setObjectName("H2")
         lay.addWidget(self._summary)
@@ -136,8 +144,10 @@ class TimesheetView(QWidget):
                 top.addChild(child)
             top.setExpanded(True)
 
+        self._empty.setVisible(not sheet.rows)
+        self._tree.setVisible(bool(sheet.rows))
         if not sheet.rows:
-            self._summary.setText(t("ts.empty"))
+            self._summary.clear()
             return
 
         projects = t("list.sep_wide").join(

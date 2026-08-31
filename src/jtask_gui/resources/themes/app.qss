@@ -391,6 +391,15 @@ QTableWidget#HelpTable QHeaderView::section {
     border-bottom: 1px solid @border@; padding: @sp_4@ @sp_6@; font-weight: 700;
 }
 
+/* ============================ toast (d6) ============================= */
+QFrame#Toast {
+    background-color: @surface@;
+    border: 1px solid @border@;
+    border-radius: @r_lg@;
+}
+QLabel#ToastText { color: @text@; font-size: @fs_body@; background: transparent; }
+QLabel#ToastIcon { background: transparent; }
+
 /* ============================ M9 — diagnostics / help / calc ========== */
 QPlainTextEdit#DiagText {
     font-family: "DejaVu Sans Mono", "Vazirmatn", monospace; font-size: @fs_xs@;

@@ -209,6 +209,8 @@ CATALOG.update({
     "confirm.undo.ok": "Undo",
     "msg.undo_done": "Undo complete",
     "msg.context_changed": "Context changed",
+    "msg.filter_saved": "Filter “{name}” saved",
+    "msg.filter_renamed": "Filter renamed to “{name}”",
     "theme.switch_label": "{name} theme",
     "theme.switch_tip": "Switch theme to “{name}”",
 

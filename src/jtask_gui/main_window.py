@@ -392,6 +392,10 @@ class MainWindow(QMainWindow):
         self._status_busy = self._op_status  # back-compat alias
         sb.addWidget(self._op_status)
 
+        from .widgets.toast import Toast
+
+        self._toast = Toast(self)
+
     def _wire(self) -> None:
         self._sidebar.activated.connect(self._on_view_selected)
         self._sidebar.contextChangeRequested.connect(self._change_context)
@@ -484,10 +488,12 @@ class MainWindow(QMainWindow):
     def _save_filter(self, name: str, raw: str) -> None:
         self.settings.save_filter(name, raw)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._toast.show_message(t("msg.filter_saved", name=name))
 
     def _rename_filter(self, old: str, new: str) -> None:
         self.settings.rename_filter(old, new)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._toast.show_message(t("msg.filter_renamed", name=new))
 
     def _delete_filter(self, name: str) -> None:
         self.settings.delete_filter(name)
@@ -892,6 +898,7 @@ class MainWindow(QMainWindow):
             self._end_busy()
             self._op_status.success(success_msg)
             self.statusBar().showMessage(success_msg, 2500)
+            self._toast.show_message(success_msg)
             self.refresh_all()
 
         submit(fn, done, self._op_failed)
@@ -924,6 +931,10 @@ class MainWindow(QMainWindow):
         if state:
             self.restoreState(state)
         self._console_action.setChecked(self._console_dock.isVisible())
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._toast.parent_resized()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self.settings.save_window(self.saveGeometry(), self.saveState())
