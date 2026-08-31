@@ -1560,3 +1560,38 @@ captured.
 
 _Next: d7 — `docs/design-system.md`, corrected natural-size screenshots of every
 touched screen (both themes), final regression._
+
+## d7 — implementation log (complete) — mission done
+
+- **`docs/design-system.md`** written: the nine enforced conventions (tokens,
+  colour/elevation, destructive colour, validation timing, toast, empty states,
+  toolbar, RTL/bidi, terminology) each with its guard test. This is the
+  reference future milestones follow.
+- **Corrected screenshots** (`natural size`, both themes) captured for every
+  screen the mission touched: shell, shell+detail, toolbar, toast, Add-Task
+  (pristine), Purge, Sync Manager, Settings, Error, first-run, dependency
+  graph. The audit's original set was distorted by a screenshot-script
+  `resize()`; these are the accurate reference.
+- **Regression:** full suite **431 passing**, ruff + mypy clean. The
+  fa/Jalali visible-text snapshot changed only where a milestone deliberately
+  changed wording or added a widget (documented per milestone); the
+  no-hardcoded-string ceiling held throughout.
+
+### Mission "d" summary
+
+| milestone | commit | what |
+|---|---|---|
+| d1 | `ea33e25` | `tokens.py` + QSS tokenised + guard; dead `#H2` rule removed |
+| d2a | `bf16c1d` | shell/view/widget layout → tokens |
+| d2b | `fd239fd` | dialog layout → tokens; elevation (`elevated` role); colour tokens |
+| d3 | `777b561` | dialog sizing guard; first-run `QFormLayout`; validation timing; danger-disabled |
+| d4 | `5f04c8c` | toolbar grouping + flat `⋯` overflow + tooltip audit + icons |
+| d5 | `885fa6b` | priority بحرانی→بالا; dep-graph node elision; bidi-safe paths |
+| d6 | `afa4f58` | non-blocking toast; empty-state consistency |
+| d7 | *(this)* | `docs/design-system.md`; corrected screenshots; regression |
+
+Suite 407 → **431**. Deferred, as agreed: a deeper light-theme elevation
+(base-tone shift); §9.2 cross-panel animation consistency (the detail panel is
+still the only slide-in). The two "bugs" the audit surfaced — dialog empty
+space, grey Purge button — were confirmed to be screenshot-script / correct
+disabled-state artifacts, and are now guarded against regression anyway.
