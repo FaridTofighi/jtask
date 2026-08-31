@@ -74,7 +74,7 @@ QPushButton#Primary {
     border: none; font-weight: 700; padding: @sp_8@ @sp_20@;
 }
 QPushButton#Primary:hover { background-color: @primary_hi@; }
-QPushButton#Primary:pressed { background-color: @primary_hi@; }
+QPushButton#Primary:pressed { background-color: @accent@; }
 QPushButton#Primary:disabled { background-color: @bg_alt@; color: @text_muted@; }
 
 QToolButton {
@@ -124,7 +124,7 @@ QComboBox QAbstractItemView {
 /* ============================ table ========================= */
 QTableView {
     background-color: @surface@;
-    alternate-background-color: @surface@;
+    alternate-background-color: @row_alt@;
     border: 1px solid @border_soft@;
     border-radius: @r_lg@;
     gridline-color: transparent;
@@ -236,20 +236,23 @@ QWidget#Placeholder QLabel#H1 { color: @text@; }
 QWidget#Placeholder QLabel#Body { color: @text_muted@; font-size: @fs_body@; line-height: 150%; }
 
 /* ============================ toolbars ==================== */
+/* the toolbar is a visually distinct region (@bg_alt@ + a bottom rule),
+   not blended into the content — consistent with d4's cluster grouping. */
 QToolBar {
-    background-color: @bg@;
+    background-color: @bg_alt@;
     border: none;
-    spacing: @sp_6@;
+    border-bottom: 1px solid @border@;
+    spacing: @sp_8@;
     padding: @sp_8@ @sp_12@;
 }
-QToolBar#RowOne { padding-bottom: @sp_4@; }
-QToolBar#RowTwo { padding-top: @sp_4@; border-bottom: 1px solid @border@; }
-QToolBar::separator { background: @border_soft@; width: 1px; margin: @sp_4@ @sp_6@; }
+QToolBar#RowOne { padding-bottom: @sp_4@; border-bottom: none; }
+QToolBar#RowTwo { padding-top: @sp_4@; }
+QToolBar::separator { background: @border@; width: 1px; margin: @sp_4@ @sp_8@; }
 QLabel#ToolLabel { color: @text_muted@; font-weight: 700; font-size: @fs_xs@; }
 
 /* ============================ status bar ================== */
 QStatusBar {
-    background-color: @bg@;
+    background-color: @bg_alt@;
     border-top: 1px solid @border@;
     color: @text_muted@;
     padding: @sp_4@ @sp_12@;
@@ -330,7 +333,7 @@ QPushButton#Danger {
     font-weight: 700;
 }
 QPushButton#Danger:hover { background-color: @blocked@; border-color: @blocked@; }
-QPushButton#Danger:pressed { background-color: @blocked@; }
+QPushButton#Danger:pressed { background-color: @accent@; border-color: @accent@; }
 QPushButton#Danger:disabled {
     background-color: @bg_alt@; color: @overdue@; border: 1px solid @overdue@;
 }

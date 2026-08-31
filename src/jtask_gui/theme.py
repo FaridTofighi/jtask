@@ -27,8 +27,11 @@ CHART_SERIES_ROLES = ("primary", "completed", "overdue", "due_soon", "accent")
 # The palette is organised as elevation layers — each surface sits visibly
 # above the one behind it:  bg (window)  <  bg_alt (sidebar / recessed rail)
 # <  surface (cards, rows, buttons)  <  elevated (dialogs, popovers, menus).
-# Inputs use ``field`` (a recessed well) and the accent (``primary``) is used
-# deliberately — selection, primary action, focus ring, active nav row.
+# Inputs use ``field`` (a recessed well). The accent is teal (the mission-d
+# baseline — the mission-m blue re-tone was reverted): selection wash
+# (``primary_soft`` / ``selection``), primary action, focus ring (``focus`` ==
+# ``primary``), the selected-row accent bar. ``accent`` (violet) is the
+# press-state flash and the 5th chart-series colour.
 
 # --- شب (dark) --------------------------------------------------------
 _SHAB = {
@@ -40,18 +43,19 @@ _SHAB = {
     "border": "#2c333f",
     "border_soft": "#20252e",
     "hover": "#20252f",
-    "selection": "#273049",
+    "selection": "#22343d",
     "row_line": "#242a34",
+    "row_alt": "#21262f",
     "field": "#12151b",
     "field_focus": "#171b22",
     "text": "#e8eaef",
     "text_muted": "#8c94a3",
-    "primary": "#6ea8fe",
-    "primary_hi": "#8bbcff",
-    "primary_fg": "#0a1a33",
-    "primary_soft": "#1c2740",
-    "accent": "#a78bfa",
-    "focus": "#6ea8fe",
+    "primary": "#6cc7dd",
+    "primary_hi": "#8ad6e8",
+    "primary_fg": "#08222a",
+    "primary_soft": "#18333d",
+    "accent": "#b98cf0",
+    "focus": "#6cc7dd",
     "overdue": "#ff6b6b",
     "due_soon": "#f5c451",
     "waiting": "#7f8896",
@@ -75,18 +79,19 @@ _RUZ = {
     "border": "#dde2e9",
     "border_soft": "#e9edf2",
     "hover": "#eef1f6",
-    "selection": "#e2ecff",
+    "selection": "#cfe8ee",
     "row_line": "#e7ebf1",
+    "row_alt": "#f0f3f7",
     "field": "#f1f4f8",
     "field_focus": "#ffffff",
     "text": "#1b2027",
     "text_muted": "#5b6472",
-    "primary": "#3565d0",
-    "primary_hi": "#2c56b8",
+    "primary": "#0a6e8f",
+    "primary_hi": "#0c82a8",
     "primary_fg": "#ffffff",
-    "primary_soft": "#e6edfc",
-    "accent": "#7c5cd6",
-    "focus": "#3565d0",
+    "primary_soft": "#dbeff3",
+    "accent": "#7b41d8",
+    "focus": "#0a6e8f",
     "overdue": "#d63b45",
     "due_soon": "#9a6b00",
     "waiting": "#6a7280",

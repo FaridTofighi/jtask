@@ -97,6 +97,44 @@ def test_completed_task_is_struck_through_and_dimmed():
         palette("شب")["completed"].lower()
 
 
+def test_foreground_muting_and_priority_colours():
+    """Governed convention (mission-m audit, kept-with-test): the description
+    leads — `id` / `urgency` render muted, `priority` is colour-coded by level,
+    and none of this overrides a row-state colour."""
+    pal = palette("شب")
+    m = TaskTableModel(theme_name="شب")
+    m.set_tasks([
+        {"id": 1, "description": "high", "status": "pending", "priority": "H", "urgency": 9.0},
+        {"id": 2, "description": "med", "status": "pending", "priority": "M", "urgency": 3.0},
+        {"id": 3, "description": "low", "status": "pending", "priority": "L", "urgency": 1.0},
+        {"id": 4, "description": "none", "status": "pending", "urgency": 0.0},
+    ])
+
+    def fg(row, key):
+        c = m.data(m.index(row, _row(m, key)), Qt.ItemDataRole.ForegroundRole)
+        return c.name().lower() if c is not None else None
+
+    # id / urgency are muted on every row
+    for r in range(4):
+        assert fg(r, "id") == pal["text_muted"].lower()
+        assert fg(r, "urgency") == pal["text_muted"].lower()
+
+    # priority: H -> overdue (red), M -> due_soon (amber), L / none -> muted
+    assert fg(0, "priority") == pal["overdue"].lower()
+    assert fg(1, "priority") == pal["due_soon"].lower()
+    assert fg(2, "priority") == pal["text_muted"].lower()
+    assert fg(3, "priority") == pal["text_muted"].lower()
+
+    # the description column keeps the default colour (no override) for a plain row
+    assert fg(0, "description") is None
+
+    # a row-state colour still wins over the per-column muting
+    m.set_tasks([{"id": 9, "description": "done", "status": "completed",
+                  "priority": "H", "urgency": 5.0}])
+    assert fg(0, "id") == pal["completed"].lower()
+    assert fg(0, "priority") == pal["completed"].lower()
+
+
 def test_description_direction_follows_content():
     m = TaskTableModel()
     m.set_tasks([

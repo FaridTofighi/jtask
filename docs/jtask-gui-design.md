@@ -1701,63 +1701,79 @@ cross-session persistence of collapsed-group state (retained within a session).
 > **Going forward, no implementation work proceeds without proposal → explicit
 > approval → implementation with evidence, regardless of how small the ask.**
 
-Mission **d** standardized the design system but was deliberately invisible
-(tokenization, guards, docs — "pixel-identical bar data drift"). This pass makes
-the redesign actually *show*.
+Mission **d** standardized the design system but was deliberately invisible.
+Mission **m** made a visible pass. **As originally applied** (`7240e69` +
+`78e88de`) it did the following — but see the resolution table just below;
+several of these were reverted after the audit:
 
-- **Palette (`theme.py`) — elevation layers + a real accent.** Dark and light
-  both rebuilt as `bg < bg_alt < surface < elevated` layers so panels read as
-  distinct depths (the old dark theme was one muddy value). New `primary`
-  (blue: dark `#6ea8fe`, light `#3565d0`) is used *only* for selection, the
-  primary action, focus, active nav and the tab underline. New roles:
-  `border_soft` (hairline), `primary_soft` (selection wash), `focus`. WCAG-AA
-  contrast still enforced (`test_theme.py`).
-- **`app.qss` rewrite.** Modern table (no zebra; `border_soft` row lines;
-  `primary_soft` selection + 2-px left bar; `bg_alt` sticky header), sidebar
-  with muted section captions and no boxed "Reports" entry, single-feel
-  toolbar, consistent `@focus@` rings, `elevated` menus/tooltips/toast, thinner
-  scrollbars. Still token-only (`test_qss_uses_tokens` green).
-- **Toolbar (`main_window.py`).** Dropped the three `QLabel:` prefixes
-  ("Quick add", "Filter", "Group by") — the controls carry their own
-  placeholder / first-item text. One Persian snapshot line removed (intended).
-- **Task table (`task_model.py` / `column_spec.py`).** `status` is blank for
-  `pending` (the default state was column-wide noise); `id` / `urgency` render
-  muted; `priority` is colour-coded (H/M/L); tag `#` prefix dropped; per-column
-  alignment follows the layout direction (`_halign`); columns re-widthed. New
-  §11 in `docs/design-system.md`.
-- **Sidebar (`sidebar.py`).** Section captions render in `text_muted` with
-  slight tracking; the saved-filter hint is muted and non-interactive.
+- **Palette (`theme.py`).** Both palettes rebuilt as `bg < bg_alt < surface <
+  elevated` elevation layers; **accent re-toned teal → blue** *(reverted to
+  teal)*; new `border_soft` / `primary_soft` / `focus` roles *(kept)*.
+- **`app.qss` rewrite.** Table: no zebra *(restored)*, `primary_soft` selection
+  + a `border-left` per-cell bar *(reverted → `paintEvent` bar)*, `bg_alt`
+  header *(kept)*. Toolbar bg `→ @bg@` *(reverted to `@bg_alt@`)*. Combo /
+  menu-button arrows hidden *(reverted)*. `elevated` menus/tooltips/toast, new
+  `#Primary:disabled` rule, focus rings *(kept)*.
+- **Toolbar (`main_window.py`).** Dropped the three `QLabel:` prefixes *(kept —
+  controls self-describe)*.
+- **Task table (`task_model.py` / `column_spec.py`).** `status` blank for
+  `pending` *(reverted)*; tag `#` prefix dropped *(reverted)*; `id`/`urgency`
+  muted + `priority` colour-coded *(kept, now tested)*; `_halign` per-direction
+  alignment *(kept — genuine fix)*; column widths *(kept)*.
+- **Sidebar (`sidebar.py`).** Muted section captions + non-interactive
+  saved-filter hint *(kept)*; active nav row full-bleed → soft tint and
+  `#ReportsEntry` de-boxed *(pending review)*.
 
-## Mission "m" — retroactive audit
+## Mission "m" — retroactive audit + resolution
 
 Full line-by-line audit of the mission-m slice of `7240e69` + `78e88de`, held
-to the mission-d evidence standard. Full suite at audit time: **478 passed /
-1 skipped** (the skip is `test_environment.py` on Taskwarrior 3.4.1 < 3.5 — a
-Phase-A guard, unrelated). All 101 prior-convention guard tests (d1–d7 + i1–i6
-+ bidi + snapshot + hardcoded-string) pass against the post-mission-m code.
+to the mission-d evidence standard, followed by a per-item resolution
+(accepted 2026-08-31, corrective pass `a420774` + this one). Suite after the
+corrective pass: **479 passed / 1 skipped** (baseline 478 + the one new
+`_foreground` test; the skip is `test_environment.py` on Taskwarrior 3.4.1 —
+a Phase-A guard, unrelated). All prior-convention guard tests still pass.
 
-| Area | Change | Class | Status |
+**Legend:** *reverted* = restored to the mission-d baseline · *keep* =
+genuine improvement, no change · *keep+test* = kept with new guard coverage ·
+*pending* = awaiting a screenshot-based decision, not yet changed.
+
+| Area | Change mission "m" made | Resolution | Evidence |
 |---|---|---|---|
-| `app.qss` inputs | `QComboBox::down-arrow { image: none }` — every combobox lost its dropdown arrow, reads as a plain text field | **regression** | **fixed in this audit** (rule removed → d7 default arrow) |
-| `app.qss` toolbuttons | `QToolButton::menu-indicator { image: none }` — the data/`⋯` menu buttons lost their ▾ caret | **regression** (minor) | **fixed in this audit** (rule removed) |
-| `app.qss` table | `QTableView::item:selected { border-left: 2px solid @primary@ }` → per-cell boxed grid | **regression** | already fixed (`78e88de`) |
-| `theme.py` palette | Accent changed **teal → blue** (`#6cc7dd`/`#0a6e8f` → `#6ea8fe`/`#3565d0`); both palettes fully re-toned; new `border_soft`/`primary_soft`/`focus` roles | needs-decision (identity change) + improvement (elevation layers) | **user decision** |
-| `app.qss` table | Zebra striping removed (`alternate-background-color` = `surface`) | needs-decision (M1 spec said "alternate rows") | **user decision** |
-| `column_spec.py` | `_status` returns `""` for `pending` — the Status column is blank on the common case | needs-decision (changes a documented column's content) | **user decision** |
-| `column_spec.py` | `_tags` drops the `#` prefix (`#work` → `work`) | needs-decision (Taskwarrior convention) | **user decision** |
-| `task_model.py` | `_foreground` — `id`/`urgency` render muted, `priority` colour-coded (H→red, M→amber); no test | needs-decision (visual change to core table, untested) | **user decision** |
-| `app.qss` toolbar | Toolbar bg `@bg_alt@` → `@bg@` (blends with window, no longer a distinct bar); status bar likewise | needs-decision (visual change to d4-stabilised area) | **user decision** |
-| `app.qss` sidebar | Active nav row `@primary@` full-bleed → `@primary_soft@` tint + `@primary@` bold text; `#ReportsEntry` de-boxed | needs-decision | **user decision** |
-| `app.qss` buttons | `:hover` border `@primary@`→`@text_muted@`; `#Primary:pressed` / `#Danger:pressed` lose the distinct `@accent@` press colour | needs-decision (minor) | **user decision** |
-| `app.qss` misc | scrollbars 12→10 px, progress-bar/chip radius `@r_md@`→`@r_pill@`, tooltip border `@primary@`→`@border@` | needs-decision (minor cosmetic) | **user decision** |
-| `task_model.py` | `_halign` — per-column alignment follows layout direction; **was `AlignRight` for everything, wrong for LTR/English** | **improvement / fix** (closed an i3 gap; partial guard via the bidi test) | keep |
-| `main_window.py` toolbar | 3 `QLabel:` prefixes removed; `_group_combo.setMinimumWidth(150)`. Deliberate and correct — controls self-describe via placeholder / first-item text. Leaves 3 orphaned catalog keys (`toolbar.quick_add/filter/group_by`) and a dead `QLabel#ToolLabel` QSS rule. | improvement | keep (catalog/QSS cruft: harmless, cleanup optional) |
-| `column_spec.py` | Column width tweaks (`priority` 80→96 fixes the "Mediu…" truncation, etc.) | improvement | keep |
-| `app.qss` elevation | Card surfaces `@bg@`→`@surface@`, dividers `@border@`→`@border_soft@`, menus/tooltips/toast `@surface@`→`@elevated@` | improvement (elevation-layer consistency) | keep |
-| `app.qss` buttons | **new** `QPushButton#Primary:disabled` rule — a disabled primary button (Add-Task OK etc.) now actually looks disabled | improvement (d3-adjacent) | keep |
-| `sidebar.py` | Section captions muted + `letter-spacing 105%`; saved-filter hint made non-interactive + muted | improvement | keep |
-| `tests/gui/_i18n_util.py` | Snapshot normaliser masks absolute paths (`‹path›`) — driven by the Hook Manager (Phase B); only touches `~/.taskrc` in 2 catalog strings | improvement | keep |
-| — | **Mission m added zero guard tests.** `_halign` got incidental coverage from a bidi test; `_foreground` colouring and `_status` blanking have **none**; `test_task_table_selection.py` (7) exists only because `78e88de` fixed a regression found by chance | **process finding** | for the record |
+| `app.qss` inputs | `QComboBox::down-arrow { image: none }` — every combobox lost its dropdown arrow | **reverted** (`a420774`) | rule removed → d7 default arrow; `SettingsDialog` render |
+| `app.qss` toolbuttons | `QToolButton::menu-indicator { image: none }` — menu tool-buttons lost the ▾ caret | **reverted** (`a420774`) | rule removed |
+| `app.qss` table | `QTableView::item:selected { border-left: 2px solid @primary@ }` → per-cell boxed grid | **reverted** (`78e88de`) | `test_task_table_selection.py` (7) |
+| `theme.py` palette | Accent **teal → blue** (`#6cc7dd`/`#0a6e8f` → `#6ea8fe`/`#3565d0`) | **reverted to teal** | `theme.py` `_SHAB`/`_RUZ` `primary`/`primary_hi`/`primary_fg`/`focus`; `primary_soft` recomputed as a teal wash; `test_theme.py` 6/6 (contrast + parity) |
+| `theme.py` palette | New `border_soft` / `primary_soft` / `focus` roles | **kept** (they now derive from teal) | in both palettes; used in QSS |
+| `app.qss` + `task_table.py` | Zebra striping dropped (`alternate-background-color` was already inert — `setAlternatingRowColors(False)` since the reviewed M1 remediation `7e6f59f`, **not** mission m — see note) | **restored** — `setAlternatingRowColors(True)` + new `row_alt` palette role | screenshot: zebra + selection accent bar together, both themes |
+| `column_spec._status` | Returned `""` for `pending` | **reverted** — shows the real value (`Pending` / `در جریان`) | `column_spec.py`; screenshot |
+| `column_spec._tags` | Dropped the `#` prefix (`#work` → `work`) | **reverted** — `#` restored (Taskwarrior convention, same principle as d5) | `column_spec.py`; screenshot |
+| `app.qss` toolbar / status bar | bg `@bg_alt@` → `@bg@` (blended into the window) | **reverted** — `@bg_alt@` + a bottom rule; the toolbar is a distinct region again | `app.qss`; screenshot |
+| `app.qss` buttons | `#Primary:pressed` / `#Danger:pressed` lost the distinct `@accent@` press colour, orphaning the `accent` role from the QSS | **reverted** — both restored to `@accent@`; `accent` is QSS-used again (+ `CHART_SERIES_ROLES`) | `app.qss` |
+| `task_model._foreground` | `id`/`urgency` muted, `priority` colour-coded (H→`overdue`, M→`due_soon`, L/none→`text_muted`) | **kept + test** | `test_task_model.py::test_foreground_muting_and_priority_colours` |
+| `task_model._halign` | Per-column alignment follows layout direction (was `AlignRight` for everything — wrong for LTR/English) | **kept** — genuine fix, closed an i3 gap | `test_task_model.py::test_description_direction_follows_content` |
+| `main_window` toolbar | 3 `QLabel:` prefixes removed; `_group_combo.setMinimumWidth(150)` | **kept** | `test_d4_toolbar.py` 5/5; fields self-describe via placeholder |
+| `column_spec.py` widths | id 60→56, description 320→340, project/tags 140→130, **priority 80→96** (fixes "Mediu…"), urgency 80→84, status 90→96 | **kept** | diff |
+| `app.qss` elevation | Card surfaces `@bg@`→`@surface@`, dividers `@border@`→`@border_soft@`, menus/tooltips/toast `@surface@`→`@elevated@` | **kept** — consistent elevation layers | `test_qss_uses_tokens.py` 5/5 |
+| `app.qss` buttons | **new** `QPushButton#Primary:disabled` rule — a disabled primary button now looks disabled | **kept** | d3's `test_pristine_add_task_form_has_no_error` still passes |
+| `sidebar.py` | Section captions `text_muted` + `letter-spacing 105%`; saved-filter hint non-interactive + muted | **kept** | diff |
+| `tests/gui/_i18n_util.py` | Snapshot normaliser masks absolute paths (`‹path›`) — Hook Manager driven (Phase B) | **kept** | `test_i18n_snapshot.py` passes; verified it only masks `~/.taskrc` in 2 catalog strings |
+| `app.qss` sidebar | Active nav row `@primary@` full-bleed → `@primary_soft@` tint + bold text; **`#ReportsEntry` de-boxed** (lost its `surface` fill + border) | **pending** — screenshot submitted for review (M2 gave this entry deliberate extra weight; not reverted or kept pre-emptively) | `sb_{dark,light}_strip.png` — normal / quick-view-active / reports-active |
+| — | **Mission m added zero guard tests.** `_halign` got incidental coverage from a bidi test only; `_foreground` and `_status` had none; `test_task_table_selection.py` exists only because `78e88de` fixed a regression found by chance. Now: `_foreground` covered (`test_foreground_muting_and_priority_colours`), `_status` reverted so no longer a concern. | **process finding** — for the record | — |
+
+**Note on zebra striping.** The M1 design doc specified alternating rows, and
+M1 initially shipped `setAlternatingRowColors(True)` (`c642f15`). The **reviewed
+M1 visual/UX remediation pass** (`7e6f59f`) flipped it to `False` in favour of
+per-row *state* colour washes (overdue / blocked / due-soon / waiting). So
+zebra was off well before mission m — mission m only deleted the already-inert
+`alternate-background-color` declaration. Per the accepted resolution it has
+now been turned back **on** (with a dedicated subtle `row_alt` role); the model
+state-washes still layer on top and the selection accent bar sits above both.
+
+**Not touched by mission m (verified):** every Taskwarrior verb, the `_RC`
+overrides, `taskwarrior.run()`, the detail-panel `_save()` diff-and-modify
+path, all `report_*` / `shape_*`. The new `taskwarrior` functions in `7240e69`
+(`hooks*`, `tag_count`/`rename_tag`/`remove_tag`) are Phase B / tag management,
+each with tests.
 
 **Not touched by mission m (verified):** every Taskwarrior-facing verb
 (`add`/`modify`/`done`/`undo`/`purge`/`export`/`sync`/`config`/`context`), the

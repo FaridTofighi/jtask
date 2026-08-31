@@ -21,7 +21,8 @@ class Column:
 
 
 def _tags(task: dict) -> str:
-    return "  ".join(x for x in (task.get("tags") or []) if not x.isupper())
+    # keep Taskwarrior's own "+tag" / "#tag" convention — shown with the leading #
+    return "  ".join(f"#{x}" for x in (task.get("tags") or []) if not x.isupper())
 
 
 def _priority(task: dict) -> str:
@@ -31,14 +32,11 @@ def _priority(task: dict) -> str:
 
 
 def _status(task: dict) -> str:
-    # "pending" is the overwhelming default — showing it on every row is noise;
-    # the interesting states (waiting / done / deleted / recurring) still show.
     st = task.get("status", "")
-    if st == "pending":
-        return ""
     return {
-        "completed": t("col.status.completed"), "waiting": t("col.status.waiting"),
-        "deleted": t("col.status.deleted"), "recurring": t("col.status.recurring"),
+        "pending": t("col.status.pending"), "completed": t("col.status.completed"),
+        "waiting": t("col.status.waiting"), "deleted": t("col.status.deleted"),
+        "recurring": t("col.status.recurring"),
     }.get(st, st)
 
 

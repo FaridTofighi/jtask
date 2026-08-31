@@ -1,12 +1,13 @@
 # jtask-gui — design system
 
 The enforced visual conventions. Established in mission **d** (d1–d7), then
-given a visible modernization pass (mission **m**): a layered palette with a
-deliberate accent, a modern table (no zebra, hairline rows, accent selection,
-quiet secondary columns), a cleaner toolbar (no label prefixes) and sidebar,
-consistent focus rings. Every future feature follows these rather than
-re-deriving them. Colours live in `src/jtask_gui/theme.py`; everything else in
-`src/jtask_gui/tokens.py`.
+given a visible pass (mission **m**) that was **partly reverted** after a
+retroactive audit (see `docs/jtask-gui-design.md` → "Mission m — retroactive
+audit + resolution"): a layered palette on a **teal** accent, a table with
+zebra striping + state washes + an accent selection bar + quiet secondary
+columns, a distinct toolbar with no label prefixes, consistent focus rings.
+Every future feature follows these rather than re-deriving them. Colours live
+in `src/jtask_gui/theme.py`; everything else in `src/jtask_gui/tokens.py`.
 
 ---
 
@@ -71,13 +72,16 @@ text is the `on_danger` role; charts colour their series by role
 
 ### The accent is used deliberately — `primary`
 
-Dark `#6ea8fe`, light `#3565d0` (`primary_fg` is the text on top; `primary_soft`
-is the low-alpha wash). It appears in exactly these places and nowhere else:
-selection (table row + menu item = `primary_soft` fill; the table adds a 3-px
-`primary` leading-edge bar painted in `TaskTable.paintEvent`, see §11), the
-primary action button, the focus ring (`focus` == `primary`), the active
-sidebar row (`primary_soft` bg + `primary` text), the detail-tab underline,
-progress-bar fill, and the running-timer chip.
+**Teal** — dark `#6cc7dd`, light `#0a6e8f` (`primary_fg` is the text on top;
+`primary_soft` is the low-alpha wash; `focus` == `primary`). This is the
+mission-d baseline; the mission-m blue re-tone was reverted. `primary` appears
+in exactly these places and nowhere else: selection (table row + menu item =
+`primary_soft` fill; the table adds a 3-px `primary` leading-edge bar painted
+in `TaskTable.paintEvent`, see §11), the primary action button, the focus ring,
+the active sidebar row (`primary_soft` bg + `primary` text), the detail-tab
+underline, progress-bar fill, and the running-timer chip. **`accent`** (violet)
+is the `#Primary:pressed` / `#Danger:pressed` flash and the 5th chart-series
+colour — nothing else.
 
 The light theme's base is a soft off-white (`bg = #f4f6fa`), not pure white, so
 `surface` (`#ffffff`) cards lift off it. Contrast for body/secondary text and
@@ -194,8 +198,11 @@ The primary surface, so its rendering rules are specific (`models/task_model.py`
 - **No label prefixes on toolbar controls.** The quick-add, filter and group-by
   controls carry their own placeholder / first-item text; a separate `QLabel:`
   in front of an input is not used.
-- **No zebra striping.** Rows separate on a `border_soft` hairline only. Hover
-  is a `hover` wash.
+- **Zebra striping** (M1 design decision) — `setAlternatingRowColors(True)` +
+  the `row_alt` palette role, a subtle lift off `surface`. A row's *state*
+  colour wash (`_background`) layers on top for overdue / blocked / due-soon /
+  waiting rows, and the selection accent bar sits above both. `row_line` gives
+  each row a `border_soft` hairline as well.
 - **Selection is one continuous band, never per-cell boxes.**
   `QTableView::item:selected` is `background-color` **only** — no `border`
   (a per-item border draws a line on every internal cell edge). The single

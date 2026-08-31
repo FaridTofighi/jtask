@@ -89,7 +89,7 @@ class TaskTable(QTableView):
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.setSortingEnabled(True)
-        self.setAlternatingRowColors(False)
+        self.setAlternatingRowColors(True)  # zebra (M1 design decision, @row_alt@)
         self.setShowGrid(False)
         self.setWordWrap(False)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
