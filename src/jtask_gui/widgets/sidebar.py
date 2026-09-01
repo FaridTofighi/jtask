@@ -83,6 +83,8 @@ class Sidebar(QTreeWidget):
     projectColorRequested = pyqtSignal(str, str)  # (project, taskwarrior colour string)
     projectColorClearRequested = pyqtSignal(str)  # project — unset its colour
     savedFilterActivated = pyqtSignal(str)  # raw filter string
+    boardActivated = pyqtSignal(str)        # board name
+    boardManageRequested = pyqtSignal()
     savedFilterDeleteRequested = pyqtSignal(str)  # name
     savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
 
@@ -124,6 +126,7 @@ class Sidebar(QTreeWidget):
         gap2.setSizeHint(0, QSize(1, 6))
         self.addTopLevelItem(gap2)
 
+        self._boards = self._section(t("sidebar.section.boards"))
         self._saved = self._section(t("sidebar.section.saved"))
         self._projects = self._section(t("sidebar.section.projects"))
         self._tags = self._section(t("sidebar.section.tags"))
@@ -242,6 +245,20 @@ class Sidebar(QTreeWidget):
             item.setData(0, _SPEC_ROLE, {"kind": "context", "name": name})
             item.setData(0, _ICON_ROLE, "context")
             self._contexts.addChild(item)
+        self.retint()
+
+    def populate_boards(self, names: list[str]) -> None:
+        self._boards.takeChildren()
+        for name in names:
+            self._leaf(self._boards, name,
+                       {"kind": "board", "name": name}, "board")
+        manage = self._leaf(
+            self._boards, t("sidebar.boards.manage"),
+            {"kind": "board_manage"}, "settings",
+        )
+        f = manage.font(0)
+        f.setItalic(True)
+        manage.setFont(0, f)
         self.retint()
 
     def populate_saved_filters(self, filters: dict[str, str]) -> None:
@@ -425,6 +442,12 @@ class Sidebar(QTreeWidget):
             return
         if spec.get("kind") == "saved":
             self.savedFilterActivated.emit(spec["raw"])
+            return
+        if spec.get("kind") == "board":
+            self.boardActivated.emit(spec["name"])
+            return
+        if spec.get("kind") == "board_manage":
+            self.boardManageRequested.emit()
             return
         resolved = dict(spec)
         flt = resolved.get("filter")

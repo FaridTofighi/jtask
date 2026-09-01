@@ -468,6 +468,8 @@ class MainWindow(QMainWindow):
         self._sidebar.projectColorRequested.connect(self._set_project_color)
         self._sidebar.projectColorClearRequested.connect(self._clear_project_color)
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
+        self._sidebar.boardActivated.connect(self._show_board)
+        self._sidebar.boardManageRequested.connect(self._open_board_manager)
         self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
         self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
         self._filter_bar.saveRequested.connect(self._save_filter)
@@ -723,6 +725,7 @@ class MainWindow(QMainWindow):
             self._error,
         )
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
+        self._sidebar.populate_boards(self._board_names())
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
         submit(self._view_counts, self._sidebar.set_view_counts, lambda _e: None)
         self._reports.discover_custom_reports()
@@ -764,6 +767,22 @@ class MainWindow(QMainWindow):
         self._begin_busy(t("status.loading"))
         submit(fetch, self._populate_table, self._on_load_error)
 
+    def _board_names(self) -> list[str]:
+        from . import boards as B
+
+        return [b.name for b in B.all_builtins()] + list(self.settings.boards())
+
+    def _resolve_board(self, name: str):
+        from . import boards as B
+
+        spec = self.settings.boards().get(name)
+        if spec is not None:
+            return B.Board.from_dict({"name": name, **spec})
+        for b in B.all_builtins():
+            if b.name == name:
+                return b
+        return None
+
     def _toggle_board(self, on: bool) -> None:
         self._board_mode = on
         self._group_combo.setEnabled(not on)
@@ -773,15 +792,7 @@ class MainWindow(QMainWindow):
         self._load_current_view()
 
     def _show_board(self, name: str) -> None:
-        from . import boards as B
-
-        board = None
-        for b in B.all_builtins():
-            if b.name == name:
-                board = b
-        spec = self.settings.boards().get(name)
-        if spec is not None:
-            board = B.Board.from_dict({"name": name, **spec})
+        board = self._resolve_board(name)
         if board is None:
             return
         self._board.set_board(board)
@@ -789,6 +800,21 @@ class MainWindow(QMainWindow):
         self._group_combo.setEnabled(False)
         self._board_action.setChecked(True)
         self._load_current_view()
+
+    def _open_board_manager(self) -> None:
+        from .widgets.board_manager import BoardManagerDialog
+
+        dlg = BoardManagerDialog(self.settings, self)
+        dlg.changed.connect(self._on_boards_changed)
+        dlg.exec()
+
+    def _on_boards_changed(self) -> None:
+        self._sidebar.populate_boards(self._board_names())
+        cur = self._board.current_board()
+        if self._board_mode and cur is not None:
+            refreshed = self._resolve_board(cur.name)
+            if refreshed is not None:
+                self._board.set_board(refreshed)
 
     def _open_card(self, uuid: str) -> None:
         self._board_action.setChecked(False)  # back to the table
@@ -1226,6 +1252,11 @@ class MainWindow(QMainWindow):
                     name, t("palette.cat.filter"),
                     functools.partial(self._apply_saved_filter, raw),
                 )
+            )
+        for name in self._board_names():
+            cmds.append(
+                Command(name, t("status.boards"),
+                        functools.partial(self._show_board, name))
             )
         return cmds
 

@@ -2364,3 +2364,26 @@ per-transition matrix. The `status` preset's "To Do" drop is `stop`; dragging a
 *Done* card there runs `task stop` (a soft "not started" toast) rather than
 reopening. The GTD board — the primary preset — has no such case. Suite
 **599 passed / 1 skipped**.
+
+## NB-3 — board navigation + management UI (complete)
+
+**Sidebar "Boards" section** — `Sidebar.populate_boards(names)` (builtins +
+user boards) + a "Manage boards…" row. `activate_spec` routes
+`kind:"board"` → `boardActivated(name)` → `MainWindow._show_board()` (index 2),
+`kind:"board_manage"` → `boardManageRequested` → the dialog. Boards also feed
+the command palette. The temp `Ctrl+B`/toolbar toggle stays as a quick
+"last board" shortcut.
+
+**`widgets/board_manager.py`** — `BoardManagerDialog(settings)` (emits
+`changed`):
+- left: board list (builtins italic + read-only), **New ▾** (blank / from each
+  preset), Delete, ↑ ↓ reorder (user boards only);
+- right: the selected board's columns — Add / Remove / ↑ ↓ — and a per-column
+  editor: title, a read-only filter field + **"Filter…"** opening the real M3
+  `FilterBuilder`, and `_DropEditor` — a type combo (`none / tags / attr / uda
+  / verb`) over a `QStackedWidget` of the fields for each. Every keystroke
+  persists through `Settings.save_board` / `delete_board` / `set_board_order`.
+
+`MainWindow._on_boards_changed()` repopulates the sidebar and reloads the open
+board. `tests/gui/test_board_manager.py` (9). Suite **608 passed / 1 skipped**.
+Snapshot rebaselined (Boards section + preset names).
