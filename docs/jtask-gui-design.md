@@ -1958,7 +1958,13 @@ that made the two toolbar rows look mis-aligned.
 
 ## n2 — implementation log (in progress)
 
-**Refined light palette.** The old `_RUZ` ladder was ~4% luminance apart —
+**Dimmed light palette (revised).** First widened the `_RUZ` steps; then, on
+feedback that pure-white `surface` was too bright, re-based the whole theme
+darker — `bg #d9dee6` (mid cool-grey), `surface #eef1f5` (soft off-white, not
+white), `elevated #f7f9fb`. Elevation ladder stays wide (surface ~0.15 lum
+above bg, bg ~0.07 above the sidebar). `text_muted` → `#4c5666` to hold AA on
+the greyer `bg_alt`. Structure / clarity unchanged; just less glare.
+_Original n2 note:_ The old `_RUZ` ladder was ~4% luminance apart —
 `surface` (white) barely lifted off `bg` (near-white) and borders had nothing
 to sit against. Steps widened: `bg #f4f6fa → #eaeef4` (a cooler grey),
 `bg_alt → #e2e7f0`, `border #dde2e9 → #ccd4e0`, plus matching moves on

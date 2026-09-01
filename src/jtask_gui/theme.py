@@ -68,40 +68,42 @@ _SHAB = {
 }
 
 # --- روز (light) -----------------------------------------------------
-# The window base is a cool grey (not near-white) so raised surfaces
-# (cards / dialogs on ``surface`` = pure white) read as genuinely lifted and
-# borders have something to sit against.  n2 widened these steps — the old
-# ladder was ~4% luminance apart and elevation did not read.
+# A *dimmed* light theme: the window base is a mid cool-grey and ``surface`` a
+# soft off-white (not pure white), so it reads as daylight without the glare.
+# The elevation ladder is deliberately wide — surface sits ~0.15 luminance
+# above bg, bg ~0.07 above the sidebar — so cards, the nav rail and dialogs
+# separate cleanly.  WCAG-AA contrast + palette parity stay enforced by
+# tests/gui/test_theme.py.
 _RUZ = {
-    "bg": "#eaeef4",
-    "bg_alt": "#e2e7f0",
-    "surface": "#ffffff",
-    "elevated": "#ffffff",
+    "bg": "#d9dee6",
+    "bg_alt": "#ced4de",
+    "surface": "#eef1f5",
+    "elevated": "#f7f9fb",
     "on_danger": "#ffffff",
-    "border": "#ccd4e0",
-    "border_soft": "#dde3ec",
-    "hover": "#e5eaf2",
-    "selection": "#b6dde8",
-    "row_line": "#e6ebf2",
-    "row_alt": "#f3f6fa",
-    "field": "#eef1f7",
-    "field_focus": "#ffffff",
-    "text": "#1b2027",
-    "text_muted": "#556070",
+    "border": "#b7c0cc",
+    "border_soft": "#c7ced9",
+    "hover": "#e2e6ed",
+    "selection": "#b0d6e3",
+    "row_line": "#dce1e9",
+    "row_alt": "#e6eaf0",
+    "field": "#e3e7ee",
+    "field_focus": "#f7f9fb",
+    "text": "#1a1f27",
+    "text_muted": "#4c5666",
     "primary": "#0a6e8f",
     "primary_hi": "#0c82a8",
     "primary_fg": "#ffffff",
-    "primary_soft": "#d3ecf3",
+    "primary_soft": "#cde4ec",
     "accent": "#7b41d8",
     "focus": "#0a6e8f",
     "overdue": "#d63b45",
     "due_soon": "#8a6000",
-    "waiting": "#66707e",
-    "completed": "#8b93a0",
+    "waiting": "#5e6978",
+    "completed": "#808995",
     "blocked": "#c72e86",
-    "success": "#1a8a42",
-    "chip_bg": "#e4ecfa",
-    "chip_border": "#c7d5ec",
+    "success": "#187a3c",
+    "chip_bg": "#dae5f4",
+    "chip_border": "#bbcbde",
     "chip_fg": "#2f5bb5",
 }
 
