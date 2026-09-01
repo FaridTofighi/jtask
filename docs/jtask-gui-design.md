@@ -2267,3 +2267,29 @@ in fa). Both themes + both directions screenshotted.
 `tests/gui/test_kanban.py` (12). Suite **583 passed / 1 skipped**. Snapshot
 rebaselined (board strings). Also fixed a latent missing key `col.priority.none`
 (added by N-A's priority delegate, never caught because `t()` degrades softly).
+
+## N-E — Timewarrior integration (complete) — mission n done
+
+**One feature, not a second panel** (Phase-0 Q4). `jtask/timew.py` — the only
+`timew` subprocess wrapper: `available()`, `intervals(since, until)` (parses
+`timew export <range>`), `summary(...)` → `{total, by_tag, by_day, intervals}`.
+
+The **existing M6 Timesheet view** gained a **Source `SegmentedControl`**:
+**Taskwarrior** (the modification-log reconstruction, default and fallback) |
+**Timewarrior** (disabled with the Taskwarrior default when `timew` is absent).
+An always-visible note states the active source. In Timewarrior mode
+`_render_timew()` shows intervals grouped by their `timew` tags + a per-day
+total — jtask makes no assumption about an `on-modify` hook mapping tags back
+to task uuids, so tag grouping is the honest presentation.
+
+`tests/test_timew.py` (7) — detection both ways, JSON parse, garbage-safe, the
+view toggle + disabled-when-absent + tag-grouped render.
+`docs/taskwarrior-compatibility.md` updated. Suite **590 passed / 1 skipped**.
+
+---
+
+**Mission "n" complete** — 8 milestones: n1 (shell) · n2 (density/palette/dark)
+· n3 (command palette) + the interspersed bug fixes · **N-A** (keyboard +
+inline edit) · **N-C** (templates) · **N-B** (starred + smart lists) · **N-D**
+(Kanban) · **N-E** (Timewarrior). Deferred with rationale: keyboard rebinding
+UI, template UDA capture, Kanban per-UDA grouping.

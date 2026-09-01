@@ -8,7 +8,6 @@ Timewarrior, if installed, is noted as a richer optional source.
 from __future__ import annotations
 
 import datetime as dt
-import shutil
 
 import jdatetime
 from PyQt6.QtCore import Qt
@@ -22,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from jtask import timesheet
+from jtask import timesheet, timew
 
 from .. import fmt
 from .. import tokens as tok
@@ -30,6 +29,7 @@ from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
 from .jalali_date_picker import JalaliDatePicker
+from .segmented import SegmentedControl
 
 
 def _hm(d: dt.timedelta) -> str:
@@ -67,6 +67,19 @@ class TimesheetView(QWidget):
         bar.addStretch(1)
         lay.addLayout(bar)
 
+        src = QHBoxLayout()
+        src.setSpacing(tok.SP_6)
+        src.addWidget(QLabel(t("ts.source")))
+        self._source = SegmentedControl([
+            (t("ts.source.taskwarrior"), "tw"),
+            (t("ts.source.timewarrior"), "timew"),
+        ])
+        self._source.changed.connect(lambda _v: self.reload())
+        self._source._group.button(1).setEnabled(timew.available())
+        src.addWidget(self._source)
+        src.addStretch(1)
+        lay.addLayout(src)
+
         start, end = active().week_bounds()
         self._from.set_value(start)
         self._to.set_value(end)
@@ -92,14 +105,19 @@ class TimesheetView(QWidget):
         self._summary.setObjectName("H2")
         lay.addWidget(self._summary)
 
-        note = (
-            t("ts.note.base")
-            + (t("ts.note.timew") if shutil.which("timew") else ".")
-        )
-        self._note = QLabel(note)
+        self._note = QLabel("")
         self._note.setObjectName("Muted")
         self._note.setWordWrap(True)
         lay.addWidget(self._note)
+        self._update_note()
+
+    def _update_note(self) -> None:
+        if self._source.value() == "timew":
+            self._note.setText(t("ts.note.timew_active"))
+        elif timew.available():
+            self._note.setText(t("ts.note.base") + t("ts.note.timew"))
+        else:
+            self._note.setText(t("ts.note.base") + ".")
 
     def set_filter(self, tokens: list[str]) -> None:
         self._filter = tokens or None
@@ -118,10 +136,35 @@ class TimesheetView(QWidget):
         if isinstance(until, dt.datetime):
             until = until.date()
         self._summary.setText(t("ts.calculating"))
+        self._update_note()
+        if self._source.value() == "timew" and timew.available():
+            submit(
+                lambda: timew.summary(since, until),
+                self._render_timew,
+                lambda _e: self._summary.setText(t("ts.calc_failed")),
+            )
+            return
         submit(
             lambda: timesheet.build(self._filter, since, until),
             self._render,
             lambda _e: self._summary.setText(t("ts.calc_failed")),
+        )
+
+    def _render_timew(self, s: timew.Summary) -> None:
+        self._tree.clear()
+        for tag, total in sorted(s.by_tag.items(), key=lambda kv: kv[1], reverse=True):
+            self._tree.addTopLevelItem(QTreeWidgetItem([tag, "", _hm(total)]))
+        self._empty.setVisible(not s.by_tag)
+        self._tree.setVisible(bool(s.by_tag))
+        if not s.by_tag:
+            self._summary.setText("")
+            return
+        days = t("list.sep_wide").join(
+            f"{active().format_local(d.strftime('%Y-%m-%d'), 'short')}: {_hm(dur)}"
+            for d, dur in sorted(s.by_day.items())
+        )
+        self._summary.setText(
+            t("ts.summary", total=_hm(s.total), projects=days, extra="")
         )
 
     def _render(self, sheet: timesheet.Timesheet) -> None:

@@ -22,7 +22,7 @@ Rules (from the mission's cross-cutting requirements):
 | `import-v2` | `import-v2 in _commands` | fall back to `import` |
 | `timesheet` report | `timesheet in _commands` | build from modification-log parse anyway |
 | sync configured | `task _get rc.sync.server.url` / `rc.sync.local.server` non-empty; `task diagnostics` sync section | Sync Manager shows "sync not configured", links to Config Manager |
-| Timewarrior | `shutil.which("timew")` | Timesheet uses the Taskwarrior-only source |
+| Timewarrior | `jtask.timew.available()` (`shutil.which("timew")`) | Timesheet "Source" toggle offers **Timewarrior** (`timew export`, grouped by tag); disabled + Taskwarrior-reconstruction fallback when absent |
 | a `rc.*` var | `task _get rc.<name>` (empty string vs. missing) | treat missing as "default" |
 | a column/attribute | `X in task _columns` | omit from column pickers |
 | context read/write filters | `task _get rc.context.<name>.read` / `.write` (3.4+) or `rc.context.<name>` (older) | use whichever is present |

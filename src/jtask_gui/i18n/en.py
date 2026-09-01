@@ -594,6 +594,10 @@ CATALOG.update({
     "ts.note.base": "Sessions reconstructed from Taskwarrior history",
     "ts.note.timew": "  ·  Timewarrior is installed and can be a more precise "
                      "source.",
+    "ts.note.timew_active": "Live intervals from Timewarrior, grouped by tag.",
+    "ts.source": "Source",
+    "ts.source.taskwarrior": "Taskwarrior",
+    "ts.source.timewarrior": "Timewarrior",
     "ts.calculating": "Calculating…",
     "ts.calc_failed": "Calculation failed.",
     "ts.running": "running",
