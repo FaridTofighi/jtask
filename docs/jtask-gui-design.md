@@ -2443,3 +2443,12 @@ So `context define …`, `add …`, `config …` etc. typed in the console show
 immediately in the sidebar / task list. `tests/gui/test_command_console.py`
 +2 (`_is_mutating` classification, an end-to-end `context define` → sidebar).
 Suite **615 passed / 1 skipped**.
+
+## Console — one shortcut to open *and* close (2026-09-02)
+
+`_console_action` is a checkable `QAction` with `WindowShortcut` context bound to
+both **Ctrl+`** and **F12**; a shortcut press toggles its check state, so the
+same key both reveals and hides the dock (`toggled` → `_toggle_console`, which
+also persists `settings.console_visible`). Registry entry `sc.console` under the
+navigation category; `action.console.tip` now names the keys.
+`tests/gui/test_command_console.py` +1. Suite **617 passed / 1 skipped**.

@@ -136,3 +136,34 @@ def test_main_window_resyncs_after_a_console_context_define(qapp, qtbot, tw_env)
     rows = [w._sidebar._contexts.child(i).text(0)
             for i in range(w._sidebar._contexts.childCount())]
     assert any("home" in r for r in rows)          # sidebar updated on the fly
+
+
+def test_one_shortcut_toggles_the_console_open_and_shut(qapp, qtbot, tw_env):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    w = MainWindow(Settings())
+    qtbot.addWidget(w)
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+
+    keys = {s.toString() for s in w._console_action.shortcuts()}
+    assert keys == {"Ctrl+`", "F12"}
+    assert w._console_action.isCheckable()
+
+    # one action — its shortcut both opens and closes the dock
+    assert not w._console_dock.isVisibleTo(w)
+    w._console_action.trigger()          # the shortcut
+    qapp.processEvents()
+    assert w._console_dock.isVisibleTo(w)
+    assert w.settings.console_visible
+    w._console_action.trigger()          # same shortcut again
+    qapp.processEvents()
+    assert not w._console_dock.isVisibleTo(w)
+    assert not w.settings.console_visible

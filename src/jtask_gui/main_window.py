@@ -278,6 +278,10 @@ class MainWindow(QMainWindow):
         self._console_action = QAction(icons.icon("console"), t("action.console"), self)
         self._console_action.setToolTip(t("action.console.tip"))
         self._console_action.setCheckable(True)
+        self._console_action.setShortcuts(
+            [QKeySequence("Ctrl+`"), QKeySequence(Qt.Key.Key_F12)]
+        )
+        self._console_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
         self._console_action.toggled.connect(self._toggle_console)
         row2.addAction(self._console_action)
 
