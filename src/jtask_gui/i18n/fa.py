@@ -154,6 +154,16 @@ CATALOG: dict[str, str] = {
     "palette.cat.filter": "فیلتر ذخیره‌شده",
 
     # ---- کلیدهای میان‌بر (shortcuts.py، برگهٔ راهنما، تنظیمات) ----
+    "action.board": "نمای برد",
+    "action.board.tip": "نمایش فهرست کارها به‌صورت برد کانبان",
+    "kanban.group_by": "ستون‌ها بر اساس",
+    "kanban.by.status": "وضعیت",
+    "kanban.by.priority": "اولویت",
+    "kanban.by.project": "پروژه",
+    "kanban.col.todo": "برای انجام",
+    "kanban.col.doing": "در حال انجام",
+    "kanban.col.done": "انجام‌شده",
+    "kanban.col.waiting": "در انتظار",
     "sc.sheet.title": "کلیدهای میان‌بر",
     "sc.cat.create": "ایجاد",
     "sc.cat.navigate": "پیمایش",
@@ -751,6 +761,7 @@ CATALOG: dict[str, str] = {
     # ---- column spec (models/column_spec.py) --------------
     "col.priority.h": "بالا",
     "col.priority.m": "متوسط",
+    "col.priority.none": "بدون",
     "col.priority.l": "پایین",
     "col.status.pending": "در جریان",
     "col.status.completed": "انجام‌شده",

@@ -2233,3 +2233,37 @@ and the detail-panel chip editor / save-diff (so a plain Save can't strip it).
 
 `tests/gui/test_starred_smartlists.py` (9). Suite **571 passed / 1 skipped**.
 Snapshot rebaselined (quick-view counts + the star tooltip).
+
+## N-D — Kanban board (complete)
+
+A third content view (`_content` index 2), toggled by a checkable
+`action.board` toolbar button (`_board_mode`; disables the table grouping combo
+while on). `widgets/kanban_view.py` + `widgets/kanban_card.py`.
+
+**Grouping** — a `SegmentedControl` (status / priority / project), default
+**status**. `_bucket(task, grouping)`:
+
+| grouping | columns | drop → write |
+|---|---|---|
+| **status** | To Do (`-start`) · Doing (`start` set) · Done (`completed`) · **Waiting** (read-only) | To Do→Doing `start` · →Done `done` · Doing→To Do `stop` · Done→To Do `modify status:pending` |
+| priority | (none) · Low · Medium · High | `modify priority:<>` |
+| project | one per project + (no project) | `modify project:<>` |
+
+"Doing" is `task.get("start")` — the running-timer state, real stored data,
+**not an invented status** (`task export` doesn't surface the `+ACTIVE` virtual
+tag, so `start` is the signal). Every drop emits
+`KanbanView.taskMoved(task, grouping, target)` → `MainWindow._kanban_move()` →
+one `taskwarrior.command()` through `_write` (undo-able). No parallel write
+path.
+
+**Cards** (`KanbanCard`) — star toggle, description (`auto_isolate`), a meta
+line (project · due, `bidi_isolate` + `fmt`), a priority-coloured left edge
+(QSS `[priority]`). Drag = a `QDrag` carrying the `UUID_MIME`; double-click →
+`taskActivated` → back to the table + open the edit panel.
+
+**RTL** — the column `QHBoxLayout` mirrors under RTL (verified: To Do rightmost
+in fa). Both themes + both directions screenshotted.
+
+`tests/gui/test_kanban.py` (12). Suite **583 passed / 1 skipped**. Snapshot
+rebaselined (board strings). Also fixed a latent missing key `col.priority.none`
+(added by N-A's priority delegate, never caught because `t()` degrades softly).

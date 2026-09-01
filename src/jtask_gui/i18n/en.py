@@ -163,6 +163,16 @@ CATALOG.update({
     "palette.cat.filter": "Saved filter",
 
     # ---- keyboard shortcuts (shortcuts.py, cheat sheet, settings) ----
+    "action.board": "Board view",
+    "action.board.tip": "Show the task list as a Kanban board",
+    "kanban.group_by": "Columns by",
+    "kanban.by.status": "Status",
+    "kanban.by.priority": "Priority",
+    "kanban.by.project": "Project",
+    "kanban.col.todo": "To Do",
+    "kanban.col.doing": "Doing",
+    "kanban.col.done": "Done",
+    "kanban.col.waiting": "Waiting",
     "sc.sheet.title": "Keyboard shortcuts",
     "sc.cat.create": "Create",
     "sc.cat.navigate": "Navigate",
@@ -782,6 +792,7 @@ CATALOG.update({
     # ---- column spec ----------------
     "col.priority.h": "High",
     "col.priority.m": "Medium",
+    "col.priority.none": "None",
     "col.priority.l": "Low",
     "col.status.pending": "Pending",
     "col.status.completed": "Completed",

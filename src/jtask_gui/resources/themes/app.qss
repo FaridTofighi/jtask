@@ -329,6 +329,32 @@ QListWidget#PaletteList::item:selected {
     color: @primary@;
 }
 
+/* ============================ kanban board =============== */
+QWidget#KanbanView { background-color: @bg@; }
+QScrollArea#KanbanBoard { background: transparent; border: none; }
+QScrollArea#KanbanColScroll { background: transparent; border: none; }
+QFrame#KanbanColumn {
+    background-color: @bg_alt@;
+    border: 1px solid @border_soft@;
+    border-radius: @r_lg@;
+    min-width: 220px;
+}
+QFrame#KanbanColumn[dropTarget="true"] { border-color: @primary@; }
+QLabel#KanbanColTitle {
+    color: @text_muted@; font-weight: 700; font-size: @fs_xs@;
+    padding: @sp_2@ @sp_4@;
+}
+QFrame#KanbanCard {
+    background-color: @surface@;
+    border: 1px solid @border@;
+    border-radius: @r_md@;
+}
+QFrame#KanbanCard[priority="H"] { border-left: 2px solid @overdue@; }
+QFrame#KanbanCard[priority="M"] { border-left: 2px solid @due_soon@; }
+QLabel#CardTitle { color: @text@; }
+QLabel#CardMeta { color: @text_muted@; font-size: @fs_xs@; }
+QToolButton#CardStar { border: none; background: transparent; padding: 0; }
+
 /* ============================ shortcut cheat sheet ======= */
 QDialog#ShortcutSheet { background-color: @elevated@; }
 QScrollArea#SheetScroll { background: transparent; border: none; }

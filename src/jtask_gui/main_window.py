@@ -85,6 +85,9 @@ class MainWindow(QMainWindow):
         self._raw_view = RawDataView()
         self._annotations_view = AnnotationsView()
         self._reports = ReportsView(self.settings.theme)
+        from .widgets.kanban_view import KanbanView
+        self._kanban = KanbanView(self.settings.theme)
+        self._board_mode = False
 
         self._really_quit = False
         self._build_central()
@@ -136,8 +139,9 @@ class MainWindow(QMainWindow):
         self._detail_host.setVisible(False)
         self._split.setSizes([1_000_000, 0])
 
-        self._content.addWidget(self._split)     # index 0: tasks
+        self._content.addWidget(self._split)     # index 0: tasks (table)
         self._content.addWidget(self._reports)   # index 1: reports & charts
+        self._content.addWidget(self._kanban)    # index 2: kanban board
 
         # A gutter of the window background around the content so the task
         # table / reports read as an elevated card, distinct from the chrome
@@ -205,6 +209,12 @@ class MainWindow(QMainWindow):
             lambda: self._table.set_group_key(self._group_combo.currentData())
         )
         row2.addWidget(self._group_combo)
+
+        self._board_action = QAction(icons.icon("board"), t("action.board"), self)
+        self._board_action.setCheckable(True)
+        self._board_action.setToolTip(t("action.board.tip"))
+        self._board_action.toggled.connect(self._toggle_board)
+        row2.addAction(self._board_action)
         row2.addSeparator()
 
         self._add_full_action = QAction(
@@ -465,6 +475,9 @@ class MainWindow(QMainWindow):
         self._detail.starToggled.connect(self._toggle_star)
         self._model.cellEdited.connect(self._inline_edit)
         self._model.starToggled.connect(self._toggle_star)
+        self._kanban.taskMoved.connect(self._kanban_move)
+        self._kanban.starToggled.connect(self._toggle_star)
+        self._kanban.taskActivated.connect(self._open_card)
 
         from PyQt6.QtGui import QShortcut
 
@@ -726,12 +739,26 @@ class MainWindow(QMainWindow):
             self._status_count.setText(t("status.reports"))
             self._reports.set_filter(self._extra_filter)
             return
-        self._content.setCurrentIndex(0)
 
         base_filter = list(spec.get("filter") or [])
         fn_name = spec.get("fn")
         extra = self._extra_filter
 
+        if self._board_mode:
+            self._content.setCurrentIndex(2)
+            # the status board wants every non-deleted task; the others, pending
+            board_filter = (
+                list(extra) if self._kanban.grouping() == "status"
+                else ["status:pending", *extra]
+            )
+            self._begin_busy(t("status.loading"))
+            submit(
+                functools.partial(reports.report_list, board_filter),
+                self._populate_board, self._on_load_error,
+            )
+            return
+
+        self._content.setCurrentIndex(0)
         if fn_name:
             fetch = functools.partial(getattr(reports, fn_name), extra or None)
         else:
@@ -739,6 +766,64 @@ class MainWindow(QMainWindow):
 
         self._begin_busy(t("status.loading"))
         submit(fetch, self._populate_table, self._on_load_error)
+
+    def _populate_board(self, tasks: list[dict]) -> None:
+        self._end_busy()
+        self._kanban.set_tasks(tasks)
+        self._status_count.setText(
+            t("status.count", n=fmt.num(len(tasks)),
+              title=self._view_spec.get("title") or t("view.tasks"))
+        )
+
+    def _toggle_board(self, on: bool) -> None:
+        self._board_mode = on
+        self._group_combo.setEnabled(not on)
+        self._load_current_view()
+
+    def _open_card(self, uuid: str) -> None:
+        self._board_action.setChecked(False)  # back to the table
+
+        def show(rows: list[dict]) -> None:
+            if rows:
+                self._show_detail(rows[0])
+
+        submit(functools.partial(taskwarrior.export, [uuid]), show, self._error)
+
+    def _kanban_move(self, task: dict, grouping: str, target: str) -> None:
+        uuid = task.get("uuid")
+        if not uuid:
+            return
+        if grouping == "priority":
+            self._write(
+                functools.partial(taskwarrior.command, [uuid], "modify",
+                                  [f"priority:{target}"]),
+                t("msg.task_updated"),
+            )
+            return
+        if grouping == "project":
+            self._write(
+                functools.partial(taskwarrior.command, [uuid], "modify",
+                                  [f"project:{target}"]),
+                t("msg.task_updated"),
+            )
+            return
+        # grouping == "status"
+        cur = "done" if task.get("status") == "completed" else (
+            "doing" if task.get("start") else "todo")
+        verb, mods = {
+            ("todo", "doing"): ("start", []),
+            ("todo", "done"): ("done", []),
+            ("doing", "done"): ("done", []),
+            ("doing", "todo"): ("stop", []),
+            ("done", "todo"): ("modify", ["status:pending"]),
+            ("done", "doing"): ("start", []),
+        }.get((cur, target), (None, None))
+        if verb is None:
+            return
+        self._write(
+            functools.partial(taskwarrior.command, [uuid], verb, mods),
+            t("msg.task_updated"),
+        )
 
     def _populate_table(self, tasks: list[dict]) -> None:
         self._end_busy()
@@ -1107,6 +1192,7 @@ class MainWindow(QMainWindow):
         self._sidebar.retint()
         self._filter_bar.retint()
         self._reports.set_theme(name)
+        self._kanban.set_theme(name)
         self._sync_theme_action()
         self._undo_action.setIcon(icons.icon("undo"))
         self._settings_action.setIcon(icons.icon("settings"))
