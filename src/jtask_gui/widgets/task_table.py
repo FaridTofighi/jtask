@@ -325,6 +325,25 @@ class TaskTable(QTableView):
         if self.model() is self._group_model and index.data(GROUP_HEADER_ROLE):
             self._group_model.toggle(index.data(GROUP_KEY_ROLE))
             self._apply_group_spans()
+            return
+        src = self._map_to_flat(index)
+        if not src.isValid():
+            return
+        keys = self._model.visible_columns()
+        if 0 <= src.column() < len(keys) and keys[src.column()] == "starred":
+            task = self._model.data(src, TASK_ROLE)
+            if task and task.get("uuid"):
+                self._model.starToggled.emit(
+                    task["uuid"], not self._model._is_starred(task)
+                )
+
+    def toggle_star_on_selection(self) -> None:
+        for task in self.selected_tasks():
+            if task.get("uuid"):
+                self._model.starToggled.emit(
+                    task["uuid"], not self._model._is_starred(task)
+                )
+                return
 
     # --- events -----------------------------------------------
 

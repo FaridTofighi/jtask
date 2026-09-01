@@ -173,6 +173,7 @@ CATALOG: dict[str, str] = {
     "sc.timer_start": "شروع زمان‌سنج",
     "sc.timer_stop": "توقف زمان‌سنج",
     "sc.delete": "حذف (با پرسش تأیید)",
+    "sc.toggle_star": "ستاره‌دار کردن / برداشتن ستاره",
     "sc.undo": "واگرد آخرین تغییر",
     "sc.cheat_sheet": "نمایش همین فهرست میان‌برها",
     "sc.close_panel": "بستن پنل ویرایش / پنجره",
@@ -235,6 +236,8 @@ CATALOG: dict[str, str] = {
     "msg.tasks_updated": "کارها به‌روزرسانی شدند",
     "msg.timer_updated": "زمان‌سنجی به‌روزرسانی شد",
     "msg.task_updated": "کار به‌روزرسانی شد",
+    "msg.starred": "ستاره‌دار شد",
+    "msg.unstarred": "ستاره برداشته شد",
     "op.undo_preparing": "در حال آماده‌سازی واگرد…",
     "msg.nothing_to_undo": "چیزی برای واگرد وجود ندارد.",
     "confirm.undo.title": "واگرد آخرین تغییر",
@@ -465,6 +468,7 @@ CATALOG: dict[str, str] = {
     "detail.priority.l": "پایین",
     "detail.priority.none": "بدون",
     "detail.date.wait": "تاریخ انتظار",
+    "detail.star.tip": "ستاره‌دار کردن / برداشتن ستارهٔ این کار",
     "detail.title": "جزئیات کار",
     "detail.field.recurrence": "تکرار",
     "detail.deps.placeholder": "شناسه‌ها با کاما، مثلاً 3,7",
@@ -792,6 +796,7 @@ CATALOG: dict[str, str] = {
     "theme.light": "روز",
 
     # ---- sidebar quick views (i2 — key/label decoupled) --
+    "view.starred": "ستاره‌دار",
     "view.today": "امروز",
     "view.week": "این هفته",
     "view.overdue": "معوق",

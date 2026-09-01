@@ -24,6 +24,7 @@ from .rewrite import rewrite_export
 
 __all__ = [
     "VIRTUAL_TAGS",
+    "STARRED_TAG",
     "shape_task_list",
     "shape_projects",
     "shape_tags",
@@ -50,6 +51,11 @@ __all__ = [
 ]
 
 PERIODS = ("daily", "weekly", "monthly")
+
+# jtask's "starred / important" flag — a real Taskwarrior tag (round-trips
+# through plain `task`), but treated as semi-virtual: hidden from the tag chips
+# and the tag sidebar, surfaced instead as the star column / the ⭐ quick view.
+STARRED_TAG = "starred"
 
 # Taskwarrior virtual tags — never shown as user tags.
 VIRTUAL_TAGS = frozenset({
@@ -168,7 +174,7 @@ def shape_tags(tasks: list[dict]) -> list[dict]:
     counter: Counter = Counter()
     for t in tasks:
         for tag in t.get("tags", []) or []:
-            if tag not in VIRTUAL_TAGS:
+            if tag not in VIRTUAL_TAGS and tag != STARRED_TAG:
                 counter[tag] += 1
     return [{"tag": tag, "count": n} for tag, n in counter.most_common()]
 

@@ -41,6 +41,7 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Ctrl+S", "sc.timer_start", "sc.cat.task"),
     Shortcut("Ctrl+Shift+S", "sc.timer_stop", "sc.cat.task"),
     Shortcut("Del", "sc.delete", "sc.cat.task"),
+    Shortcut("Ctrl+.", "sc.toggle_star", "sc.cat.task"),
     # -- everywhere --
     Shortcut("Ctrl+Z", "sc.undo", "sc.cat.general"),
     Shortcut("?", "sc.cheat_sheet", "sc.cat.general"),

@@ -42,6 +42,7 @@ _DATE_FIELDS = [("due", "word.due", True), ("scheduled", "word.scheduled", True)
 
 class DetailPanel(QScrollArea):
     saveRequested = pyqtSignal(str, list)      # uuid, modification tokens
+    starToggled = pyqtSignal(str, bool)        # uuid, starred
     opened = pyqtSignal()
     closed = pyqtSignal()
 
@@ -62,10 +63,18 @@ class DetailPanel(QScrollArea):
         outer.setSpacing(tok.SP_10)
 
         top = QHBoxLayout()
+        from PyQt6.QtWidgets import QToolButton
+
+        self._star = QToolButton()
+        self._star.setObjectName("DetailStar")
+        self._star.setCheckable(True)
+        self._star.setToolTip(t("detail.star.tip"))
+        self._star.clicked.connect(self._on_star)
         self._title = QLabel(t("detail.title"))
         self._title.setObjectName("H2")
         close = QPushButton(t("btn.close"))
         close.clicked.connect(self.hide_panel)
+        top.addWidget(self._star)
         top.addWidget(self._title, 1)
         top.addWidget(close)
         outer.addLayout(top)
@@ -201,8 +210,21 @@ class DetailPanel(QScrollArea):
 
     def set_theme(self, name: str) -> None:
         self._dep_graph.set_theme(name)
+        self._retint_star()
         if self._task and getattr(self, "_all_tasks", None):
             self._dep_graph.show_task(self._task, self._all_tasks)
+
+    def _retint_star(self) -> None:
+        from .. import icons
+
+        on = self._star.isChecked()
+        self._star.setIcon(icons.icon("star" if on else "star_outline",
+                                      "due_soon" if on else "text_muted"))
+
+    def _on_star(self, checked: bool) -> None:
+        self._retint_star()
+        if self._task and self._task.get("uuid"):
+            self.starToggled.emit(self._task["uuid"], checked)
 
     def _toggle_why(self, on: bool) -> None:
         self._why.setVisible(on)
@@ -227,9 +249,13 @@ class DetailPanel(QScrollArea):
         self._dirty_dates.clear()
         self.verticalScrollBar().setValue(0)  # open at the top — title + Close visible
         self._title.setText(t("detail.task_number", id=task.get("id", "—")))
+        self._star.setChecked("starred" in (task.get("tags") or []))
+        self._retint_star()
         self._description.setText(task.get("description", ""))
         self._project.setCurrentText(task.get("project", ""))
-        self._tags.set_tags([t for t in (task.get("tags") or []) if not t.isupper()])
+        self._tags.set_tags(
+            [t for t in (task.get("tags") or []) if not t.isupper() and t != "starred"]
+        )
         pri = task.get("priority", "")
         self._priority.setCurrentIndex(
             next((i for i, (_, v) in enumerate(_PRIORITIES) if v == pri), 0)
@@ -339,7 +365,11 @@ class DetailPanel(QScrollArea):
             mods.append(f"project:{proj}")
 
         new_tags = set(self._tags.tags())
-        old_tags = {t for t in (orig.get("tags") or []) if not t.isupper()}
+        # "starred" is owned by the star toggle, never the chip editor — keep it
+        # out of the diff so a plain Save can't strip it
+        old_tags = {
+            t for t in (orig.get("tags") or []) if not t.isupper() and t != "starred"
+        }
         mods += [f"+{t}" for t in new_tags - old_tags]
         mods += [f"-{t}" for t in old_tags - new_tags]
 

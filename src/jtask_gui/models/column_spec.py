@@ -17,12 +17,17 @@ class Column:
     numeric: bool = False
     is_id: bool = False
     indicator: bool = False
+    star: bool = False  # the ⭐ toggle column — click flips the `starred` tag
     formatter: Callable[[dict], str] | None = field(default=None, compare=False)
 
 
 def _tags(task: dict) -> str:
-    # keep Taskwarrior's own "+tag" / "#tag" convention — shown with the leading #
-    return "  ".join(f"#{x}" for x in (task.get("tags") or []) if not x.isupper())
+    # keep Taskwarrior's own "+tag" / "#tag" convention — shown with the leading #.
+    # "starred" is jtask's ⭐ flag — it has its own column, never a chip here.
+    return "  ".join(
+        f"#{x}" for x in (task.get("tags") or [])
+        if not x.isupper() and x != "starred"
+    )
 
 
 def _priority(task: dict) -> str:
@@ -47,6 +52,7 @@ INDICATOR_MARKS = ("annotations", "recur", "depends")
 
 
 COLUMNS: list[Column] = [
+    Column("starred", "", 30, star=True),
     Column("id", t("col.id"), 56, is_id=True),
     Column("description", t("col.description"), 320),
     Column("indicators", "", 60, indicator=True),

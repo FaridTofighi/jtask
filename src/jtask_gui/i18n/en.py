@@ -182,6 +182,7 @@ CATALOG.update({
     "sc.timer_start": "Start the timer",
     "sc.timer_stop": "Stop the timer",
     "sc.delete": "Delete (asks to confirm)",
+    "sc.toggle_star": "Star / unstar",
     "sc.undo": "Undo the last change",
     "sc.cheat_sheet": "Show this shortcut list",
     "sc.close_panel": "Close the edit panel / dialog",
@@ -247,6 +248,8 @@ CATALOG.update({
     "msg.tasks_updated": "Tasks updated",
     "msg.timer_updated": "Timer updated",
     "msg.task_updated": "Task updated",
+    "msg.starred": "Starred",
+    "msg.unstarred": "Star removed",
     "op.undo_preparing": "Preparing undo…",
     "msg.nothing_to_undo": "Nothing to undo.",
     "confirm.undo.title": "Undo last change",
@@ -491,6 +494,7 @@ CATALOG.update({
     "detail.priority.l": "Low",
     "detail.priority.none": "None",
     "detail.date.wait": "Wait",
+    "detail.star.tip": "Star / unstar this task",
     "detail.title": "Task details",
     "detail.field.recurrence": "Recurrence",
     "detail.deps.placeholder": "IDs comma-separated, e.g. 3,7",
@@ -823,6 +827,7 @@ CATALOG.update({
     "theme.light": "Light",
 
     # ---- sidebar quick views (GTD planning vocabulary) --
+    "view.starred": "Starred",
     "view.today": "Today",
     "view.week": "This Week",
     "view.overdue": "Overdue",

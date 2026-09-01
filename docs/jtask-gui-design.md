@@ -2201,3 +2201,35 @@ recurrence copier (Phase-0 Q2):
 `docs/i18n-glossary.md` §3a documents both tools. `tests/gui/test_templates.py`
 (6). Suite **562 passed / 1 skipped**. Snapshot rebaselined (recurrence-button
 rename).
+
+## N-B — starred tasks + smart lists (complete)
+
+**Starred = the `+starred` tag** (Phase-0 Q5 — verified round-trips through
+plain `task`: `task add … +starred`, `task <id> mod -starred`, filter
+`+starred`). `reports.STARRED_TAG`; excluded from `shape_tags`, the tag sidebar,
+and the detail-panel chip editor / save-diff (so a plain Save can't strip it).
+
+- **Star column** — a 30 px leading gutter (`Column(star=True)`); the model
+  paints a gold `star` when set, a muted `star_outline` otherwise
+  (`DecorationRole`). A click emits `TaskTableModel.starToggled(uuid, on)` —
+  **the model never writes**; `MainWindow._toggle_star` runs one
+  `task modify +starred|-starred` via `_write`.
+- **Detail panel** — a `QToolButton#DetailStar` before the title; reflects the
+  tag on load, emits `DetailPanel.starToggled`.
+- **`Ctrl+.`** — toggle the star on the selection (`shortcuts.SHORTCUTS`).
+- **"⭐ Starred" quick view** — first in `QUICK_VIEWS`
+  (`+starred status:pending`).
+
+**Smart lists.**
+- **Counts** — every quick view *and* saved filter now shows `· N`, like
+  Projects/Tags always have. `taskwarrior.count(filter)`;
+  `MainWindow._view_counts()` runs off-thread (`submit`) and calls
+  `Sidebar.set_view_counts({key_or_name: n})`. `fn`-based quick views
+  (`report_ready` etc.) map through `_FN_COUNT_FILTER`.
+- **Folders** — a `/` in a saved-filter name nests it:
+  `"Work/Urgent"` → an (icon-only) **Work** folder with an **Urgent** leaf.
+  Rename/delete still act on the full name. Zero new UI — a naming convention,
+  documented in the glossary.
+
+`tests/gui/test_starred_smartlists.py` (9). Suite **571 passed / 1 skipped**.
+Snapshot rebaselined (quick-view counts + the star tooltip).

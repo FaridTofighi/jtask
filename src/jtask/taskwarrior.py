@@ -23,6 +23,7 @@ _log = logging.getLogger(__name__)
 __all__ = [
     "binary",
     "run",
+    "count",
     "export",
     "add",
     "command",
@@ -371,6 +372,14 @@ def project_task_count(name: str) -> int:
     if not name.strip():
         return 0
     for line in _lines([*_project_filter(name), "count"]):
+        if line.strip().isdigit():
+            return int(line.strip())
+    return 0
+
+
+def count(filter_args: list[str]) -> int:
+    """``task <filter> count`` — matched tasks, 0 on any trouble."""
+    for line in _lines([*filter_args, "count"]):
         if line.strip().isdigit():
             return int(line.strip())
     return 0

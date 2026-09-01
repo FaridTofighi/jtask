@@ -36,6 +36,8 @@ class TaskTableModel(QAbstractTableModel):
     # (uuid, field, value) — an inline cell edit; MainWindow turns it into a
     # `task <uuid> modify <field>:<value>` write. The model never writes.
     cellEdited = pyqtSignal(str, str, str)
+    # (uuid, starred) — the ⭐ column was clicked
+    starToggled = pyqtSignal(str, bool)
 
     #: columns that accept an inline editor (delegates in widgets/table_delegates)
     EDITABLE = ("project", "priority", "due")
@@ -195,8 +197,12 @@ class TaskTableModel(QAbstractTableModel):
                 return Qt.AlignmentFlag.AlignRight
         return self._leading()
 
+    @staticmethod
+    def _is_starred(task: dict) -> bool:
+        return "starred" in (task.get("tags") or [])
+
     def _display(self, task: dict, col: Column) -> str:
-        if col.indicator:
+        if col.indicator or col.star:
             return ""
         if col.formatter is not None:
             text = col.formatter(task)
@@ -227,6 +233,11 @@ class TaskTableModel(QAbstractTableModel):
     _PRIORITY_DOT = {"H": "overdue", "M": "due_soon", "L": "text_muted"}
 
     def _decoration(self, task: dict, col: Column):
+        if col.star:
+            from ..icons import icon
+            if self._is_starred(task):
+                return icon("star", "due_soon").pixmap(15, 15)
+            return icon("star_outline", "text_muted").pixmap(15, 15)
         if col.key == "priority":
             role = self._PRIORITY_DOT.get(task.get("priority", ""))
             if role is None:

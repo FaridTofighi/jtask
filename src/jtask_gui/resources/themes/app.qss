@@ -95,6 +95,9 @@ QToolButton#PrimaryAction {
 QToolButton#PrimaryAction:hover { background-color: @primary_hi@; }
 QToolButton#PrimaryAction:pressed { background-color: @accent@; }
 
+QToolButton#DetailStar { border: none; background: transparent; padding: @sp_2@; }
+QToolButton#DetailStar:hover { background-color: @hover@; border-radius: @r_sm@; }
+
 /* ============================ inputs ======================== */
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTimeEdit {
     background-color: @field@;

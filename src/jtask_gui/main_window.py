@@ -462,7 +462,9 @@ class MainWindow(QMainWindow):
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
+        self._detail.starToggled.connect(self._toggle_star)
         self._model.cellEdited.connect(self._inline_edit)
+        self._model.starToggled.connect(self._toggle_star)
 
         from PyQt6.QtGui import QShortcut
 
@@ -476,6 +478,7 @@ class MainWindow(QMainWindow):
             ("Ctrl+1", lambda: self._goto_view("today")),
             ("Ctrl+2", lambda: self._goto_view("next")),
             ("Ctrl+3", lambda: self._goto_view("completed")),
+            ("Ctrl+.", self._table.toggle_star_on_selection),
         ):
             sc = QShortcut(QKeySequence(seq), self)
             sc.setContext(Qt.ShortcutContext.WindowShortcut)
@@ -707,6 +710,7 @@ class MainWindow(QMainWindow):
         )
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        submit(self._view_counts, self._sidebar.set_view_counts, lambda _e: None)
         self._reports.discover_custom_reports()
         submit(
             lambda: taskwarrior.export(["+ACTIVE"]),
@@ -1016,6 +1020,15 @@ class MainWindow(QMainWindow):
             t("msg.timer_updated"),
         )
 
+    def _toggle_star(self, uuid: str, on: bool) -> None:
+        self._write(
+            functools.partial(
+                taskwarrior.command, [uuid], "modify",
+                ["+starred" if on else "-starred"],
+            ),
+            t("msg.starred") if on else t("msg.unstarred"),
+        )
+
     def _inline_edit(self, uuid: str, field: str, value: str) -> None:
         mod = f"{field}:{value}"  # empty value clears the attribute
         self._write(
@@ -1167,6 +1180,36 @@ class MainWindow(QMainWindow):
     def _focus_filter(self) -> None:
         self._filter_bar._edit.setFocus()
         self._filter_bar._edit.selectAll()
+
+    _FN_COUNT_FILTER = {
+        "report_ready": ["+READY"],
+        "report_waiting": ["+WAITING"],
+        "report_blocked": ["+BLOCKED"],
+        "report_completed": ["status:completed"],
+    }
+
+    def _view_counts(self) -> dict:
+        """Match counts for the quick views + saved filters (runs off-thread)."""
+        import shlex
+
+        from .widgets.sidebar import QUICK_VIEWS
+
+        out: dict[str, int] = {}
+        for _lbl, _glyph, spec in QUICK_VIEWS:
+            if spec.get("fn"):
+                flt = self._FN_COUNT_FILTER.get(spec["fn"])
+                if flt is None:
+                    continue
+            else:
+                flt = spec.get("filter")
+                flt = flt() if callable(flt) else list(flt or [])
+            out[spec["key"]] = taskwarrior.count(flt)
+        for name, raw in self.settings.saved_filters().items():
+            try:
+                out[name] = taskwarrior.count(shlex.split(raw))
+            except ValueError:
+                out[name] = taskwarrior.count(raw.split())
+        return out
 
     def _goto_view(self, key: str) -> None:
         from .widgets.sidebar import QUICK_VIEWS

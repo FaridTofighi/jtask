@@ -48,6 +48,9 @@ def _this_week_filter() -> list[str]:
 # (label_key, icon/stable key, spec). The spec's ``key`` is the stable identity
 # used by the empty-state lookup; ``title`` is the localized display label.
 QUICK_VIEWS = [
+    ("view.starred", "star",
+     {"kind": "filter", "key": "starred",
+      "filter": ["+starred", "status:pending"]}),
     ("view.today", "today",
      {"kind": "filter", "key": "today",
       "filter": ["due:today", "status:pending"]}),
@@ -243,19 +246,51 @@ class Sidebar(QTreeWidget):
 
     def populate_saved_filters(self, filters: dict[str, str]) -> None:
         self._saved.takeChildren()
+        self._saved_items: dict[str, QTreeWidgetItem] = {}
         if not filters:
             hint = QTreeWidgetItem([t("sidebar.saved.hint")])
             hint.setFlags(Qt.ItemFlag.NoItemFlags)
             hint.setForeground(0, getattr(self, "_hint_colour", QColor("#888")))
             self._saved.addChild(hint)
             return
+        folders: dict[str, QTreeWidgetItem] = {}
         for name, raw in sorted(filters.items()):
+            # a "/" in the saved-filter name nests it under a folder
+            folder, _, leaf = name.rpartition("/")
+            parent = self._saved
+            if folder:
+                if folder not in folders:
+                    fi = QTreeWidgetItem([folder])
+                    fi.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                    fi.setData(0, _ICON_ROLE, "folder")
+                    self._saved.addChild(fi)
+                    folders[folder] = fi
+                parent = folders[folder]
             item = self._leaf(
-                self._saved, name,
+                parent, leaf,
                 {"kind": "saved", "name": name, "raw": raw}, "filter",
             )
             item.setToolTip(0, raw)
+            self._saved_items[name] = item
+        self.expandItem(self._saved)
+        for fi in folders.values():
+            self.expandItem(fi)
         self.retint()
+
+    def set_view_counts(self, counts: dict[str, int]) -> None:
+        """Append ``· N`` to quick-view / saved-filter rows (keyed by spec key
+        or saved-filter name)."""
+        def label_with_count(base: str, n: int | None) -> str:
+            return f"{base}  ·  {n}" if n is not None else base
+
+        for item in self._iter_items(self._quick):
+            spec = item.data(0, _SPEC_ROLE)
+            if isinstance(spec, dict) and spec.get("key") in counts:
+                item.setText(0, label_with_count(spec["title"], counts[spec["key"]]))
+        for name, item in getattr(self, "_saved_items", {}).items():
+            if name in counts:
+                leaf = name.rpartition("/")[2]
+                item.setText(0, label_with_count(leaf, counts[name]))
 
     # --- drag & drop -----------------------------------------
 

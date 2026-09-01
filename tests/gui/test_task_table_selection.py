@@ -62,9 +62,12 @@ def test_status_is_the_last_column_no_blank_trailing_cells():
     vis = TaskTableModel().visible_columns()
     assert vis[-1] == "status"
 
+    # empty-header default columns are OK only at the *leading* edge (the star
+    # gutter, the merged indicators icon) — never trailing.
     empty_header_visible = [c.key for c in COLUMNS if c.header == "" and c.default_visible]
-    assert empty_header_visible == ["indicators"]           # exactly one
-    assert vis.index("indicators") < len(vis) - 1           # and it is not last
+    assert empty_header_visible == ["starred", "indicators"]
+    for key in empty_header_visible:
+        assert vis.index(key) < len(vis) - 1
 
 
 @pytest.mark.parametrize("cols", [None, ["id", "description", "priority", "due"]])
