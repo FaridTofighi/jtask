@@ -196,6 +196,15 @@ class BoardManagerDialog(QDialog):
         for wdg in (new_btn, self._del_btn, self._up, self._dn):
             brow.addWidget(wdg)
         left.addLayout(brow)
+
+        io_row = QHBoxLayout()
+        self._export_btn = QPushButton(t("board.manage.export"))
+        self._export_btn.clicked.connect(self._export)
+        imp = QPushButton(t("board.manage.import"))
+        imp.clicked.connect(self._import)
+        io_row.addWidget(self._export_btn)
+        io_row.addWidget(imp)
+        left.addLayout(io_row)
         root.addLayout(left, 0)
 
         # -- right: columns of the selected board --
@@ -436,6 +445,49 @@ class BoardManagerDialog(QDialog):
             self._persist()
             self._load_columns()
             self._cols.setCurrentRow(j)
+
+    # --- export / import -----------------------------------
+
+    def _export(self) -> None:
+        from PyQt6.QtWidgets import QFileDialog
+
+        d = self._current_board_dict()
+        if d is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, t("board.manage.export"), f"{self._current}.json",
+            "JSON (*.json)",
+        )
+        if not path:
+            return
+        board = B.Board.from_dict(d)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(B.to_json(board))
+
+    def _import(self) -> None:
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, t("board.manage.import"), "", "JSON (*.json)",
+        )
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8") as fh:
+                board = B.from_json(fh.read())
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, t("board.manage.import"),
+                                t("board.manage.import.bad", err=str(exc)))
+            return
+        name = board.name or t("board.col.new")
+        i = 2
+        while name in self._all_board_names():
+            name = f"{board.name} {i}"
+            i += 1
+        self._user[name] = {"columns": [c.to_dict() for c in board.columns]}
+        self._order.append(name)
+        self._persist()
+        self._reload_board_list(name)
 
     # --- persistence ----------------------------------------
 

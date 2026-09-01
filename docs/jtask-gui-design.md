@@ -2387,3 +2387,22 @@ the command palette. The temp `Ctrl+B`/toolbar toggle stays as a quick
 `MainWindow._on_boards_changed()` repopulates the sidebar and reloads the open
 board. `tests/gui/test_board_manager.py` (9). Suite **608 passed / 1 skipped**.
 Snapshot rebaselined (Boards section + preset names).
+
+## NB-4 — board export / import (complete) — board engine done
+
+`BoardManagerDialog` gains **Export…** / **Import…** (in the board-list button
+column). Export writes `boards.to_json(board)` for the selected board (builtins
+included) via `QFileDialog`. Import reads a `.json`, runs `boards.from_json`
+(`validate` inside — a bad file → a `QMessageBox`, not a crash), suffixes the
+name on collision, and adds it as a user board. `boards.to_json` / `from_json`
+were built in NB-1.
+
+`tests/gui/test_board_manager.py` +3 (12) — export→import round-trip, bad-file
+rejection (JSON + schema), buttons present. Suite **611 passed / 1 skipped**.
+
+---
+
+**Board engine mission complete** — NB-1 engine · NB-2 GTD preset (verified) ·
+NB-3 sidebar nav + `BoardManagerDialog` · NB-4 export/import. N-D's fixed
+Kanban is gone; `BUILTIN_BOARDS` ships `gtd` + `status`. Deferred (stated in
+Phase 0): per-board visual card-layout editor; per-transition drop matrices.

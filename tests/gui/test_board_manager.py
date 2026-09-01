@@ -152,3 +152,43 @@ def test_manager_drop_editor_roundtrips_every_type(mgr):
     ):
         ed.load(drop)
         assert ed.value() == drop
+
+
+# --- NB-4: export / import --------------------------------------
+
+def test_export_then_import_roundtrips(mgr, tmp_path):
+    from jtask_gui import boards as B
+    from jtask_gui.settings import Settings
+
+    mgr._from_preset("GTD")
+    mgr._boards.setCurrentRow(mgr._all_board_names().index("GTD 2"))
+    path = tmp_path / "gtd.json"
+    path.write_text(B.to_json(B.Board.from_dict(mgr._current_board_dict())),
+                    encoding="utf-8")
+
+    QSettings("jtask", "jtask-gui").clear()
+    mgr2_settings = Settings()
+    from jtask_gui.widgets.board_manager import BoardManagerDialog
+    mgr2 = BoardManagerDialog(mgr2_settings)
+    board = B.from_json(path.read_text(encoding="utf-8"))
+    mgr2._user[board.name] = {"columns": [c.to_dict() for c in board.columns]}
+    mgr2._order.append(board.name)
+    mgr2._persist()
+    assert len(Settings().boards()[board.name]["columns"]) == 5
+
+
+def test_import_rejects_bad_files():
+    from jtask_gui import boards as B
+
+    for text in ("{ not json", '{"name": "x"}', '{"name": "y", "columns": []}'):
+        with pytest.raises(ValueError):        # noqa: PT011 - JSONDecodeError / BoardValidationError
+            B.from_json(text)
+
+
+def test_manager_has_export_import_buttons(mgr):
+    from PyQt6.QtWidgets import QPushButton
+
+    labels = {b.text() for b in mgr.findChildren(QPushButton)}
+    from jtask_gui.i18n import t
+    assert t("board.manage.export") in labels
+    assert t("board.manage.import") in labels
