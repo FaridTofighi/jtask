@@ -47,11 +47,13 @@ class TaskTableModel(QAbstractTableModel):
 
     def _apply_theme(self, theme_name: str) -> None:
         self._pal = palette(theme_name)
-        bg = self._pal["bg"]
-        # row tints: a wash of the state colour over the base background
-        _strength = {"overdue": 0.20, "blocked": 0.16, "due_soon": 0.14, "waiting": 0.10}
+        # row tints: a wash of the state colour over the *row* surface (rows
+        # paint on `surface`, not the window `bg` — mixing against `bg` made
+        # the wash vanish).
+        base = self._pal["surface"]
+        _strength = {"overdue": 0.22, "blocked": 0.16, "due_soon": 0.16, "waiting": 0.10}
         self._tint = {
-            state: QColor(_mix(bg, self._pal[state], t))
+            state: QColor(_mix(base, self._pal[state], t))
             for state, t in _strength.items()
         }
 

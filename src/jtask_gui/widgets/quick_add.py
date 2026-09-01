@@ -41,6 +41,7 @@ class QuickAddBar(QWidget):
         self._preview = QLabel()
         self._preview.setObjectName("Muted")
         self._preview.setMinimumHeight(16)
+        self._preview.setVisible(False)  # only while typing — no empty band at rest
         lay.addWidget(self._preview)
 
         self._parsed: ParsedQuickAdd = ParsedQuickAdd()
@@ -57,12 +58,14 @@ class QuickAddBar(QWidget):
     def _update_preview(self, text: str) -> None:
         self._parsed = parse_quick_add(text)
         self._preview.setText(preview_text(self._parsed))
+        self._preview.setVisible(bool(text.strip()))
 
     def _commit(self) -> None:
         if self._parsed.ok:
             self.taskRequested.emit(self._parsed.raw_args)
             self._edit.clear()
             self._preview.clear()
+            self._preview.setVisible(False)
 
     def focus(self) -> None:
         self._edit.setFocus()

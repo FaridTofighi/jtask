@@ -1902,3 +1902,56 @@ AND, `apply_context=False` bypass, reports honour context, no-context no-op,
 quoted-value tokenisation, cache-clear on switch;
 `tests/gui/test_m3.py::test_main_window_context_switch_scopes_the_task_list`.
 Suite **513 passed / 1 skipped**.
+
+---
+
+# Mission "n" — UI/UX modernization
+
+Approved 2026-09-01 ("implement all P stages"). The review found the shell was
+*competent but flat*: one-of-two-greys everywhere, no spatial hierarchy, an
+invisible selection, a misplaced-emphasis status bar, and a long
+undifferentiated glyph toolbar. Three stages, each its own commit with tests +
+screenshots:
+
+- **n1 — shell restructure (P0):** structure & clarity.
+- **n2 — density & polish (P1):** density toggle, row content, refined light
+  palette, focus ring, toolbar grouping.
+- **n3 — modern features (P2):** command palette (Ctrl/Cmd-K), skeleton
+  loaders, motion vocabulary.
+
+## n1 — implementation log (complete)
+
+**Framed content card.** The central widget is now a `QWidget#ContentFrame`
+with a `SP_10` gutter of window `@bg@` around `_content`, so the task table /
+reports read as an elevated card (`@surface@` + 1 px `@border@` + `@r_lg@`)
+distinct from the chrome — previously the table butted flush against the
+sidebar and toolbar with no separation. `tests/gui/test_main_window.py`
+`_central_avail` subtracts the frame margin.
+
+**Sidebar edge.** `QTreeWidget#Sidebar` gained `border-right: 1px solid
+@border@` — the nav rail and the content are now visibly two surfaces, not one.
+
+**Selection you can actually see.** `QTableView::item:selected` now fills with
+`@selection@` (was the barely-there `@primary_soft@`); `@selection@` itself was
+re-toned up in both palettes (`#22343d → #294a58` dark, `#cfe8ee → #bfe1ea`
+light). The 3 px leading accent bar stays.
+
+**Row-state tint now renders.** `TaskTableModel._apply_theme` mixed the
+overdue / due-soon / blocked / waiting wash against the window `@bg@`, but rows
+paint on `@surface@` — so the wash was computed too dark and vanished. Now
+mixed against `@surface@`, strengths nudged (overdue .20→.22, due_soon
+.14→.16).
+
+**Status bar.** The Taskwarrior version string was bright `@success@` green —
+the most saturated thing on screen. `QLabel#StatusOk` is now `@text_muted@`;
+`QLabel#StatusCount` (the task count) went `@fs_xs@ → @fs_body@` and is the
+confident element. `@overdue@` red is still reserved for "task not found".
+
+**Header.** `+ Add task` is now the one emphasised toolbar control —
+`QToolButton#PrimaryAction` (accent fill, text beside icon). The filter field
+gained a leading `search` (magnify) glyph. The quick-add live-preview label is
+hidden at rest (it only means something while typing), removing the empty band
+that made the two toolbar rows look mis-aligned.
+
+**Tests:** `tests/gui/test_n1_shell.py` (6). Full suite **519 passed /
+1 skipped**; ruff clean.

@@ -24,6 +24,7 @@ from jtask.errors import TaskCommandError
 from jtask.rtl import bidi_isolate, set_digit_mode
 
 from . import fmt, icons
+from . import tokens as tok
 from .i18n import t
 from .models.task_model import TaskTableModel
 from .settings import Settings
@@ -136,7 +137,19 @@ class MainWindow(QMainWindow):
 
         self._content.addWidget(self._split)     # index 0: tasks
         self._content.addWidget(self._reports)   # index 1: reports & charts
-        self.setCentralWidget(self._content)
+
+        # A gutter of the window background around the content so the task
+        # table / reports read as an elevated card, distinct from the chrome
+        # (toolbars, sidebar) rather than blended into one flat plane.
+        from PyQt6.QtWidgets import QVBoxLayout, QWidget
+
+        frame = QWidget()
+        frame.setObjectName("ContentFrame")
+        fl = QVBoxLayout(frame)
+        fl.setContentsMargins(tok.SP_10, tok.SP_10, tok.SP_10, tok.SP_10)
+        fl.setSpacing(0)
+        fl.addWidget(self._content)
+        self.setCentralWidget(frame)
 
         from PyQt6.QtWidgets import QApplication
 
@@ -193,11 +206,17 @@ class MainWindow(QMainWindow):
         row2.addWidget(self._group_combo)
         row2.addSeparator()
 
-        self._add_full_action = QAction(icons.icon("add"), t("action.add_full"), self)
+        self._add_full_action = QAction(
+            icons.icon("add", "primary_fg"), t("action.add_full"), self
+        )
         self._add_full_action.setShortcut("Ctrl+Shift+N")
         self._add_full_action.setToolTip(t("action.add_full.tip"))
         self._add_full_action.triggered.connect(lambda: self._open_task_form("add"))
         row2.addAction(self._add_full_action)
+        _add_btn = row2.widgetForAction(self._add_full_action)
+        if _add_btn is not None:
+            _add_btn.setObjectName("PrimaryAction")
+            _add_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self._log_action = QAction(icons.icon("completed"), t("action.log"), self)
         self._log_action.setToolTip(t("action.log.tip"))
@@ -1018,7 +1037,7 @@ class MainWindow(QMainWindow):
         self._undo_action.setIcon(icons.icon("undo"))
         self._settings_action.setIcon(icons.icon("settings"))
         self._console_action.setIcon(icons.icon("console"))
-        self._add_full_action.setIcon(icons.icon("add"))
+        self._add_full_action.setIcon(icons.icon("add", "primary_fg"))
         self._log_action.setIcon(icons.icon("completed"))
         self._manage_action.setIcon(icons.icon("manage"))
         self._tools_action.setIcon(icons.icon("tools"))

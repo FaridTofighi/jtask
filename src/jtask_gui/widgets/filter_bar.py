@@ -49,6 +49,9 @@ class FilterBar(QWidget):
         self._edit = _FilterLineEdit()
         self._edit.setObjectName("FilterEdit")
         self._edit.setClearButtonEnabled(True)
+        self._search_action = self._edit.addAction(
+            icons.icon("search", "text_muted"), QLineEdit.ActionPosition.LeadingPosition
+        )
         self._edit.setPlaceholderText(
             t("filterbar.placeholder")
         )
@@ -79,6 +82,7 @@ class FilterBar(QWidget):
         self._apply_btn.setIcon(icons.icon("filter"))
         self._clear_btn.setIcon(icons.icon("clear"))
         self._builder_btn.setIcon(icons.icon("group"))
+        self._search_action.setIcon(icons.icon("search", "text_muted"))
 
     def _open_builder(self) -> None:
         dlg = FilterBuilder(self._edit.text().strip(), self)

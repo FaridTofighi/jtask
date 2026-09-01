@@ -29,7 +29,14 @@ def win(qapp, qtbot, tw_env, monkeypatch):
 # ---- P0: the task table fills the central content area -----------------
 
 def _central_avail(w):
-    return w.centralWidget().contentsRect()
+    # the task area sits inside a ContentFrame that adds a gutter of window
+    # background around it (the elevated-card look) — subtract that margin.
+    r = w.centralWidget().contentsRect()
+    lay = w.centralWidget().layout()
+    if lay is not None:
+        m = lay.contentsMargins()
+        r = r.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+    return r
 
 
 def test_table_fills_central_area_when_detail_closed(win):

@@ -27,6 +27,7 @@ QWidget {
 }
 QMainWindow { background-color: @bg@; }
 QMainWindow::separator { background: @border_soft@; width: 1px; height: 1px; }
+QWidget#ContentFrame { background-color: @bg@; }
 
 QLabel { background: transparent; }
 QLabel#H1 { font-size: @fs_h1@; font-weight: 700; letter-spacing: 0; }
@@ -85,6 +86,14 @@ QToolButton:hover { background-color: @hover@; }
 QToolButton:pressed { background-color: @selection@; }
 QToolButton:checked { background-color: @primary_soft@; border-color: @primary@; }
 
+/* the one emphasised toolbar action — "New task" */
+QToolButton#PrimaryAction {
+    background-color: @primary@; color: @primary_fg@;
+    font-weight: 700; padding: @sp_6@ @sp_12@;
+}
+QToolButton#PrimaryAction:hover { background-color: @primary_hi@; }
+QToolButton#PrimaryAction:pressed { background-color: @accent@; }
+
 /* ============================ inputs ======================== */
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTimeEdit {
     background-color: @field@;
@@ -125,10 +134,10 @@ QComboBox QAbstractItemView {
 QTableView {
     background-color: @surface@;
     alternate-background-color: @row_alt@;
-    border: 1px solid @border_soft@;
+    border: 1px solid @border@;
     border-radius: @r_lg@;
     gridline-color: transparent;
-    selection-background-color: @primary_soft@;
+    selection-background-color: @selection@;
     selection-color: @text@;
 }
 QTableView::item {
@@ -140,7 +149,7 @@ QTableView::item {
    The leading-edge accent bar is painted by TaskTable.paintEvent (direction
    aware) so it never renders as a per-cell border. */
 QTableView::item:hover { background-color: @hover@; }
-QTableView::item:selected { background-color: @primary_soft@; }
+QTableView::item:selected { background-color: @selection@; }
 QTableView::item:selected:hover { background-color: @selection@; }
 QHeaderView { background: transparent; }
 QHeaderView::section {
@@ -159,6 +168,7 @@ QTableView QTableCornerButton::section { background: @bg_alt@; border: none; }
 QTreeWidget#Sidebar {
     background-color: @bg_alt@;
     border: none;
+    border-right: 1px solid @border@;
     padding: @sp_8@ @sp_8@;
     font-size: @fs_body@;
 }
@@ -259,8 +269,8 @@ QStatusBar {
 }
 QStatusBar::item { border: none; }
 QStatusBar QLabel { color: @text_muted@; font-size: @fs_xs@; }
-QLabel#StatusCount { color: @text@; font-weight: 700; }
-QLabel#StatusOk { color: @success@; }
+QLabel#StatusCount { color: @text@; font-weight: 700; font-size: @fs_body@; }
+QLabel#StatusOk { color: @text_muted@; }
 QLabel#StatusBad { color: @overdue@; font-weight: 700; }
 
 /* ============================ dock ======================= */
