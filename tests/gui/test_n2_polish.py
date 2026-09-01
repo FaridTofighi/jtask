@@ -52,6 +52,25 @@ def test_density_setting_roundtrips(qapp):
     assert Settings().density == "comfortable"
 
 
+def test_settings_dialog_is_scrollable_and_fits_the_screen(qapp):
+    from PyQt6.QtCore import QSettings
+    from PyQt6.QtWidgets import QApplication, QDialogButtonBox, QScrollArea
+
+    from jtask_gui.settings import Settings
+    from jtask_gui.settings_dialog import SettingsDialog
+
+    QSettings("jtask", "jtask-gui").clear()
+    d = SettingsDialog(Settings())
+    assert d.findChild(QScrollArea) is not None          # content scrolls
+    screen = QApplication.primaryScreen()
+    if screen:
+        assert d.height() <= screen.availableGeometry().height() * 0.85 + 1
+    # the button box is NOT inside the scroll area (always visible)
+    bb = d.findChild(QDialogButtonBox)
+    assert not isinstance(bb.parent(), QScrollArea)
+    assert d.findChild(QScrollArea).findChild(QDialogButtonBox) is None
+
+
 def test_settings_dialog_exposes_density(qapp):
     from PyQt6.QtCore import QSettings
 

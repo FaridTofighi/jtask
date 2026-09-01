@@ -14,10 +14,12 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
+from . import tokens as tok
 from .i18n import t
 from .settings import Settings
 from .theme import THEMES
@@ -42,7 +44,17 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(420)
         self._settings = settings
 
-        root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        _content = QWidget()
+        scroll.setWidget(_content)
+        outer.addWidget(scroll, 1)
+
+        root = QVBoxLayout(_content)
+        root.setContentsMargins(*tok.INSET_DIALOG)
         form = QFormLayout()
         root.addLayout(form)
 
@@ -173,6 +185,8 @@ class SettingsDialog(QDialog):
         self._show_shortcuts.clicked.connect(self._open_shortcut_sheet)
         root.addWidget(self._show_shortcuts)
 
+        root.addStretch(1)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -180,7 +194,18 @@ class SettingsDialog(QDialog):
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(t("btn.cancel"))
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
-        root.addWidget(buttons)
+        bwrap = QVBoxLayout()
+        bwrap.setContentsMargins(*tok.INSET_DIALOG)
+        bwrap.addWidget(buttons)
+        outer.addLayout(bwrap)
+
+        # fit the screen: never taller than 85% of the available height
+        from PyQt6.QtWidgets import QApplication
+
+        screen = QApplication.primaryScreen()
+        cap = int(screen.availableGeometry().height() * 0.85) if screen else 720
+        hint = _content.sizeHint().height() + buttons.sizeHint().height() + 2 * tok.SP_16
+        self.resize(480, min(hint, cap))
 
     def _accept(self) -> None:
         s = self._settings
