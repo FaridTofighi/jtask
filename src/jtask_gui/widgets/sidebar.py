@@ -174,6 +174,19 @@ class Sidebar(QTreeWidget):
             yield child
             yield from self._iter_items(child)
 
+    def navigation_targets(self) -> list[tuple[str, str, dict]]:
+        """``(label, section, spec)`` for every activatable row — feeds the
+        command palette."""
+        out: list[tuple[str, str, dict]] = []
+        for item in self._iter_items(self.invisibleRootItem()):
+            spec = item.data(0, _SPEC_ROLE)
+            if not isinstance(spec, dict) or item.data(0, _SECTION_ROLE):
+                continue
+            parent = item.parent()
+            section = parent.text(0) if parent is not None else ""
+            out.append((item.text(0).split("  ·")[0].strip(), section, spec))
+        return out
+
     # --- dynamic population ------------------------------------
 
     def populate_projects(
@@ -366,12 +379,16 @@ class Sidebar(QTreeWidget):
 
     def _on_click(self, item: QTreeWidgetItem, _column: int) -> None:
         spec = item.data(0, _SPEC_ROLE)
-        if not spec:
-            return
-        if spec["kind"] == "context":
+        if spec:
+            self.activate_spec(spec)
+
+    def activate_spec(self, spec: dict) -> None:
+        """Route a sidebar spec to the right signal — shared by clicks and the
+        command palette."""
+        if spec.get("kind") == "context":
             self.contextChangeRequested.emit(spec["name"])
             return
-        if spec["kind"] == "saved":
+        if spec.get("kind") == "saved":
             self.savedFilterActivated.emit(spec["raw"])
             return
         resolved = dict(spec)

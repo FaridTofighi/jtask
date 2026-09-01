@@ -303,6 +303,12 @@ class MainWindow(QMainWindow):
         add_sc.triggered.connect(self._quick_add.focus)
         self.addAction(add_sc)
 
+        self._palette_action = QAction(t("action.command_palette"), self)
+        self._palette_action.setShortcut("Ctrl+K")
+        self._palette_action.setToolTip(t("action.command_palette.tip"))
+        self._palette_action.triggered.connect(self._open_command_palette)
+        self.addAction(self._palette_action)
+
     def _build_sidebar(self) -> None:
         self._sidebar = Sidebar()
         dock = QDockWidget(t("dock.navigation"), self)
@@ -1050,6 +1056,48 @@ class MainWindow(QMainWindow):
     def _toggle_console(self, visible: bool) -> None:
         self._console_dock.setVisible(visible)
         self.settings.console_visible = visible
+
+    def _collect_commands(self) -> list:
+        from .widgets.command_palette import Command
+
+        cmds: list[Command] = []
+        seen: set[str] = set()
+        for act in self.findChildren(QAction):
+            text = act.text().replace("&", "").strip()
+            if not text or act.isSeparator() or not act.isEnabled() or text in seen:
+                continue
+            seen.add(text)
+            sc = act.shortcut().toString()
+            cmds.append(
+                Command(text, t("palette.cat.action"), act.trigger, hint=sc)
+            )
+        for label, section, spec in self._sidebar.navigation_targets():
+            if spec.get("kind") == "saved":
+                continue  # added from settings below, with a stable category
+            cmds.append(
+                Command(
+                    label, section or t("palette.cat.view"),
+                    functools.partial(self._sidebar.activate_spec, spec),
+                )
+            )
+        for name, raw in self.settings.saved_filters().items():
+            cmds.append(
+                Command(
+                    name, t("palette.cat.filter"),
+                    functools.partial(self._apply_saved_filter, raw),
+                )
+            )
+        return cmds
+
+    def _open_command_palette(self) -> None:
+        from .widgets.command_palette import CommandPalette
+
+        pal = CommandPalette(self._collect_commands(), self)
+        pal.move(
+            self.geometry().center().x() - pal.width() // 2,
+            self.geometry().top() + self.height() // 6,
+        )
+        pal.exec()
 
     def _open_settings(self) -> None:
         from .settings_dialog import SettingsDialog

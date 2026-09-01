@@ -1980,3 +1980,31 @@ default comfortable) + a Settings-dialog combo. `TaskTable.set_density()` sets
 the row height (40 → 30) live — no restart, applied on open and on settings
 accept. `tests/gui/test_n2_polish.py` (6). Snapshot rebaselined for the new
 Settings row (documented change).
+
+## n3 — implementation log (complete)
+
+**Command palette (Ctrl+K).** `widgets/command_palette.py` — a `Popup` dialog
+with a search field + ranked list. `_score()` is a small fuzzy matcher:
+contiguous substring hits rank by position and always beat a scattered
+subsequence match. `MainWindow._collect_commands()` gathers three sources:
+
+- every enabled `QAction` under the window (toolbar + menus), deduped by text,
+  carrying its shortcut as a hint;
+- every activatable sidebar row via the new `Sidebar.navigation_targets()`
+  (quick views, reports, projects, tags, contexts) — routed through the
+  extracted `Sidebar.activate_spec()` shared with normal clicks;
+- saved filters, with a stable category (the sidebar's own saved-filter rows
+  are skipped so they aren't listed twice).
+
+It complements the Raw Command Console (invariant #7), never replaces it: the
+palette launches things that already have a control; the console stays the
+raw-`task` escape hatch.
+
+`tests/gui/test_n3_command_palette.py` (4). i18n keys added (fa + en). QSS
+`QDialog#CommandPalette` / `#PaletteInput` / `#PaletteList`.
+
+**Mission n status:** P0 (n1) + P1 (n2) + P2 (n3 command palette) shipped.
+Deferred from P1/P2 as separate follow-ups if wanted: tag-pill delegate,
+default-hiding the urgency column (breaks 4 model tests' column assumptions —
+needs a test sweep), skeleton loaders, view cross-fade animation. Suite **529
+passed / 1 skipped**.

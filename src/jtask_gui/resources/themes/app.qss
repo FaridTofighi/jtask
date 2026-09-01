@@ -298,6 +298,34 @@ QMenu::item { padding: @sp_8@ @sp_24@; border-radius: @r_sm@; }
 QMenu::item:selected { background-color: @primary_soft@; }
 QMenu::separator { height: 1px; background: @border_soft@; margin: @sp_4@ @sp_8@; }
 
+/* ============================ command palette ============ */
+QDialog#CommandPalette {
+    background-color: @elevated@;
+    border: 1px solid @border@;
+    border-radius: @r_lg@;
+}
+QLineEdit#PaletteInput {
+    background-color: @field@;
+    border: 1px solid @border@;
+    border-radius: @r_md@;
+    padding: @sp_10@ @sp_12@;
+    font-size: @fs_lg@;
+}
+QLineEdit#PaletteInput:focus { border-color: @focus@; background-color: @field_focus@; }
+QListWidget#PaletteList {
+    background-color: transparent;
+    border: none;
+}
+QListWidget#PaletteList::item {
+    padding: @sp_8@ @sp_10@;
+    border-radius: @r_sm@;
+    color: @text@;
+}
+QListWidget#PaletteList::item:selected {
+    background-color: @primary_soft@;
+    color: @primary@;
+}
+
 /* ============================ scrollbars ================= */
 QScrollBar:vertical { background: transparent; width: 10px; margin: @sp_2@; }
 QScrollBar::handle:vertical { background: @border@; border-radius: @r_sm@; min-height: 32px; }
