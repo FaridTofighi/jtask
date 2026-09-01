@@ -72,6 +72,7 @@ class TaskTable(QTableView):
     annotateRequested = pyqtSignal(list)     # list[uuid] — caller prompts for text
     purgeRequested = pyqtSignal(list)        # list[uuid] (deleted tasks only)
     bulkEditRequested = pyqtSignal(list)     # list[uuid]
+    saveTemplateRequested = pyqtSignal(dict)  # the selected task dict
 
     def __init__(self, model: TaskTableModel, parent=None) -> None:
         super().__init__(parent)
@@ -356,6 +357,7 @@ class TaskTable(QTableView):
         act_append = menu.addAction(t("table.menu.append"))
         act_prepend = menu.addAction(t("table.menu.prepend"))
         act_annotate = menu.addAction(t("table.menu.annotate"))
+        act_tpl = menu.addAction(t("table.menu.save_template")) if n == 1 else None
         menu.addSeparator()
         act_start = menu.addAction(t("table.menu.start"))
         act_start.setShortcut(QKeySequence("Ctrl+S"))
@@ -385,6 +387,8 @@ class TaskTable(QTableView):
             self.prependRequested.emit(uuids)
         elif chosen == act_annotate:
             self.annotateRequested.emit(uuids)
+        elif act_tpl is not None and chosen == act_tpl:
+            self.saveTemplateRequested.emit(tasks[0])
         elif chosen == act_start:
             self.startStopRequested.emit(uuids[0], True)
         elif chosen == act_stop:

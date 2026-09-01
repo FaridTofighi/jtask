@@ -445,6 +445,7 @@ class MainWindow(QMainWindow):
         self._table.purgeRequested.connect(self._purge)
         self._table.bulkEditRequested.connect(self._bulk_edit)
         self._table.startStopRequested.connect(self._start_stop)
+        self._table.saveTemplateRequested.connect(self._save_task_as_template)
         self._reports.filterRequested.connect(self._drill_into_filter)
         self._reports._calendar.taskRescheduled.connect(self._reschedule)
         self._sidebar.tasksDroppedOnProject.connect(self._reassign_project)
@@ -842,7 +843,8 @@ class MainWindow(QMainWindow):
         from .widgets.task_form import TaskFormDialog
 
         dlg = TaskFormDialog(
-            mode, taskwarrior.list_projects(), taskwarrior.list_tags(), self
+            mode, taskwarrior.list_projects(), taskwarrior.list_tags(), self,
+            settings=self.settings,
         )
         if not dlg.exec():
             return
@@ -857,6 +859,23 @@ class MainWindow(QMainWindow):
         if not uuids:
             return
         self._write(functools.partial(taskwarrior.command, uuids, verb), msg)
+
+    def _save_task_as_template(self, task: dict) -> None:
+        from PyQt6.QtWidgets import QInputDialog
+
+        name, ok = QInputDialog.getText(
+            self, t("form.template.save.title"), t("form.template.save.label")
+        )
+        if not (ok and name.strip()):
+            return
+        spec = {
+            "description": task.get("description", ""),
+            "project": task.get("project", "") or "",
+            "tags": [x for x in (task.get("tags") or []) if not x.isupper()],
+            "priority": task.get("priority", "") or "",
+        }
+        self.settings.save_template(name.strip(), spec)
+        self._toast.show_message(t("msg.template_saved", name=name.strip()))
 
     # --- M5 task-lifecycle verbs --------------------------
 

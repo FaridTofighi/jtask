@@ -125,6 +125,16 @@ unified fa = «بالا / متوسط / پایین», en = «High / Medium / Low�
 
 (There is no "Someday/Maybe" quick-view today; if added later, en = "Someday/Maybe".)
 
+### 3a. Templates — two distinct tools (N-C), never merge
+
+| Concept | fa | en | What it is |
+|---|---|---|---|
+| recurrence rule copier | «از یک کار تکرارشونده…» (`form.recur.from_template`) | "From a recurring task…" | in the **Recurrence row** of the Add form — copies the `recur` rule (and project/tags) off a live **recurring** parent task. About *repeating on a schedule*. |
+| **task template** | «الگوی کار» / «الگوها» (`form.template.*`) | **"Task template"** / "Templates" | a **saved, named, reusable task shape** — description + project + tags + priority, **no schedule**. A GUI convenience stored in `QSettings` (like saved filters), applied from the Add form's "Templates ▾" menu or created from an existing task via its context menu. |
+
+The two are never adjacent in the UI: the recurrence copier is a small button
+inside the Recurrence field; "Templates ▾" is in the dialog header.
+
 ---
 
 ## 4. Reports & charts

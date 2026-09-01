@@ -284,5 +284,23 @@ class Settings:
             self._s.setValue("filters/saved", current)
             self._s.sync()
 
+    # --- task templates (reusable one-off task shapes; GUI concept, like
+    #     saved filters — no schedule, distinct from recurrence) ---
+    def templates(self) -> dict[str, dict]:
+        raw = self._s.value("templates/saved", {}, dict) or {}
+        return {str(k): dict(v) for k, v in raw.items()}
+
+    def save_template(self, name: str, spec: dict) -> None:
+        current = self.templates()
+        current[name] = spec
+        self._s.setValue("templates/saved", current)
+        self._s.sync()
+
+    def delete_template(self, name: str) -> None:
+        current = self.templates()
+        current.pop(name, None)
+        self._s.setValue("templates/saved", current)
+        self._s.sync()
+
     def sync(self) -> None:
         self._s.sync()

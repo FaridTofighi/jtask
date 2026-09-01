@@ -17,7 +17,9 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -91,9 +93,11 @@ class TaskFormDialog(QDialog):
         projects: list[str] | None = None,
         tags: list[str] | None = None,
         parent: QWidget | None = None,
+        settings: object | None = None,
     ) -> None:
         super().__init__(parent)
         self.mode = mode
+        self._settings = settings
         self.setObjectName("TaskFormDialog")
         self.setWindowTitle(t("form.title.add") if mode == "add" else t("form.title.log"))
         self.setMinimumWidth(500)
@@ -101,6 +105,17 @@ class TaskFormDialog(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(*tok.INSET_DIALOG)
         root.setSpacing(tok.SP_10)
+
+        if settings is not None and mode == "add":
+            head = QHBoxLayout()
+            head.addStretch(1)
+            self._tpl_btn = QToolButton()
+            self._tpl_btn.setText(t("form.template.menu") + "  ▾")
+            self._tpl_btn.setObjectName("TemplateMenu")
+            self._tpl_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+            self._tpl_btn.setMenu(self._build_template_menu())
+            head.addWidget(self._tpl_btn)
+            root.addLayout(head)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -216,6 +231,52 @@ class TaskFormDialog(QDialog):
         self._show_problems(problems)
         if not problems:
             self.accept()
+
+    # -- task templates (distinct from the recurrence copier below) ----
+
+    def _build_template_menu(self) -> QMenu:
+        menu = QMenu(self)
+        templates = self._settings.templates() if self._settings else {}
+        if templates:
+            for name in sorted(templates):
+                menu.addAction(name).triggered.connect(
+                    lambda _c=False, n=name: self._apply_template(templates[n])
+                )
+        else:
+            empty = menu.addAction(t("form.template.none"))
+            empty.setEnabled(False)
+        menu.addSeparator()
+        menu.addAction(t("form.template.save")).triggered.connect(self._save_as_template)
+        return menu
+
+    def _apply_template(self, spec: dict) -> None:
+        if not self._description.text().strip() and spec.get("description"):
+            self._description.setText(spec["description"])
+        if spec.get("project"):
+            self._project.setCurrentText(spec["project"])
+        if spec.get("tags"):
+            self._tags.set_tags(sorted(set(self._tags.tags()) | set(spec["tags"])))
+        if spec.get("priority"):
+            self._priority.set_value(spec["priority"])
+        self._revalidate()
+
+    def current_template_spec(self) -> dict:
+        return {
+            "description": self._description.text().strip(),
+            "project": self._project.currentText().strip(),
+            "tags": self._tags.tags(),
+            "priority": self._priority.value() or "",
+        }
+
+    def _save_as_template(self) -> None:
+        if self._settings is None:
+            return
+        name, ok = QInputDialog.getText(
+            self, t("form.template.save.title"), t("form.template.save.label")
+        )
+        if ok and name.strip():
+            self._settings.save_template(name.strip(), self.current_template_spec())
+            self._tpl_btn.setMenu(self._build_template_menu())
 
     # -- recurrence templates -------------------------------------------
 

@@ -2174,3 +2174,30 @@ write. `tests/gui/test_inline_edit.py` (9).
 
 Suite **556 passed / 1 skipped**. Snapshot rebaselined (new Settings strings +
 a pre-existing `timew`-now-installed env drift).
+
+## N-C — task templates (complete)
+
+A **task template** is a saved, named, reusable task *shape* — description +
+project + tags + priority, **no schedule**. Deliberately distinct from the
+recurrence copier (Phase-0 Q2):
+
+- `Settings.templates()` / `save_template()` / `delete_template()` — a
+  `QSettings` dict `templates/saved`, same mechanism as saved filters. Not
+  CLI-visible (a GUI convenience, like saved filters).
+- `task_form.py`: a **"Templates ▾"** `QToolButton` in the dialog **header**
+  (add mode only) — its menu lists saved templates (apply) + "Save this as a
+  task template…". `_apply_template()` fills project / tags (union) / priority
+  and description **only if the field is empty** (never clobbers typed text).
+- The recurrence button was **renamed** `form.recur.from_template`:
+  «از الگوی موجود…» → «از یک کار تکرارشونده…» / "From existing…" → "From a
+  recurring task…"; its dialog title → "Copy a recurrence rule". The word
+  «الگو / template» is now reserved for the new feature.
+- Table context menu (single selection): **"Save as a task template…"** →
+  `saveTemplateRequested(task)` → `MainWindow._save_task_as_template()` prompts
+  for a name and stores the task's shape.
+- UDA capture is **deferred** — the Add form has no generic UDA rows to apply
+  them into; templates hold description/project/tags/priority only.
+
+`docs/i18n-glossary.md` §3a documents both tools. `tests/gui/test_templates.py`
+(6). Suite **562 passed / 1 skipped**. Snapshot rebaselined (recurrence-button
+rename).
