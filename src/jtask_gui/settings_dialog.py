@@ -84,6 +84,14 @@ class SettingsDialog(QDialog):
         self._due_soon.setSuffix(t("settings.suffix.days"))
         form.addRow(t("settings.due_soon_threshold"), self._due_soon)
 
+        self._density = QComboBox()
+        for key in ("comfortable", "compact"):
+            self._density.addItem(t(f"settings.density.{key}"), key)
+        self._density.setCurrentIndex(
+            max(0, self._density.findData(settings.density))
+        )
+        form.addRow(t("settings.density"), self._density)
+
         sec = QLabel(t("settings.notifications"))
         sec.setObjectName("Section")
         root.addWidget(sec)
@@ -174,6 +182,7 @@ class SettingsDialog(QDialog):
         s.persian_digits = self._digits.isChecked()
 
         s.due_soon_days = self._due_soon.value()
+        s.density = self._density.currentData()
         s.notifications_enabled = self._notify.isChecked()
         s.notify_states = [k for k, cb in self._states.items() if cb.isChecked()]
         s.notify_interval_min = self._interval.value()

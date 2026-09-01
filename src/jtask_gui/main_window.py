@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
             self.settings.due_soon_days,
         )
         self._table = TaskTable(self._model)
+        self._table.set_density(self.settings.density)
         self._detail = DetailPanel()
         self._history_view = TaskHistoryView()
         self._raw_view = RawDataView()
@@ -1058,6 +1059,7 @@ class MainWindow(QMainWindow):
             set_digit_mode(self.settings.persian_digits)
             self._model.set_persian_digits(self.settings.persian_digits)
             self._model.set_due_soon_days(self.settings.due_soon_days)
+            self._table.set_density(self.settings.density)
             self._reports.refresh_digits()
             self._apply_theme(self.settings.theme)
             self._notify.reconfigure()

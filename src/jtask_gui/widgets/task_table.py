@@ -98,7 +98,8 @@ class TaskTable(QTableView):
 
         vh = self.verticalHeader()
         vh.setVisible(False)
-        vh.setDefaultSectionSize(40)
+        self._row_h = {"comfortable": 40, "compact": 30}
+        vh.setDefaultSectionSize(self._row_h["comfortable"])
 
         hh = self.horizontalHeader()
         hh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -125,6 +126,15 @@ class TaskTable(QTableView):
     def set_theme(self, name: str) -> None:
         """Keep the selected-row accent bar in sync with the active theme."""
         self._accent = QColor(palette(name)["primary"])
+        self.viewport().update()
+
+    def set_density(self, mode: str) -> None:
+        """``comfortable`` | ``compact`` — row height only, live."""
+        h = self._row_h.get(mode, self._row_h["comfortable"])
+        vh = self.verticalHeader()
+        vh.setDefaultSectionSize(h)
+        for r in range(self.model().rowCount() if self.model() else 0):
+            vh.resizeSection(r, h)
         self.viewport().update()
 
     def _apply_column_sizing(self) -> None:

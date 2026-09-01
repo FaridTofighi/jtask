@@ -1955,3 +1955,24 @@ that made the two toolbar rows look mis-aligned.
 
 **Tests:** `tests/gui/test_n1_shell.py` (6). Full suite **519 passed /
 1 skipped**; ruff clean.
+
+## n2 — implementation log (in progress)
+
+**Refined light palette.** The old `_RUZ` ladder was ~4% luminance apart —
+`surface` (white) barely lifted off `bg` (near-white) and borders had nothing
+to sit against. Steps widened: `bg #f4f6fa → #eaeef4` (a cooler grey),
+`bg_alt → #e2e7f0`, `border #dde2e9 → #ccd4e0`, plus matching moves on
+`hover / row_line / row_alt / field / primary_soft / chip_*`. `text_muted`
+darkened `#5b6472 → #556070` to stay clear of the AA line on the darker
+`bg_alt`. WCAG-AA parity + contrast tests still green. Dark theme unchanged bar
+the n1 `selection` re-tone.
+
+**Focus ring.** `QToolButton:focus` now swaps its (already-reserved 1 px)
+border to `@focus@`, matching `QPushButton` / inputs — every interactive
+control shows focus consistently.
+
+**Row density (live toggle).** `Settings.density` (`comfortable` | `compact`,
+default comfortable) + a Settings-dialog combo. `TaskTable.set_density()` sets
+the row height (40 → 30) live — no restart, applied on open and on settings
+accept. `tests/gui/test_n2_polish.py` (5). Snapshot rebaselined for the new
+Settings row (documented change).

@@ -85,6 +85,7 @@ QToolButton {
 QToolButton:hover { background-color: @hover@; }
 QToolButton:pressed { background-color: @selection@; }
 QToolButton:checked { background-color: @primary_soft@; border-color: @primary@; }
+QToolButton:focus { border-color: @focus@; }
 
 /* the one emphasised toolbar action — "New task" */
 QToolButton#PrimaryAction {

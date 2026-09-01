@@ -100,6 +100,19 @@ class Settings:
         self._s.setValue("digit_mode_user_overridden", bool(value))
         self._s.sync()
 
+    # --- table density (live toggle) ---
+    @property
+    def density(self) -> str:
+        v = self._s.value("density", "comfortable", str)
+        return v if v in ("comfortable", "compact") else "comfortable"
+
+    @density.setter
+    def density(self, value: str) -> None:
+        self._s.setValue(
+            "density", value if value in ("comfortable", "compact") else "comfortable"
+        )
+        self._s.sync()
+
     # --- colour-coding threshold ---
     @property
     def due_soon_days(self) -> int:

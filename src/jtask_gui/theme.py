@@ -68,38 +68,40 @@ _SHAB = {
 }
 
 # --- روز (light) -----------------------------------------------------
-# The window base is a soft off-white so raised surfaces (cards / dialogs on
-# ``surface`` = pure white) read as genuinely lifted.
+# The window base is a cool grey (not near-white) so raised surfaces
+# (cards / dialogs on ``surface`` = pure white) read as genuinely lifted and
+# borders have something to sit against.  n2 widened these steps — the old
+# ladder was ~4% luminance apart and elevation did not read.
 _RUZ = {
-    "bg": "#f4f6fa",
-    "bg_alt": "#e9edf3",
+    "bg": "#eaeef4",
+    "bg_alt": "#e2e7f0",
     "surface": "#ffffff",
     "elevated": "#ffffff",
     "on_danger": "#ffffff",
-    "border": "#dde2e9",
-    "border_soft": "#e9edf2",
-    "hover": "#eef1f6",
-    "selection": "#bfe1ea",
-    "row_line": "#e7ebf1",
-    "row_alt": "#f0f3f7",
-    "field": "#f1f4f8",
+    "border": "#ccd4e0",
+    "border_soft": "#dde3ec",
+    "hover": "#e5eaf2",
+    "selection": "#b6dde8",
+    "row_line": "#e6ebf2",
+    "row_alt": "#f3f6fa",
+    "field": "#eef1f7",
     "field_focus": "#ffffff",
     "text": "#1b2027",
-    "text_muted": "#5b6472",
+    "text_muted": "#556070",
     "primary": "#0a6e8f",
     "primary_hi": "#0c82a8",
     "primary_fg": "#ffffff",
-    "primary_soft": "#dbeff3",
+    "primary_soft": "#d3ecf3",
     "accent": "#7b41d8",
     "focus": "#0a6e8f",
     "overdue": "#d63b45",
-    "due_soon": "#9a6b00",
-    "waiting": "#6a7280",
-    "completed": "#98a0ab",
+    "due_soon": "#8a6000",
+    "waiting": "#66707e",
+    "completed": "#8b93a0",
     "blocked": "#c72e86",
     "success": "#1a8a42",
-    "chip_bg": "#e8effb",
-    "chip_border": "#cdd9ef",
+    "chip_bg": "#e4ecfa",
+    "chip_border": "#c7d5ec",
     "chip_fg": "#2f5bb5",
 }
 
