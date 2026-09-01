@@ -74,6 +74,31 @@ def test_detail_panel_opens_and_then_frees_space_on_close(win, qapp):
     assert abs(win._table.width() - _central_avail(win).width()) <= 3
 
 
+def test_escape_closes_the_detail_panel(win, qapp):
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtTest import QTest
+
+    from jtask_gui.workers import wait_for_done
+
+    win._show_detail(win._model.task_at(0) or {"uuid": "x", "description": "d", "id": 1})
+    qapp.processEvents()
+    assert win._detail_host.isVisible()
+
+    QTest.keyClick(win._detail._description, Qt.Key.Key_Escape)
+    for _ in range(20):
+        qapp.processEvents()
+        wait_for_done(1000)
+        qapp.processEvents()
+    assert not win._detail_host.isVisible()
+    assert win._split.sizes()[1] == 0
+
+
+def test_window_minimum_width_fits_a_standard_screen(win):
+    # opening the edit panel used to force the window past ~1012 px, pushing its
+    # trailing edge off-screen. Keep the floor below a 1024-wide display.
+    assert win.minimumSizeHint().width() < 1000
+
+
 # ---- P3: status-bar text composition ---------------------------------
 
 def test_status_count_is_pure_persian_with_persian_digits(win):

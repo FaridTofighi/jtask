@@ -2032,3 +2032,23 @@ Two reported search bugs:
    emptying the field emits `filterChanged([])`, returning the list to the
    current view. Typing still applies on Enter. `tests/gui/test_filter_bar.py::
    test_emptying_the_field_resets_the_view`.
+
+## n — edit-panel fixes (2026-09-01)
+
+1. **The window forced itself past a 1024-wide screen.** `minimumSizeHint`
+   was ~1012 px (nav dock `minWidth 240` + filter field `minWidth 320` + group
+   combo `minWidth 150` + the panel's own minimum), so on a 1024 display —
+   especially with the edit panel open — the trailing toolbar controls (and the
+   panel's own edge) were clipped / pushed off-screen. Lowered: dock 240→190,
+   filter 320→200, combo 150→120, `_DETAIL_WIDTH` 460→400. Floor is now
+   ~962 px. `tests/gui/test_main_window.py::
+   test_window_minimum_width_fits_a_standard_screen`.
+
+2. **Esc didn't close the edit panel** — only the Close button did. Added a
+   window-level `Esc` `QShortcut` → `_escape_pressed()`, which calls
+   `_hide_detail()` only when `_detail_host` is visible (so it's inert
+   otherwise and doesn't shadow dialog/menu/popup Esc, which are separate
+   windows). `test_escape_closes_the_detail_panel`.
+
+3. The panel now scrolls to the top on `load_task()` so the title + Close are
+   visible when it opens on a new task.

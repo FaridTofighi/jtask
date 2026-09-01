@@ -219,6 +219,7 @@ class DetailPanel(QScrollArea):
     def load_task(self, task: dict) -> None:
         self._task = task
         self._dirty_dates.clear()
+        self.verticalScrollBar().setValue(0)  # open at the top — title + Close visible
         self._title.setText(t("detail.task_number", id=task.get("id", "—")))
         self._description.setText(task.get("description", ""))
         self._project.setCurrentText(task.get("project", ""))

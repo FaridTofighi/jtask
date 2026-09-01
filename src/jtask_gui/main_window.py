@@ -48,7 +48,7 @@ from .workers import submit
 log = logging.getLogger("jtask_gui.window")
 
 _DEFAULT_VIEW = {"kind": "report", "key": "next", "fn": "report_ready"}
-_DETAIL_WIDTH = 460
+_DETAIL_WIDTH = 400
 _MIN_SIZE = QSize(940, 620)
 
 
@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row2)
 
         self._filter_bar = FilterBar()
-        self._filter_bar.setMinimumWidth(320)
+        self._filter_bar.setMinimumWidth(200)
         self._filter_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         row2.addWidget(self._filter_bar)
 
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
         ]:
             self._group_combo.addItem(label, key)
         self._group_combo.setToolTip(t("toolbar.group.tip"))
-        self._group_combo.setMinimumWidth(150)
+        self._group_combo.setMinimumWidth(120)
         self._group_combo.currentIndexChanged.connect(
             lambda: self._table.set_group_key(self._group_combo.currentData())
         )
@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetMovable
             | QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
-        dock.setMinimumWidth(240)
+        dock.setMinimumWidth(190)
         # Navigation sits on the reading-start edge: right for RTL, left for LTR.
         from .i18n import is_rtl
 
@@ -461,6 +461,12 @@ class MainWindow(QMainWindow):
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
+
+        from PyQt6.QtGui import QShortcut
+
+        esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
+        esc.setContext(Qt.ShortcutContext.WindowShortcut)
+        esc.activated.connect(self._escape_pressed)
         self._annotations_view.annotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "annotate", [text]),
@@ -507,6 +513,12 @@ class MainWindow(QMainWindow):
 
     def _hide_detail(self) -> None:
         self._animate_detail(0)
+
+    def _escape_pressed(self) -> None:
+        """Esc closes the edit panel when it is open (and nothing else has
+        claimed the key)."""
+        if self._detail_host.isVisible():
+            self._hide_detail()
 
     # --- drag & drop / saved filters ----------------------
 
