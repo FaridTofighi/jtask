@@ -110,7 +110,7 @@ date_format: short      # short: ۱۴۰۳-۰۷-۱۰   |   long: چهارشنبه
 ```bash
 pip install -e ".[gui]"
 jtask-gui                 # بار نخست، دستیار راه‌اندازی باز می‌شود
-./packaging/install-desktop.sh   # افزودن به منوی برنامه‌ها + آیکون
+jtask-gui --install-desktop   # افزودن به منوی برنامه‌ها + آیکون (یا packaging/install-desktop.sh)
 ```
 
 - **پوستهٔ راست‌به‌چپ**: نوار پیمایش (نماهای سریع، پروژه‌ها، برچسب‌ها، زمینه‌ها،
@@ -193,7 +193,7 @@ runs off the UI thread; the app never writes Taskwarrior's data directly.
 ```bash
 pip install -e ".[gui]"
 jtask-gui                        # first run opens a short setup wizard
-./packaging/install-desktop.sh   # add a menu entry + icon
+jtask-gui --install-desktop      # add a menu entry + themed icon (undo: --uninstall-desktop)
 ./packaging/build-appimage.sh    # standalone dist/jtask-gui-x86_64.AppImage (needs appimagetool)
 ```
 

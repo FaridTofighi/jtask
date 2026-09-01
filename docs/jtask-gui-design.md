@@ -2452,3 +2452,22 @@ same key both reveals and hides the dock (`toggled` → `_toggle_console`, which
 also persists `settings.console_visible`). Registry entry `sc.console` under the
 navigation category; `action.console.tip` now names the keys.
 `tests/gui/test_command_console.py` +1. Suite **617 passed / 1 skipped**.
+
+## Running-app icon — `jtask-gui --install-desktop` (2026-09-02)
+
+A `pip`/`pipx` install ships only the launcher, so GNOME (which identifies a
+window by `StartupWMClass` → an installed `*.desktop` file, not by
+`_NET_WM_ICON`) showed a generic icon. New `desktop_install.py`: `install()`
+writes `~/.local/share/applications/jtask-gui.desktop` (Exec resolved to the
+real launcher) + `icons/hicolor/{48,64,128,256}/apps/jtask-gui.png` +
+`scalable/apps/jtask-gui.svg`, then refreshes the desktop/icon caches;
+`uninstall()` reverses it. `app.main()` handles `--install-desktop` /
+`--uninstall-desktop` before any Qt object exists; `build_application` prints a
+one-line stderr hint when the entry is missing. The embedded entry is kept in
+lock-step with `packaging/jtask-gui.desktop` by a drift test.
+`tests/gui/test_desktop_install.py` +5. Suite **622 passed / 1 skipped**.
+
+Note: on this box Qt 6.11.2 XCB does not serialise `_NET_WM_ICON` for a
+file-backed `QIcon` (only trivial solid pixmaps) — irrelevant under GNOME once
+the `.desktop` entry is installed, but it means non-`.desktop` WMs (i3/XFCE)
+still rely on that entry too.

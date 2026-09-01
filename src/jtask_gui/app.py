@@ -200,8 +200,42 @@ def build_application(argv: list[str] | None = None) -> tuple[QApplication, obje
 
     app.aboutToQuit.connect(_teardown)
 
+    _hint_desktop_install(app)
     window.show()
     return app, window
+
+
+def _hint_desktop_install(app: QApplication) -> None:
+    """On a freedesktop session with no installed ``.desktop`` entry, the window
+    gets a generic icon. Nudge the user once, without a modal."""
+    if app.platformName() == "offscreen" or sys.platform != "linux":
+        return
+    try:
+        from . import desktop_install
+
+        if not desktop_install.installed():
+            msg = "jtask-gui: run 'jtask-gui --install-desktop' for a menu entry and app icon"
+            print(msg, file=sys.stderr)
+            log.info(msg)
+    except Exception:  # noqa: BLE001 - a hint must never break startup
+        pass
+
+
+def _handle_desktop_cli(args: list[str]) -> int | None:
+    """``--install-desktop`` / ``--uninstall-desktop`` run without a GUI and
+    exit. Returns an exit code to stop, or ``None`` to keep going."""
+    from . import desktop_install
+
+    if "--install-desktop" in args:
+        path = desktop_install.install()
+        print(f"installed {path}")
+        print("desktop entry + icons registered — new launches show the jtask icon")
+        return 0
+    if "--uninstall-desktop" in args:
+        desktop_install.uninstall()
+        print("desktop entry + icons removed")
+        return 0
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -215,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
         (Path.home() / ".cache").mkdir(exist_ok=True)
     except OSError:
         pass
+
+    rc = _handle_desktop_cli(argv if argv is not None else sys.argv[1:])
+    if rc is not None:
+        return rc
+
     app, _window = build_application(argv)
     rc = app.exec()
     if _restart_requested:
