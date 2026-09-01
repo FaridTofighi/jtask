@@ -326,6 +326,18 @@ QListWidget#PaletteList::item:selected {
     color: @primary@;
 }
 
+/* ============================ shortcut cheat sheet ======= */
+QDialog#ShortcutSheet { background-color: @elevated@; }
+QScrollArea#SheetScroll { background: transparent; border: none; }
+QLabel#KeyCap {
+    background-color: @field@;
+    border: 1px solid @border@;
+    border-radius: @r_sm@;
+    padding: @sp_2@ @sp_8@;
+    color: @text_muted@;
+    font-size: @fs_xs@;
+}
+
 /* ============================ scrollbars ================= */
 QScrollBar:vertical { background: transparent; width: 10px; margin: @sp_2@; }
 QScrollBar::handle:vertical { background: @border@; border-radius: @r_sm@; min-height: 32px; }

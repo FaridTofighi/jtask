@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 
-from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
 
 from jtask import jalali
@@ -33,6 +33,13 @@ def _mix(a: str, b: str, t: float) -> str:
 
 
 class TaskTableModel(QAbstractTableModel):
+    # (uuid, field, value) — an inline cell edit; MainWindow turns it into a
+    # `task <uuid> modify <field>:<value>` write. The model never writes.
+    cellEdited = pyqtSignal(str, str, str)
+
+    #: columns that accept an inline editor (delegates in widgets/table_delegates)
+    EDITABLE = ("project", "priority", "due")
+
     def __init__(self, theme_name: str = "dark", persian_digits: bool = True,
                  due_soon_days: int = 3) -> None:
         super().__init__()
@@ -119,6 +126,10 @@ class TaskTableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             return self._display(task, col)
+        if role == Qt.ItemDataRole.EditRole:
+            if col.key == "due":
+                return task.get("due_gregorian", "")  # raw TW timestamp
+            return task.get(col.key, "") or ""
         if role == Qt.ItemDataRole.DecorationRole:
             return self._decoration(task, col)
         if role == Qt.ItemDataRole.TextAlignmentRole:
@@ -138,6 +149,27 @@ class TaskTableModel(QAbstractTableModel):
         if role == _STATE_ROLE:
             return self._row_state(task)
         return None
+
+    def flags(self, index: QModelIndex):
+        base = super().flags(index)
+        if index.isValid() and self._columns[index.column()].key in self.EDITABLE:
+            return base | Qt.ItemFlag.ItemIsEditable
+        return base
+
+    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole or not index.isValid():
+            return False
+        col = self._columns[index.column()]
+        if col.key not in self.EDITABLE:
+            return False
+        task = self._tasks[index.row()]
+        uuid = task.get("uuid")
+        new = "" if value is None else str(value).strip()
+        current = task.get("due_gregorian", "") if col.key == "due" else (task.get(col.key) or "")
+        if not uuid or new == current:
+            return False
+        self.cellEdited.emit(uuid, col.key, new)
+        return True
 
     # --- rendering helpers --------------------------------------
 

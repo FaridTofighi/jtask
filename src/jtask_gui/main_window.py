@@ -461,12 +461,24 @@ class MainWindow(QMainWindow):
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.saveRequested.connect(self._save_task)
+        self._model.cellEdited.connect(self._inline_edit)
 
         from PyQt6.QtGui import QShortcut
 
         esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
         esc.setContext(Qt.ShortcutContext.WindowShortcut)
         esc.activated.connect(self._escape_pressed)
+
+        for seq, slot in (
+            ("?", self._open_shortcut_sheet),
+            ("Ctrl+F", self._focus_filter),
+            ("Ctrl+1", lambda: self._goto_view("today")),
+            ("Ctrl+2", lambda: self._goto_view("next")),
+            ("Ctrl+3", lambda: self._goto_view("completed")),
+        ):
+            sc = QShortcut(QKeySequence(seq), self)
+            sc.setContext(Qt.ShortcutContext.WindowShortcut)
+            sc.activated.connect(slot)
         self._annotations_view.annotateRequested.connect(
             lambda uuid, text: self._write(
                 functools.partial(taskwarrior.command, [uuid], "annotate", [text]),
@@ -687,7 +699,11 @@ class MainWindow(QMainWindow):
             lambda r: self._sidebar.populate_contexts(*r),
             self._error,
         )
-        submit(taskwarrior.list_projects, self._detail.set_projects, self._error)
+        submit(
+            taskwarrior.list_projects,
+            lambda p: (self._detail.set_projects(p), self._table.set_projects(p)),
+            self._error,
+        )
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
         self._sidebar.populate_saved_filters(self.settings.saved_filters())
         self._reports.discover_custom_reports()
@@ -981,6 +997,13 @@ class MainWindow(QMainWindow):
             t("msg.timer_updated"),
         )
 
+    def _inline_edit(self, uuid: str, field: str, value: str) -> None:
+        mod = f"{field}:{value}"  # empty value clears the attribute
+        self._write(
+            functools.partial(taskwarrior.command, [uuid], "modify", [mod]),
+            t("msg.task_updated"),
+        )
+
     def _save_task(self, uuid: str, mods: list[str]) -> None:
         # The detail panel already emits Taskwarrior-ready tokens: its Jalali
         # date pickers hand back Gregorian strings, so mods must NOT be run
@@ -1110,6 +1133,29 @@ class MainWindow(QMainWindow):
             self.geometry().top() + self.height() // 6,
         )
         pal.exec()
+
+    def _open_shortcut_sheet(self) -> None:
+        from PyQt6.QtWidgets import QComboBox, QLineEdit, QPlainTextEdit, QTextEdit
+
+        # "?" must not fire while the user is typing it into a field
+        fw = self.focusWidget()
+        if isinstance(fw, QLineEdit | QComboBox | QTextEdit | QPlainTextEdit):
+            return
+        from .widgets.shortcut_sheet import ShortcutSheet
+
+        ShortcutSheet(self).exec()
+
+    def _focus_filter(self) -> None:
+        self._filter_bar._edit.setFocus()
+        self._filter_bar._edit.selectAll()
+
+    def _goto_view(self, key: str) -> None:
+        from .widgets.sidebar import QUICK_VIEWS
+
+        for label_key, _glyph, spec in QUICK_VIEWS:
+            if spec.get("key") == key:
+                self._sidebar.activate_spec(dict(spec, title=t(label_key)))
+                return
 
     def _open_settings(self) -> None:
         from .settings_dialog import SettingsDialog

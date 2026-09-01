@@ -162,6 +162,17 @@ class SettingsDialog(QDialog):
         self._reset_cols.clicked.connect(self._do_reset_columns)
         twform.addRow("", self._reset_cols)
 
+        sc_sec = QLabel(t("settings.shortcuts"))
+        sc_sec.setObjectName("Section")
+        root.addWidget(sc_sec)
+        sc_hint = QLabel(t("settings.shortcuts.hint"))
+        sc_hint.setObjectName("Muted")
+        sc_hint.setWordWrap(True)
+        root.addWidget(sc_hint)
+        self._show_shortcuts = QPushButton(t("sc.sheet.title"))
+        self._show_shortcuts.clicked.connect(self._open_shortcut_sheet)
+        root.addWidget(self._show_shortcuts)
+
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -215,6 +226,11 @@ class SettingsDialog(QDialog):
         self._settings.reset_columns()
         self._reset_cols.setText(t("settings.tw.reset_columns.done"))
         self._reset_cols.setEnabled(False)
+
+    def _open_shortcut_sheet(self) -> None:
+        from .widgets.shortcut_sheet import ShortcutSheet
+
+        ShortcutSheet(self).exec()
 
     def _prompt_restart(self) -> None:
         box = QMessageBox(self.parent() or self)

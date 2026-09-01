@@ -117,6 +117,10 @@ class TaskTable(QTableView):
         for seq, slot in (
             ("Ctrl+S", lambda: self._timer_shortcut(True)),
             ("Ctrl+Shift+S", lambda: self._timer_shortcut(False)),
+            ("Ctrl+D", self._done_shortcut),
+            ("Ctrl+E", self._open_detail_shortcut),
+            ("Return", self._open_detail_shortcut),
+            ("Enter", self._open_detail_shortcut),
             (QKeySequence.StandardKey.Delete, self._delete_shortcut),
         ):
             sc = QShortcut(QKeySequence(seq), self)
@@ -131,7 +135,21 @@ class TaskTable(QTableView):
 
         self._accent = QColor(palette(icons._theme)["primary"])
 
+        # inline cell editors (project / priority / due) — double-click a cell
+        self._projects: list[str] = []
+        self.setEditTriggers(
+            QAbstractItemView.EditTrigger.DoubleClicked
+            | QAbstractItemView.EditTrigger.EditKeyPressed
+        )
+        from .table_delegates import install_inline_editors
+
+        install_inline_editors(self, lambda: self._projects)
+
     _SELECTION_BAR_W = 3
+
+    def set_projects(self, projects: list[str]) -> None:
+        """Feed the inline project editor's autocomplete (shared TW source)."""
+        self._projects = list(projects)
 
     def set_theme(self, name: str) -> None:
         """Keep the selected-row accent bar in sync with the active theme."""
@@ -291,6 +309,16 @@ class TaskTable(QTableView):
         uuids = self.selected_uuids()
         if uuids:
             self.deleteRequested.emit(uuids)  # _delete() runs the confirm dialog
+
+    def _done_shortcut(self) -> None:
+        uuids = self.selected_uuids()
+        if uuids:
+            self.doneRequested.emit(uuids)
+
+    def _open_detail_shortcut(self) -> None:
+        task = self.current_task()
+        if task:
+            self.taskActivated.emit(task)
 
     def _on_click(self, index) -> None:
         if self.model() is self._group_model and index.data(GROUP_HEADER_ROLE):

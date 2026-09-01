@@ -2115,3 +2115,62 @@ their shortcut (`setShortcut` + `WidgetShortcut` context = label only, no
 ambiguous binding).
 
 `tests/gui/test_task_shortcuts.py` (5). Suite **543 passed / 1 skipped**.
+
+---
+
+# Mission "n" (cont.) — six new features
+
+Approved 2026-09-01 after a Phase-0 investigation (six open questions resolved
+in the review; see that thread). Order: **N-A → N-C → N-B → N-D → N-E.** Every
+milestone: tests + both-theme (both-direction where layout-sensitive)
+screenshots, full regression green.
+
+Phase-0 resolutions carried into implementation:
+1. **Kanban** — grouping selectable (`SegmentedControl`), default `status`
+   (To Do / Doing = `+ACTIVE` / Done); Waiting read-only. `priority` / `project`
+   also. Every drag = one `task modify` / `start` / `stop` / `done`. No invented
+   state — `+ACTIVE` ↔ the `start` attribute is real TW data.
+2. **Templates** — "الگوی کار / Task template" (a saved reusable *shape*), kept
+   distinct from the renamed "از کارِ تکرارشوندهٔ موجود… / From an existing
+   recurring task…". Stored in `QSettings` like saved filters.
+3. **Keyboard** — Persian layout types «ب» on the physical J key, so **no bare
+   vim letters**; all bindings are `Ctrl`/`Shift`-modified or non-letter.
+   `shortcuts.SHORTCUTS` is the one registry; `?` opens the cheat sheet.
+   Rebinding is deferred (Settings shows a read-only list).
+4. **Timewarrior** — no new panel; the M6 Timesheet view gains a source toggle.
+5. **Starred** — the `+starred` tag (verified round-trips through plain `task`).
+6. **Inline edit** — project / priority / due only, reusing the shared project
+   completer, the `_PRIORITIES` combo pattern, and `JalaliDatePicker`.
+
+## N-A — table interaction (complete)
+
+**Keyboard.** `shortcuts.py` — `Shortcut(keys, desc_key, cat_key)` registry +
+`by_category()`. New bindings (all layout-independent):
+
+| key | scope | action |
+|---|---|---|
+| `?` | window (suppressed in text fields) | open the cheat sheet |
+| `Ctrl+F` | window | focus the filter field |
+| `Ctrl+1/2/3` | window | Today / Next Actions / Completed |
+| `Return` `Enter` `Ctrl+E` | table | open the edit panel |
+| `Ctrl+D` | table | mark done |
+
+plus the existing `Ctrl+N`, `Ctrl+Shift+N`, `Ctrl+K`, `Ctrl+Z`, `Esc`,
+`Ctrl+S`, `Ctrl+Shift+S`, `Del`. `widgets/shortcut_sheet.py` renders the sheet
+from the registry (key-caps + descriptions, RTL-correct). Settings gains a
+read-only "Keyboard shortcuts" section that opens the same sheet.
+`tests/gui/test_shortcuts_registry.py` (4) — no double-binding, every live
+`QShortcut` is documented.
+
+**Inline cell editing.** `TaskTableModel` gained `flags()` (+`ItemIsEditable`
+for `project`/`priority`/`due`), `data(EditRole)` (raw values), and `setData()`
+which **emits `cellEdited(uuid, field, value)` — the model never writes**.
+`MainWindow._inline_edit()` turns that into one `task <uuid> modify` through
+`_write` (undo-able). `widgets/table_delegates.py` — `_ProjectDelegate`
+(shared `make_token_completer`), `_PriorityDelegate` (`_PRIORITIES`),
+`_DueDelegate` (`JalaliDatePicker`, active calendar system, no premature
+`invalid`). Double-click or the edit key opens the editor; Esc cancels with no
+write. `tests/gui/test_inline_edit.py` (9).
+
+Suite **556 passed / 1 skipped**. Snapshot rebaselined (new Settings strings +
+a pre-existing `timew`-now-installed env drift).
