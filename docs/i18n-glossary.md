@@ -135,6 +135,22 @@ unified fa = «بالا / متوسط / پایین», en = «High / Medium / Low�
 The two are never adjacent in the UI: the recurrence copier is a small button
 inside the Recurrence field; "Templates ▾" is in the dialog header.
 
+### 3b. Board engine (NB)
+
+| Concept | fa | en | What it is |
+|---|---|---|---|
+| board | برد | Board | a named, user-creatable view — an ordered list of columns. `_content` index 2. |
+| column | ستون | Column | one board column: a title + a **raw Taskwarrior filter** (the M3 `FilterBuilder` string) + an optional **drop action**. |
+| drop action | کنش رهاسازی | Drop action | what a card dragged **into** this column does, in real `task` terms — one of: view only / add·remove tags / set an attribute / set a UDA / a lifecycle verb (`board.drop.*`, `board.verb.*`). Never an open scripting surface. |
+| preset | پیش‌فرض | Preset | a built-in board shipped in code (`BUILTIN_BOARDS`) — **GTD** and **Kanban**. Usable as-is or duplicated to edit. |
+| GTD board columns | صندوق ورودی · اقدامات بعدی · در انتظار · روزی/شاید · انجام‌شده | Inbox · Next Actions · Waiting For · Someday/Maybe · Done | uses the project's existing `+waiting` / `+someday` conventions, not new tags. Inbox = pending, no project, no tags. |
+
+The GTD board is **not** engine code — it is the first entry in
+`BUILTIN_BOARDS`, column definitions like any user board. Its "Next Actions"
+column accepts `( +PROJECT or +TAGGED )` so a clarified-but-projectless task
+still shows; dragging Inbox→Next clears the GTD tags, it does not invent a
+project (assign one via inline edit / the detail panel).
+
 ---
 
 ## 4. Reports & charts

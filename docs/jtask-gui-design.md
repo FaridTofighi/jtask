@@ -2337,3 +2337,30 @@ temporarily shows the built-in GTD board (NB-3 replaces with sidebar nav).
 `validate` rejections, JSON round-trip, persistence + ordering, `BoardView`
 column building + drop emission, `MainWindow._board_drop` compilation.
 Suite **595 passed / 1 skipped**. Snapshot rebaselined.
+
+## NB-2 — GTD preset (complete)
+
+`BUILTIN_BOARDS["gtd"]` (already shipped in NB-1 for the demo; NB-2 verifies and
+documents it). Five columns, all plain raw-filter strings + drop configs, using
+the project's own `+waiting` / `+someday` conventions — no engine special-casing:
+
+| column | filter | drop |
+|---|---|---|
+| Inbox | `status:pending -PROJECT -TAGGED` | view only |
+| Next Actions | `status:pending -BLOCKED -waiting -someday ( +PROJECT or +TAGGED )` | `-waiting -someday` |
+| Waiting For | `status:pending +waiting` | `+waiting -someday` |
+| Someday / Maybe | `status:pending +someday` | `+someday -waiting` |
+| Done | `status:completed` | `done` verb |
+
+Membership verified against a real isolated Taskwarrior
+(`tests/test_gtd_board.py`, 4): each column's members, the four pending columns
+**partition** (no task in two at once), the drop actions compile to the right
+`modify`, and dragging a `+waiting` task into Next Actions clears the tag and
+the task then satisfies the Next filter. `docs/i18n-glossary.md` §3b documents
+board / column / drop action / preset.
+
+**Known model limitation** (documented): a column's drop action is fixed, not a
+per-transition matrix. The `status` preset's "To Do" drop is `stop`; dragging a
+*Done* card there runs `task stop` (a soft "not started" toast) rather than
+reopening. The GTD board — the primary preset — has no such case. Suite
+**599 passed / 1 skipped**.
