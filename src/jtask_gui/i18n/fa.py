@@ -286,6 +286,7 @@ CATALOG: dict[str, str] = {
     "msg.tasks_updated": "کارها به‌روزرسانی شدند",
     "msg.timer_updated": "زمان‌سنجی به‌روزرسانی شد",
     "msg.task_updated": "کار به‌روزرسانی شد",
+    "msg.console_synced": "با کنسول هم‌گام شد",
     "msg.starred": "ستاره‌دار شد",
     "msg.unstarred": "ستاره برداشته شد",
     "op.undo_preparing": "در حال آماده‌سازی واگرد…",

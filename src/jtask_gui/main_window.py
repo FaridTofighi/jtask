@@ -343,6 +343,7 @@ class MainWindow(QMainWindow):
 
     def _build_console(self) -> None:
         self._console = CommandConsole()
+        self._console.stateChanged.connect(self._after_console_command)
         dock = QDockWidget(t("dock.console"), self)
         dock.setObjectName("ConsoleDock")
         dock.setWidget(self._console)
@@ -1218,6 +1219,13 @@ class MainWindow(QMainWindow):
         self._export_action.setIcon(icons.icon("export"))
         self._import_action.setIcon(icons.icon("import"))
         self._sync_action.setIcon(icons.icon("sync"))
+
+    def _after_console_command(self) -> None:
+        """A mutating command ran in the console — re-read everything so the
+        change (a new context, task, config value…) shows immediately.
+        ``refresh_all`` already drops the lookup caches."""
+        self.refresh_all()
+        self._toast.show_message(t("msg.console_synced"))
 
     def _toggle_console(self, visible: bool) -> None:
         self._console_dock.setVisible(visible)

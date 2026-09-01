@@ -298,6 +298,7 @@ CATALOG.update({
     "msg.tasks_updated": "Tasks updated",
     "msg.timer_updated": "Timer updated",
     "msg.task_updated": "Task updated",
+    "msg.console_synced": "Synced with the console",
     "msg.starred": "Starred",
     "msg.unstarred": "Star removed",
     "op.undo_preparing": "Preparing undo…",

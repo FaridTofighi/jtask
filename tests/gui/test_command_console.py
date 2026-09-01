@@ -65,3 +65,57 @@ def test_console_input_carries_its_object_name(qtbot):
     qtbot.addWidget(con)
     assert con._in.objectName() == "ConsoleInput"   # so the QSS actually applies
     assert con._in.actions()                        # the ❯ prompt glyph
+
+
+def test_mutating_commands_trigger_a_sync_signal_and_reads_do_not(qtbot):
+    from jtask_gui.widgets.command_console import CommandConsole, _is_mutating
+
+    assert _is_mutating(["context", "define", "work", "project:Work"])
+    assert _is_mutating(["1", "modify", "priority:H"])
+    assert _is_mutating(["config", "color.project.Work", "blue"])
+    assert _is_mutating(["rc.context=work", "list"])
+    assert not _is_mutating(["list"])
+    assert not _is_mutating(["_get", "rc.context"])
+    assert not _is_mutating(["diagnostics"])
+
+    con = CommandConsole()
+    qtbot.addWidget(con)
+    fired = []
+    con.stateChanged.connect(lambda: fired.append(True))
+
+    con._mutating = True
+    con._done("ok")
+    assert fired == [True]
+    con._mutating = False
+    con._done("ID Age ...")
+    assert fired == [True]          # a read command did not re-fire
+
+
+def test_main_window_resyncs_after_a_console_context_define(qapp, qtbot, tw_env):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask import taskwarrior as tw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    w = MainWindow(Settings())
+    qtbot.addWidget(w)
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+    assert tw.list_contexts() == []
+
+    w._console._in.setText("context define home project:Home")
+    w._console._run()
+    for _ in range(20):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+
+    assert "home" in tw.list_contexts()
+    rows = [w._sidebar._contexts.child(i).text(0)
+            for i in range(w._sidebar._contexts.childCount())]
+    assert any("home" in r for r in rows)          # sidebar updated on the fly

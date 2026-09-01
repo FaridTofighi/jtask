@@ -2418,3 +2418,18 @@ brighter in dark). Also fixed a latent bug — `_in` had no `objectName`, so the
 `#ConsoleInput` QSS (monospace font) never applied.
 
 `tests/gui/test_command_console.py` +2. Suite **613 passed / 1 skipped**.
+
+## Console → live GUI sync (2026-09-01)
+
+A command run in the Raw Command Console that can mutate Taskwarrior — one of
+`_MUTATING` (`add / modify / done / delete / start / stop / config / context /
+undo / import / …`) or an `rc.<x>=<y>` override — now emits
+`CommandConsole.stateChanged`; `MainWindow._after_console_command()` runs a
+full `refresh_all()` (which drops the lookup caches, including
+`context_read_filter`) and shows a "Synced with the console" toast. Read-only
+commands (`list`, `_get`, `diagnostics`) don't trigger it.
+
+So `context define …`, `add …`, `config …` etc. typed in the console show
+immediately in the sidebar / task list. `tests/gui/test_command_console.py`
++2 (`_is_mutating` classification, an end-to-end `context define` → sidebar).
+Suite **615 passed / 1 skipped**.

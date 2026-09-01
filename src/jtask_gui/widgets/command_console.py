@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import shlex
 
-from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QIcon, QKeyEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QLineEdit,
@@ -69,7 +69,26 @@ class _HistoryLineEdit(QLineEdit):
             super().keyPressEvent(event)
 
 
+# verbs / tokens that can change the Taskwarrior store or config — after one
+# of these runs in the console the GUI must re-read everything.
+_MUTATING = {
+    "add", "log", "modify", "done", "delete", "purge", "start", "stop",
+    "annotate", "denotate", "append", "prepend", "duplicate", "edit",
+    "undo", "import", "synchronize", "sync", "config", "context",
+}
+
+
+def _is_mutating(args: list[str]) -> bool:
+    if any(a.startswith("rc.") and "=" in a for a in args):
+        return True
+    return any(a in _MUTATING for a in args)
+
+
 class CommandConsole(QWidget):
+    #: emitted after any command that could have changed Taskwarrior state —
+    #: MainWindow connects this to a full refresh so console edits show at once.
+    stateChanged = pyqtSignal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("CommandConsole")
@@ -117,6 +136,7 @@ class CommandConsole(QWidget):
         args = rewrite.rewrite_args(tokens)
         self._append(f"\n$ task {' '.join(args)}")
         self._in.setEnabled(False)
+        self._mutating = _is_mutating(args)
 
         def work() -> str:
             proc = taskwarrior.run(args, check=False)
@@ -129,3 +149,5 @@ class CommandConsole(QWidget):
         self._append(strip_ansi(text) or t("console.no_output"))
         self._in.setEnabled(True)
         self._in.setFocus()
+        if getattr(self, "_mutating", False):
+            self.stateChanged.emit()
