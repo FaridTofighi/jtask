@@ -37,3 +37,31 @@ def test_console_output_is_stripped_before_display(qtbot, tw_env):
     assert "\x1b" not in shown
     assert "[4m" not in shown          # the literal codes the user was seeing
     assert "work" in shown and "Definition" in shown
+
+
+def test_console_is_a_dark_terminal_in_every_theme():
+    """The Raw Command Console keeps a fixed dark surface (#2e3440) under both
+    themes — like an IDE's integrated terminal."""
+    import re
+
+    from jtask_gui import theme
+
+    for name, pal in theme.THEMES.items():
+        assert pal["console_bg"].lower() == "#2e3440", name
+        for key in ("console_fg", "console_border", "console_prompt"):
+            assert key in pal, (name, key)
+
+    qss = re.sub(r"/\*.*?\*/", "", theme.template_text(), flags=re.S)
+    for sel in ("QWidget#CommandConsole", "QPlainTextEdit#ConsoleOutput",
+                "QLineEdit#ConsoleInput"):
+        m = re.search(rf"{re.escape(sel)}\s*\{{([^}}]*)\}}", qss)
+        assert m and "@console_bg@" in m.group(1), sel
+
+
+def test_console_input_carries_its_object_name(qtbot):
+    from jtask_gui.widgets.command_console import CommandConsole
+
+    con = CommandConsole()
+    qtbot.addWidget(con)
+    assert con._in.objectName() == "ConsoleInput"   # so the QSS actually applies
+    assert con._in.actions()                        # the ❯ prompt glyph

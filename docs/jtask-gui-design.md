@@ -2406,3 +2406,15 @@ rejection (JSON + schema), buttons present. Suite **611 passed / 1 skipped**.
 NB-3 sidebar nav + `BoardManagerDialog` · NB-4 export/import. N-D's fixed
 Kanban is gone; `BUILTIN_BOARDS` ships `gtd` + `status`. Deferred (stated in
 Phase 0): per-board visual card-layout editor; per-transition drop matrices.
+
+## Console — terminal surface (2026-09-01)
+
+The Raw Command Console (invariant #7) is now styled like an IDE's integrated
+terminal: a **fixed dark surface `#2e3440`** in *both* themes, light monospace
+text (`console_fg`), a subtle `console_border`, and a teal **`❯` prompt glyph**
+on the input line. New palette roles `console_bg / console_fg / console_border
+/ console_prompt` (identical `console_bg` in `_SHAB` and `_RUZ`; the prompt is
+brighter in dark). Also fixed a latent bug — `_in` had no `objectName`, so the
+`#ConsoleInput` QSS (monospace font) never applied.
+
+`tests/gui/test_command_console.py` +2. Suite **613 passed / 1 skipped**.

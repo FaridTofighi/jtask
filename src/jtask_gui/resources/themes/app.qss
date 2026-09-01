@@ -387,11 +387,32 @@ QSplitter::handle:horizontal { width: 3px; }
 QSplitter::handle:hover { background: @primary@; }
 
 /* ============================ console ==================== */
+/* the Raw Command Console is a terminal — a dark surface in every theme. */
+QWidget#CommandConsole { background-color: @console_bg@; }
 QPlainTextEdit#ConsoleOutput {
-    font-family: "Vazirmatn", "DejaVu Sans Mono", monospace;
-    background-color: @surface@; border: 1px solid @border@; border-radius: @r_md@;
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace;
+    font-size: @fs_h2@;
+    background-color: @console_bg@;
+    color: @console_fg@;
+    border: 1px solid @console_border@;
+    border-radius: @r_md@;
+    padding: @sp_8@;
+    selection-background-color: @console_prompt@;
+    selection-color: @console_bg@;
 }
-QLineEdit#ConsoleInput { font-family: "Vazirmatn", "DejaVu Sans Mono", monospace; }
+QPlainTextEdit#ConsoleOutput QScrollBar:vertical { background: transparent; width: 10px; }
+QPlainTextEdit#ConsoleOutput QScrollBar::handle:vertical { background: @console_border@; border-radius: @r_sm@; }
+QLineEdit#ConsoleInput {
+    font-family: "DejaVu Sans Mono", "Vazirmatn", monospace;
+    font-size: @fs_h2@;
+    background-color: @console_bg@;
+    color: @console_fg@;
+    border: 1px solid @console_border@;
+    border-radius: @r_md@;
+    padding: @sp_8@ @sp_10@;
+}
+QLineEdit#ConsoleInput:focus { border-color: @console_prompt@; background-color: @console_bg@; }
+QLineEdit#ConsoleInput::placeholder { color: @waiting@; }
 
 /* ============================ error dialog ============== */
 QLabel#ErrorMessage { font-size: @fs_body@; line-height: 150%; }

@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 import shlex
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtGui import QColor, QFont, QIcon, QKeyEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
@@ -18,7 +18,25 @@ from jtask import rewrite, taskwarrior
 
 from .. import tokens as tok
 from ..i18n import t
+from ..theme import palette
 from ..workers import submit
+
+
+def _prompt_icon() -> QIcon:
+    """A ``❯`` prompt glyph in the console-prompt colour (theme-independent —
+    the console is always dark)."""
+    pm = QPixmap(16, 16)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(QColor(palette("dark")["console_prompt"]))
+    f = QFont("DejaVu Sans Mono")
+    f.setPointSize(11)
+    f.setBold(True)
+    p.setFont(f)
+    p.drawText(QRectF(0, 0, 16, 16), Qt.AlignmentFlag.AlignCenter, "❯")
+    p.end()
+    return QIcon(pm)
 
 # Taskwarrior underlines table headers with SGR escapes (\x1b[4m … \x1b[0m)
 # even when rc.color=off / rc._forcecolor=off — a QPlainTextEdit is not a
@@ -54,17 +72,24 @@ class _HistoryLineEdit(QLineEdit):
 class CommandConsole(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("CommandConsole")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(tok.SP_6, tok.SP_6, tok.SP_6, tok.SP_6)
-        lay.setSpacing(tok.SP_4)
+        lay.setSpacing(tok.SP_6)
 
         self._out = QPlainTextEdit()
         self._out.setObjectName("ConsoleOutput")
         self._out.setReadOnly(True)
+        self._out.setFrameShape(QPlainTextEdit.Shape.NoFrame)
         lay.addWidget(self._out, 1)
 
         self._in = _HistoryLineEdit()
+        self._in.setObjectName("ConsoleInput")
         self._in.setPlaceholderText(t("console.input_placeholder"))
+        self._in.setClearButtonEnabled(True)
+        self._in.addAction(
+            _prompt_icon(), QLineEdit.ActionPosition.LeadingPosition
+        )
         self._in.returnPressed.connect(self._run)
         lay.addWidget(self._in)
 

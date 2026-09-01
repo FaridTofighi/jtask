@@ -70,6 +70,12 @@ _SHAB = {
     "chip_bg": "#26303c",
     "chip_border": "#38434f",
     "chip_fg": "#a9c7e8",
+    # the Raw Command Console is a terminal — a fixed dark surface in *both*
+    # themes (like an IDE's integrated terminal).
+    "console_bg": "#2e3440",
+    "console_fg": "#dfe3ea",
+    "console_border": "#3b4252",
+    "console_prompt": "#8fbcbb",
 }
 
 # --- روز (light) -----------------------------------------------------
@@ -110,6 +116,11 @@ _RUZ = {
     "chip_bg": "#dae5f4",
     "chip_border": "#bbcbde",
     "chip_fg": "#2f5bb5",
+    # the console stays a dark terminal even under the light theme
+    "console_bg": "#2e3440",
+    "console_fg": "#dfe3ea",
+    "console_border": "#3b4252",
+    "console_prompt": "#4a8f8a",
 }
 
 # Stable theme keys (i2). Display labels come from the i18n catalog
