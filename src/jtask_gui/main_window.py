@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
 
         self._split = QSplitter(Qt.Orientation.Horizontal)
         self._split.setObjectName("MainSplit")
-        self._split.setHandleWidth(1)
+        self._split.setHandleWidth(4)  # grabbable — drag to widen the edit panel
         self._split.addWidget(self._table)
         self._split.addWidget(self._detail_host)
         self._split.setStretchFactor(0, 1)

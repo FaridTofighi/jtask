@@ -83,6 +83,12 @@ class DetailPanel(QScrollArea):
 
         self._project = QComboBox()
         self._project.setEditable(True)
+        # don't let a long project path (or a long entry in the list) stretch
+        # the form column and, through it, the whole edit panel
+        self._project.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self._project.setMinimumContentsLength(12)
         form.addRow(t("word.project"), self._project)
 
         self._tags = TagChipEditor()

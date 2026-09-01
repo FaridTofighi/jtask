@@ -337,8 +337,8 @@ QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 
 /* ============================ splitter =================== */
-QSplitter::handle { background: @border_soft@; }
-QSplitter::handle:horizontal { width: 1px; }
+QSplitter::handle { background: @border@; }
+QSplitter::handle:horizontal { width: 3px; }
 QSplitter::handle:hover { background: @primary@; }
 
 /* ============================ console ==================== */

@@ -2074,3 +2074,25 @@ colour language — to sit like daylight's dimmer twin:
 WCAG-AA contrast + palette parity green (text/bg 13.3, text_muted/bg_alt 5.4).
 Light theme untouched. `tests/gui/test_n2_polish.py::
 test_dark_theme_is_soft_not_near_black`.
+
+## n — edit-panel width no longer depends on content (2026-09-01)
+
+The edit panel's width is fixed to its splitter pane (`_DETAIL_WIDTH`, or
+whatever the user drags it to). Two rows could push their content past that and,
+because the panel scroll area has `ScrollBarAlwaysOff` horizontally, clip the
+right edge (the Close button):
+
+- **Tags** — `TagChipEditor` laid every chip on ONE `QHBoxLayout` row, so N
+  tags made its `minimumSizeHint().width()` = Σ chip widths. Replaced with a
+  `FlowLayout` (`widgets/flow_layout.py`, the canonical Qt port) — chips wrap,
+  the editor's width floor is just the trailing input (~90 px) regardless of
+  tag count, and it reports `heightForWidth()` so its QFormLayout row grows
+  *taller* as chips wrap. `tests/gui/test_chips.py` (4).
+- **Project** — the editable `QComboBox` sized to its widest list entry / a
+  long `A.B.C.D` path. `setSizeAdjustPolicy(AdjustToMinimumContentsLength…)` +
+  `setMinimumContentsLength(12)`; the dropdown popup still shows full names.
+
+Also: the table↔panel splitter handle went 1 px → 3 px (`setHandleWidth(4)`,
+QSS `width: 3px`) so it can actually be grabbed to widen the panel.
+
+Suite **538 passed / 1 skipped**.
