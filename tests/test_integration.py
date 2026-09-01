@@ -53,6 +53,19 @@ def test_add_stores_gregorian_but_displays_jalali(tw_env, capsys):
     assert rows[0]["due_gregorian"].startswith(("20240930", "20241001"))
 
 
+def test_search_is_case_insensitive(tw_env, capsys):
+    assert _run("add", "Meeting with Arash") == 0
+    assert _run("add", "buy milk") == 0
+    capsys.readouterr()
+
+    # a bare word matches the description regardless of case (Taskwarrior's own
+    # default is case-sensitive; jtask forces rc.search.case.sensitive=no)
+    assert [t["description"] for t in taskwarrior.export(["meeting"])] == [
+        "Meeting with Arash"
+    ]
+    assert [t["description"] for t in taskwarrior.export(["MILK"])] == ["buy milk"]
+
+
 def test_roundtrip_relative_date(tw_env, capsys):
     _run("add", "کار فردا", "due:فردا")
     capsys.readouterr()

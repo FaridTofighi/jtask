@@ -2008,3 +2008,21 @@ Deferred from P1/P2 as separate follow-ups if wanted: tag-pill delegate,
 default-hiding the urgency column (breaks 4 model tests' column assumptions —
 needs a test sweep), skeleton loaders, view cross-fade animation. Suite **529
 passed / 1 skipped**.
+
+## n — filter-field bug fixes (2026-09-01)
+
+Two reported search bugs:
+
+1. **Case-sensitive search.** Taskwarrior 3.4.1 defaults
+   `rc.search.case.sensitive=1`, so a bare word in the filter field only
+   matched the exact case. Added `rc.search.case.sensitive=no` to the shared
+   `_RC` (approved: CLI + GUI) — `tests/test_integration.py::
+   test_search_is_case_insensitive`, `docs/taskwarrior-compatibility.md`.
+
+2. **Clearing the field didn't reset the view.** `FilterBar._on_text()` only
+   updated the tooltip; the filter applied on Enter / the apply button and was
+   cleared only by the dedicated ✕ toolbutton — so deleting the query text (or
+   using the line-edit's own inline clear) left the last filter applied. Now
+   emptying the field emits `filterChanged([])`, returning the list to the
+   current view. Typing still applies on Enter. `tests/gui/test_filter_bar.py::
+   test_emptying_the_field_resets_the_view`.

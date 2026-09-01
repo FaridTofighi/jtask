@@ -27,6 +27,24 @@ def test_filter_changed_signal(qtbot):
     assert got == [["+مهم"]]
 
 
+def test_emptying_the_field_resets_the_view(qtbot):
+    bar = FilterBar()
+    qtbot.addWidget(bar)
+    got = []
+    bar.filterChanged.connect(got.append)
+
+    bar.set_text("meeting")
+    bar._apply()
+    assert got[-1] == ["meeting"]
+
+    # user deletes what they typed → back to the unfiltered view, no Enter needed
+    bar._edit.setText("")
+    assert got[-1] == []
+
+    bar._edit.setText("   ")   # whitespace-only counts as empty too
+    assert got[-1] == []
+
+
 def test_vocabulary_comes_from_shared_lists():
     vocab = build_vocabulary(["وب", "خانه"], ["مهم", "بعدی"], uda_names=["reviewed"])
     assert "project:وب" in vocab

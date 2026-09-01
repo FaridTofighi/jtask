@@ -74,12 +74,18 @@ __all__ = [
 # ``rc.verbose=nothing`` also silences Taskwarrior's error text ("No tasks
 # specified.", "Task not found", …), which the GUI must be able to surface.
 # Callers that only parse machine output (lookups, export) pass ``quiet=True``.
+#
+# ``rc.search.case.sensitive=no`` — a bare word / ``~`` pattern in a filter
+# matches regardless of case (Taskwarrior's own default is ``yes``).  jtask's
+# search field, and ``jtask <filter>``, are expected to be case-insensitive;
+# an explicit case-sensitive match is still available via ``attr.is:`` etc.
 _RC = [
     "rc.confirmation=off",
     "rc.recurrence.confirmation=off",
     "rc.bulk=0",
     "rc.color=off",
     "rc.hooks=on",
+    "rc.search.case.sensitive=no",
 ]
 
 

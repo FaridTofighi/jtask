@@ -50,6 +50,12 @@ Rules (from the mission's cross-cutting requirements):
   context *write* filter.
 - `task context none` **exits 2** ("Context not unset.") when no context is
   active — `context_activate(None)` treats that as a no-op.
+- **Search is case-sensitive by default** (`rc.search.case.sensitive=1` in
+  3.4.1): a bare word / `~` pattern in a filter only matches the exact case.
+  jtask forces `rc.search.case.sensitive=no` in `_RC` so the search field (and
+  `jtask <filter>`) match regardless of case — this command-line override wins
+  over a `.taskrc` setting. Case-sensitive matching is still reachable via
+  attribute modifiers (`description.is:` etc.).
 - `task calc` handles both date arithmetic and plain numeric arithmetic — the
   Calc panel passes the expression through untouched; Taskwarrior's grammar is
   the source of truth.

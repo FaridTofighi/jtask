@@ -103,6 +103,11 @@ class FilterBar(QWidget):
 
     def _on_text(self, text: str) -> None:
         self._edit.setToolTip(text or t("filterbar.none_applied"))
+        # emptying the field (backspace, select-all-delete, the inline ✕) drops
+        # the extra filter so the current view returns to normal — without this
+        # the last applied filter stuck until Enter / the clear button.
+        if not text.strip():
+            self.filterChanged.emit([])
 
     def refresh_completions(self) -> None:
         try:
@@ -120,8 +125,10 @@ class FilterBar(QWidget):
         self._edit.setText(text)
 
     def clear(self) -> None:
-        self._edit.clear()
-        self.filterChanged.emit([])
+        if self._edit.text():
+            self._edit.clear()  # _on_text('') emits filterChanged([])
+        else:
+            self.filterChanged.emit([])
 
     def current_filter(self) -> list[str]:
         text = self._edit.text().strip()
