@@ -419,6 +419,45 @@ def test_main_window_project_colour_flow(qtbot, tw_env, qapp, monkeypatch):
     assert tw.project_colors() == {}
 
 
+def test_main_window_context_switch_scopes_the_task_list(qtbot, tw_env, qapp):
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask import taskwarrior as tw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    tw.add(["work item", "project:Work"])
+    tw.add(["home item", "project:Home"])
+    tw.context_define("work", "project:Work")
+
+    win = MainWindow(Settings())
+    qtbot.addWidget(win)
+
+    def _drain():
+        for _ in range(8):
+            qapp.processEvents()
+            wait_for_done(4000)
+            qapp.processEvents()
+
+    def descs() -> set[str]:
+        return {tk["description"] for tk in win._model._tasks}
+
+    _drain()
+    assert descs() == {"work item", "home item"}
+
+    win._change_context("work")
+    _drain()
+    assert descs() == {"work item"}
+
+    win._change_context("")  # back to no context
+    _drain()
+    assert descs() == {"work item", "home item"}
+
+    tw.context_activate(None)
+
+
 def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):
     from PyQt6.QtCore import QSettings
 

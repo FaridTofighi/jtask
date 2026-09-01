@@ -981,8 +981,10 @@ class MainWindow(QMainWindow):
             )
 
     def _change_context(self, name: str) -> None:
-        verb = ["context", "none"] if not name else ["context", name]
-        self._write(functools.partial(taskwarrior.run, verb), t("msg.context_changed"))
+        self._write(
+            functools.partial(taskwarrior.context_activate, name or None),
+            t("msg.context_changed"),
+        )
 
     # --- theme --------------------------------------------
 

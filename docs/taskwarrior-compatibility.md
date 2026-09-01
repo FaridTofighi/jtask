@@ -39,6 +39,17 @@ Rules (from the mission's cross-cutting requirements):
   column shows "—".
 - `task context list` and `task _get rc.context.<name>.read` expose per-context
   read/write filters (separate read/write filters are a 3.4+ feature).
+- **`task export` ignores the active context.** Every *report* respects the
+  context read filter (`report.<name>.context=1`), but `export` — a command,
+  not a report — does not, and there is no rc switch to change that. Since jtask
+  reads exclusively through `task export`, `taskwarrior.export()` /
+  `export_text()` prepend `( <context read filter> )` themselves whenever a
+  context is active (`context_read_filter()`, `shlex`-tokenised, cached).
+  `apply_context=False` opts out — used only by the backup/export-to-file path,
+  which must stay complete. Writes need no help: `task add` already applies the
+  context *write* filter.
+- `task context none` **exits 2** ("Context not unset.") when no context is
+  active — `context_activate(None)` treats that as a no-op.
 - `task calc` handles both date arithmetic and plain numeric arithmetic — the
   Calc panel passes the expression through untouched; Taskwarrior's grammar is
   the source of truth.

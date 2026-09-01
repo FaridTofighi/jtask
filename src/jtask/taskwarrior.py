@@ -8,13 +8,17 @@ Taskwarrior's data store directly.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from functools import lru_cache
 
 from .errors import JtaskError, TaskCommandError
+
+_log = logging.getLogger(__name__)
 
 __all__ = [
     "binary",
@@ -52,6 +56,8 @@ __all__ = [
     "context_define",
     "context_delete",
     "context_activate",
+    "context_read_filter",
+    "current_context",
     "uda_set",
     "uda_delete",
     "report_set",
@@ -122,12 +128,52 @@ def run(
     return proc
 
 
-def export(filter_args: list[str] | None = None) -> list[dict]:
+@lru_cache(maxsize=1)
+def context_read_filter() -> tuple[str, ...]:
+    """The active context's ``read`` filter, tokenised — ``()`` when none.
+
+    Taskwarrior's own ``task export`` command ignores the active context (unlike
+    every report), so jtask applies the read filter itself on every read. The
+    filter string (``context.<name>.read``) is split with :mod:`shlex` so quoted
+    values survive.
+    """
+    name = current_context()
+    if not name:
+        return ()
+    raw = _show_config().get(f"context.{name}.read", "").strip()
+    if not raw:
+        return ()
+    try:
+        return tuple(shlex.split(raw))
+    except ValueError:
+        return tuple(raw.split())
+
+
+def _with_context(filter_args: list[str] | None, apply_context: bool) -> list[str]:
+    base = list(filter_args or [])
+    read = context_read_filter() if apply_context else ()
+    if not read:
+        return base
+    return ["(", *read, ")", *base]
+
+
+def export(
+    filter_args: list[str] | None = None, *, apply_context: bool = True
+) -> list[dict]:
     """Return the tasks matching *filter_args* as a list of dicts.
 
-    Taskwarrior requires the filter to precede the ``export`` command.
+    Taskwarrior requires the filter to precede the ``export`` command. When a
+    context is active its read filter is prepended unless *apply_context* is
+    ``False`` (backups must stay complete regardless of context).
     """
-    proc = run([*(filter_args or []), "export"], quiet=True)
+    flt = _with_context(filter_args, apply_context)
+    try:
+        proc = run([*flt, "export"], quiet=True)
+    except TaskCommandError:
+        if flt == list(filter_args or []):
+            raise
+        _log.warning("context-scoped export failed; retrying without the context filter")
+        proc = run([*(filter_args or []), "export"], quiet=True)
     text = proc.stdout.strip()
     if not text:
         return []
@@ -144,14 +190,19 @@ def add(args: list[str]) -> str:
     return proc.stdout.strip()
 
 
-def export_text(filter_args: list[str] | None = None, *, array: bool = True) -> str:
+def export_text(
+    filter_args: list[str] | None = None, *, array: bool = True, apply_context: bool = True
+) -> str:
     """Raw ``task export`` JSON text — *array* toggles ``rc.json.array``.
 
     ``array=True`` → one indented JSON array (readable); ``array=False`` →
     newline-delimited JSON objects (the canonical ``task import`` shape).
+    The active context's read filter is prepended unless *apply_context* is
+    ``False`` (see :func:`export`).
     """
     rc = ["rc.json.array=on" if array else "rc.json.array=off"]
-    return run([*(filter_args or []), "export"], quiet=True, extra_rc=rc).stdout.strip()
+    flt = _with_context(filter_args, apply_context)
+    return run([*flt, "export"], quiet=True, extra_rc=rc).stdout.strip()
 
 
 _IMPORT_COUNT_RE = re.compile(r"Imported (\d+) tasks?")
@@ -757,7 +808,12 @@ def context_delete(name: str) -> str:
 
 
 def context_activate(name: str | None) -> str:
-    return run(["context", name or "none"]).stdout.strip()
+    # ``task context none`` exits 2 ("Context not unset.") when none is active —
+    # a no-op, not an error.
+    proc = run(["context", name or "none"], check=bool(name))
+    _show_config.cache_clear()
+    context_read_filter.cache_clear()
+    return proc.stdout.strip()
 
 
 def uda_set(name: str, attr: str, value: str) -> str:
@@ -786,7 +842,7 @@ def refresh_lookups() -> None:
     for fn in (
         _show_config, uda_definitions, list_projects, list_tags,
         list_contexts, list_reports, report_specs, config_names, config_defaults,
-        version, command_reference,
+        version, command_reference, context_read_filter,
     ):
         clear = getattr(fn, "cache_clear", None)
         if callable(clear):

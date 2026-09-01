@@ -34,7 +34,7 @@ Partial / Console-only / Not-applicable / Unsupported-by-installed-TW**.
 | `export` | ✅ Export dialog — scope (all / current filter / custom) × format (indented array / JSON lines), destination picker (Jalali-dated default), live count (M7); `taskwarrior.export_text()` | ✅ | — | Implemented |
 | `synchronize` / `sync` | ✅ Sync Manager — detects config (`rc.sync.*`), server/kind shown, last-sync time (Jalali, persisted), async run with visible state, no concurrent runs, refresh after; unconfigured → points at Config Manager (M7) | ✅ | — | Implemented |
 | `config` | ✅ Configuration Manager — every `rc.*` (searchable, grouped), current / default / overridden, edit + "reset to default" via `task config` (never `.taskrc` text) (M8) | ✅ | — | Implemented |
-| `context` | ✅ Context Manager — list / create / edit / delete / activate, read+write filters shown; sidebar switch stays (M8) | ✅ | separate write-filter form is version-dependent (documented) | Implemented |
+| `context` | ✅ Context Manager — list / create / edit / delete / activate, read+write filters shown; sidebar switch stays (M8). **The active context's read filter now scopes every jtask read** — `task export` ignores context, so `taskwarrior.export()` applies it itself (backups opt out) | ✅ | separate write-filter form is version-dependent (documented) | Implemented |
 | `calc` | ✅ Calculator tab in «تشخیص و ابزارها» — wraps `task calc`; date results annotated with a Jalali rendering (M9) | ✅ | — | Implemented |
 | `count` | ✅ used internally (status bar counts) | ✅ | — | Implemented |
 | `stats` | ✅ "آمار" report — `task stats` parsed, Persian labels, Jalali dates, Persian digits, respects the active filter (M6) | ✅ | — | Implemented |

@@ -1867,3 +1867,38 @@ Two reported defects in the selected-row appearance:
 QSS, accent bar on the correct edge per direction, `status` is last with no
 empty-header trailing column, selection extent matches the visible-column
 range with a default *and* a reduced column set. Suite 478 passed / 1 skipped.
+
+## Active context now actually filters (2026-09-01)
+
+**Bug:** switching context in the sidebar changed nothing visible. Root cause:
+Taskwarrior's `task export` command **ignores the active context** (every
+*report* honours `report.<name>.context`, but `export` is not a report and has
+no such switch). jtask reads everything through `task export`, so context only
+ever affected *new* tasks (via the write filter, which `task add` applies for
+free).
+
+**Fix (core, approved "both CLI & GUI; backups stay complete"):**
+`taskwarrior.context_read_filter()` returns the active context's `read` filter
+(`context.<name>.read` from `_show`), `shlex`-tokenised, `lru_cache`d and
+cleared by `refresh_lookups` + `context_activate`. `export()` / `export_text()`
+gained `apply_context=True`: when a context is active the filter becomes
+`( <read filter> ) <caller filter>`. A context-scoped export that errors on an
+exotic filter retries once unscoped and logs — a read never hard-fails.
+
+- **Opt-out:** `export_dialog.write_export` + its count calls pass
+  `apply_context=False` — a backup file must stay complete regardless of
+  context (matches `task export`'s own semantics; the dialog's filter field
+  still scopes deliberately).
+- **Reach:** `reports.py` calls `export()` throughout, so the task list, every
+  GTD/report view, and the sidebar **Projects** / **Tags** lists all scope
+  now — CLI included (matches how `task next` / `task projects` already behave).
+  Project/tag *autocomplete* lists (`_projects` / `_tags`) stay unscoped.
+- `_change_context` now routes through `taskwarrior.context_activate` (was a
+  raw `run(["context", …])`), which also tolerates `task context none`'s
+  exit-2 when nothing is active.
+
+**Tests:** `tests/test_context_filtering.py` (6) — export scoping, caller-filter
+AND, `apply_context=False` bypass, reports honour context, no-context no-op,
+quoted-value tokenisation, cache-clear on switch;
+`tests/gui/test_m3.py::test_main_window_context_switch_scopes_the_task_list`.
+Suite **513 passed / 1 skipped**.

@@ -135,7 +135,8 @@ class ExportDialog(QDialog):
             if gen == self._count_gen:
                 self._count.setText(t("export.count_failed"))
 
-        submit(lambda: len(taskwarrior.export(flt or None)), ok, err)
+        # a backup is always complete — never scoped to the active context
+        submit(lambda: len(taskwarrior.export(flt or None, apply_context=False)), ok, err)
 
     # -- result --------------------------------------------------------
 
@@ -164,13 +165,14 @@ def _fa(n: int) -> str:
 def write_export(spec: dict) -> dict:
     """Run the export described by *spec* and write the file. Returns stats."""
     flt = spec["filter"] or None
-    text = taskwarrior.export_text(flt, array=spec["array"])
+    # a backup file must stay complete regardless of the active context
+    text = taskwarrior.export_text(flt, array=spec["array"], apply_context=False)
     path = spec["path"]
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(text + "\n")
     return {
         "path": path,
         "bytes": os.path.getsize(path),
-        "count": len(taskwarrior.export(flt)),
+        "count": len(taskwarrior.export(flt, apply_context=False)),
         "when": dt.datetime.now(),
     }
