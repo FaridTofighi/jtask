@@ -302,5 +302,35 @@ class Settings:
         self._s.setValue("templates/saved", current)
         self._s.sync()
 
+    # --- custom boards (the board engine) ---
+    def boards(self) -> dict[str, dict]:
+        raw = self._s.value("boards/user", {}, dict) or {}
+        return {str(k): dict(v) for k, v in raw.items()}
+
+    def board_order(self) -> list[str]:
+        raw = self._s.value("boards/order", [], list) or []
+        return [str(x) for x in raw]
+
+    def save_board(self, name: str, spec: dict) -> None:
+        current = self.boards()
+        current[name] = spec
+        self._s.setValue("boards/user", current)
+        order = self.board_order()
+        if name not in order:
+            order.append(name)
+        self._s.setValue("boards/order", order)
+        self._s.sync()
+
+    def delete_board(self, name: str) -> None:
+        current = self.boards()
+        current.pop(name, None)
+        self._s.setValue("boards/user", current)
+        self._s.setValue("boards/order", [x for x in self.board_order() if x != name])
+        self._s.sync()
+
+    def set_board_order(self, order: list[str]) -> None:
+        self._s.setValue("boards/order", list(order))
+        self._s.sync()
+
     def sync(self) -> None:
         self._s.sync()

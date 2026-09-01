@@ -329,28 +329,32 @@ QListWidget#PaletteList::item:selected {
     color: @primary@;
 }
 
-/* ============================ kanban board =============== */
-QWidget#KanbanView { background-color: @bg@; }
-QScrollArea#KanbanBoard { background: transparent; border: none; }
-QScrollArea#KanbanColScroll { background: transparent; border: none; }
-QFrame#KanbanColumn {
+/* ============================ board engine ============== */
+QWidget#BoardView { background-color: @bg@; }
+QScrollArea#Board { background: transparent; border: none; }
+QScrollArea#BoardColScroll { background: transparent; border: none; }
+QFrame#BoardColumn {
     background-color: @bg_alt@;
     border: 1px solid @border_soft@;
     border-radius: @r_lg@;
-    min-width: 220px;
+    min-width: 230px;
 }
-QFrame#KanbanColumn[dropTarget="true"] { border-color: @primary@; }
-QLabel#KanbanColTitle {
+QFrame#BoardColumn[dropTarget="true"] { border-color: @primary@; }
+QLabel#BoardColTitle {
     color: @text_muted@; font-weight: 700; font-size: @fs_xs@;
     padding: @sp_2@ @sp_4@;
 }
-QFrame#KanbanCard {
+QLabel#BoardColSub {
+    color: @text_muted@; font-size: @fs_xs@;
+    padding: 0 @sp_4@ @sp_2@ @sp_4@;
+}
+QFrame#BoardCard {
     background-color: @surface@;
     border: 1px solid @border@;
     border-radius: @r_md@;
 }
-QFrame#KanbanCard[priority="H"] { border-left: 2px solid @overdue@; }
-QFrame#KanbanCard[priority="M"] { border-left: 2px solid @due_soon@; }
+QFrame#BoardCard[priority="H"] { border-left: 2px solid @overdue@; }
+QFrame#BoardCard[priority="M"] { border-left: 2px solid @due_soon@; }
 QLabel#CardTitle { color: @text@; }
 QLabel#CardMeta { color: @text_muted@; font-size: @fs_xs@; }
 QToolButton#CardStar { border: none; background: transparent; padding: 0; }

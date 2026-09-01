@@ -2293,3 +2293,47 @@ view toggle + disabled-when-absent + tag-grouped render.
 inline edit) · **N-C** (templates) · **N-B** (starred + smart lists) · **N-D**
 (Kanban) · **N-E** (Timewarrior). Deferred with rationale: keyboard rebinding
 UI, template UDA capture, Kanban per-UDA grouping.
+
+---
+
+# Mission — customizable board engine (supersedes N-D)
+
+Approved 2026-09-01 after Phase 0 (six questions resolved in the review). The
+fixed status/priority/project Kanban of N-D (`ce3933d`) is **replaced** by a
+general engine; the N-D board becomes the `status` preset. `KanbanCard`/
+`KanbanView` → `BoardCard`/`BoardView`; `test_kanban.py` → `test_board_engine.py`.
+Order: **NB-1 engine → NB-2 GTD preset → NB-3 nav + management UI → NB-4
+export/import.**
+
+Phase-0 resolutions: **(1)** board = `{name, columns:[{title, filter, drop}]}`,
+`filter` = the raw string the M3 `FilterBuilder` round-trips; stored in
+`QSettings` (`boards/user` + `boards/order`); presets in code, duplicable.
+**(2)** drop vocab = `none | tags{add,remove} | attr{field,value} |
+uda{name,value} | verb{start|stop|done|reopen}`, each → one
+`taskwarrior.command`. **(3)** one card layout for v1, per-board card editor
+deferred. **(4)** sidebar "Boards" section + a `BoardManagerDialog`. **(5)**
+export/import is in scope (NB-4). **(6)** four milestones.
+
+## NB-1 — board engine core (complete)
+
+`jtask_gui/boards.py` — `@dataclass Column/Board`, `DROP_TYPES`,
+`drop_label()`, `compile_drop(drop) -> (verb, mods) | None`, `validate()`,
+`to_json`/`from_json`, `BUILTIN_BOARDS` (`gtd`, `status`), `builtin_board(key)`
+(resolves i18n titles). `Settings.boards() / save_board() / delete_board() /
+board_order() / set_board_order()` — the saved-filters persistence pattern.
+
+`widgets/board_view.py` — `BoardView.set_board(board)`: one `submit()` per
+column running `reports.report_list(shlex.split(col.filter) + extra)`; `_Column`
+carries its `drop` config and only `setAcceptDrops` when `drop.type != "none"`;
+a drop → `boardDrop(task, drop_config)`. Generation counter guards stale column
+fills. `widgets/board_card.py` — the N-D card + priority text + tags on the
+meta line.
+
+`MainWindow`: `self._board` at `_content` index 2; `_board_drop()` runs
+`compile_drop` through `_write` (undo-able); `_board_action` toggle + **`Ctrl+B`**
+temporarily shows the built-in GTD board (NB-3 replaces with sidebar nav).
+
+`tests/gui/test_board_engine.py` (16) — schema, every `compile_drop` shape,
+`validate` rejections, JSON round-trip, persistence + ordering, `BoardView`
+column building + drop emission, `MainWindow._board_drop` compilation.
+Suite **595 passed / 1 skipped**. Snapshot rebaselined.

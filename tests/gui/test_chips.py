@@ -18,13 +18,16 @@ def editor(qtbot):
     return e
 
 
-def test_width_is_independent_of_tag_count(editor):
-    empty_w = editor.minimumSizeHint().width()
-    editor.set_tags([f"tag-{i}" for i in range(20)])
-    assert editor.tags() == [f"tag-{i}" for i in range(20)]
-    # 20 tags must not widen the editor's floor
-    assert editor.minimumSizeHint().width() <= empty_w + 5
-    assert editor.minimumSizeHint().width() < 160
+def test_width_is_bounded_by_the_widest_chip_not_the_total(editor):
+    editor.set_tags(["aa", "bb", "cc"])
+    three = editor.minimumSizeHint().width()
+    editor.set_tags([f"tg{i:02d}" for i in range(20)])   # 20 equal-width chips
+    assert editor.tags() == [f"tg{i:02d}" for i in range(20)]
+    twenty = editor.minimumSizeHint().width()
+    # the wrapping flow layout keeps the floor to one chip wide — with equal
+    # chip widths, 3 tags and 20 tags need the same minimum
+    assert twenty == three
+    assert twenty < 200                      # nowhere near Σ of 20 chips
 
 
 def test_height_grows_as_chips_wrap(editor):

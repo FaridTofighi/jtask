@@ -1,4 +1,4 @@
-"""A single task card on the Kanban board."""
+"""A single task card on a board."""
 
 from __future__ import annotations
 
@@ -11,11 +11,14 @@ from jtask.rtl import auto_isolate, bidi_isolate
 from .. import icons
 from .. import tokens as tok
 from ..calendar_system import active
+from ..i18n import t
 
 UUID_MIME = "application/x-jtask-uuids"
 
+_PRIORITY_LABEL = {"H": "col.priority.h", "M": "col.priority.m", "L": "col.priority.l"}
 
-class KanbanCard(QFrame):
+
+class BoardCard(QFrame):
     activated = pyqtSignal(str)          # uuid
     starToggled = pyqtSignal(str, bool)  # uuid, on
 
@@ -23,13 +26,13 @@ class KanbanCard(QFrame):
         super().__init__(parent)
         self.task = task
         self.uuid = task.get("uuid", "")
-        self.setObjectName("KanbanCard")
+        self.setObjectName("BoardCard")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self._press_pos = None
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(*tok.INSET_TIGHT)
-        lay.setSpacing(tok.SP_6)
+        lay.setSpacing(tok.SP_4)
 
         top = QHBoxLayout()
         top.setSpacing(tok.SP_4)
@@ -49,9 +52,9 @@ class KanbanCard(QFrame):
         if meta:
             m = QLabel(meta)
             m.setObjectName("CardMeta")
+            m.setWordWrap(True)
             lay.addWidget(m)
 
-        # a coloured left edge by priority (QSS reads [priority])
         self.setProperty("priority", task.get("priority") or "")
         self._refresh_star_icon()
 
@@ -61,9 +64,16 @@ class KanbanCard(QFrame):
         bits: list[str] = []
         if task.get("project"):
             bits.append(bidi_isolate(task["project"]))
+        pri = task.get("priority", "")
+        if pri in _PRIORITY_LABEL:
+            bits.append(t(_PRIORITY_LABEL[pri]))
         due_g = task.get("due_gregorian") or ""
         if due_g:
             bits.append(bidi_isolate(active().format_utc(due_g, "short")))
+        tags = [x for x in (task.get("tags") or [])
+                if not x.isupper() and x != "starred"]
+        if tags:
+            bits.append(bidi_isolate("  ".join(f"#{x}" for x in tags)))
         return "   ·   ".join(bits)
 
     def set_theme(self, _name: str) -> None:

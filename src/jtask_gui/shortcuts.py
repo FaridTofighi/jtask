@@ -29,6 +29,7 @@ SHORTCUTS: list[Shortcut] = [
     # -- navigate --
     Shortcut("Ctrl+K", "sc.command_palette", "sc.cat.navigate"),
     Shortcut("Ctrl+F", "sc.focus_filter", "sc.cat.navigate"),
+    Shortcut("Ctrl+B", "sc.board", "sc.cat.navigate"),
     Shortcut("Ctrl+1", "sc.view_today", "sc.cat.navigate"),
     Shortcut("Ctrl+2", "sc.view_next", "sc.cat.navigate"),
     Shortcut("Ctrl+3", "sc.view_completed", "sc.cat.navigate"),
