@@ -2096,3 +2096,22 @@ Also: the table↔panel splitter handle went 1 px → 3 px (`setHandleWidth(4)`,
 QSS `width: 3px`) so it can actually be grabbed to widen the panel.
 
 Suite **538 passed / 1 skipped**.
+
+## n — task keyboard shortcuts (2026-09-01)
+
+`TaskTable` gained shortcuts on the current selection (context
+`WidgetWithChildrenShortcut` — only while the table has focus, so they never
+clash with the filter field or the edit panel):
+
+| key | action |
+|---|---|
+| `Ctrl+S` | start the timer on the selected task (`startStopRequested(uuid, True)`) |
+| `Ctrl+Shift+S` | stop the timer (`startStopRequested(uuid, False)`) |
+| `Delete` | delete the selected task(s) — `deleteRequested`, which routes to `MainWindow._delete()` → the existing destructive `confirm()` dialog |
+
+Deleting already showed a confirm dialog from the context menu; the `Delete`
+key uses the same path, so both are gated. The context-menu entries now display
+their shortcut (`setShortcut` + `WidgetShortcut` context = label only, no
+ambiguous binding).
+
+`tests/gui/test_task_shortcuts.py` (5). Suite **543 passed / 1 skipped**.

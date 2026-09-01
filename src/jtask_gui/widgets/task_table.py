@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QMimeData, QSortFilterProxyModel, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QDrag, QPainter
+from PyQt6.QtGui import QColor, QDrag, QKeySequence, QPainter, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
@@ -112,6 +112,16 @@ class TaskTable(QTableView):
         self.doubleClicked.connect(self._on_double)
         self.clicked.connect(self._on_click)
         self._connect_selection()
+
+        # keyboard shortcuts on the selected task(s)
+        for seq, slot in (
+            ("Ctrl+S", lambda: self._timer_shortcut(True)),
+            ("Ctrl+Shift+S", lambda: self._timer_shortcut(False)),
+            (QKeySequence.StandardKey.Delete, self._delete_shortcut),
+        ):
+            sc = QShortcut(QKeySequence(seq), self)
+            sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            sc.activated.connect(slot)
 
         self._empty = QLabel("", self.viewport())
         self._empty.setObjectName("EmptyState")
@@ -272,6 +282,16 @@ class TaskTable(QTableView):
             if (task := self._model.data(src, TASK_ROLE))
         ]
 
+    def _timer_shortcut(self, start: bool) -> None:
+        uuids = self.selected_uuids()
+        if uuids:
+            self.startStopRequested.emit(uuids[0], start)
+
+    def _delete_shortcut(self) -> None:
+        uuids = self.selected_uuids()
+        if uuids:
+            self.deleteRequested.emit(uuids)  # _delete() runs the confirm dialog
+
     def _on_click(self, index) -> None:
         if self.model() is self._group_model and index.data(GROUP_HEADER_ROLE):
             self._group_model.toggle(index.data(GROUP_KEY_ROLE))
@@ -301,6 +321,7 @@ class TaskTable(QTableView):
         menu = QMenu(self)
         act_done = menu.addAction(t("table.menu.done", n=n))
         act_del = menu.addAction(t("table.menu.delete", n=n))
+        act_del.setShortcut(QKeySequence(QKeySequence.StandardKey.Delete))
         act_dup = menu.addAction(t("table.menu.duplicate", n=n))
         menu.addSeparator()
         act_bulk = menu.addAction(t("table.menu.bulk_edit", n=n))
@@ -309,7 +330,11 @@ class TaskTable(QTableView):
         act_annotate = menu.addAction(t("table.menu.annotate"))
         menu.addSeparator()
         act_start = menu.addAction(t("table.menu.start"))
+        act_start.setShortcut(QKeySequence("Ctrl+S"))
         act_stop = menu.addAction(t("table.menu.stop"))
+        act_stop.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        for _a in (act_del, act_start, act_stop):
+            _a.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)  # display only
         act_purge = None
         if deleted:
             menu.addSeparator()
