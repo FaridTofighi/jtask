@@ -3,6 +3,23 @@
 from __future__ import annotations
 
 
+def test_clean_output_drops_the_rc_override_noise():
+    from jtask_gui.widgets.command_console import clean_output
+
+    raw = (
+        "TASKRC override: /home/x/.taskrc\n"
+        "TASKDATA override: /home/x/.task\n"
+        "Context 'sample' set. Use 'task context none' to remove.\n"
+        "Configuration override rc.confirmation=off\n"
+        "Configuration override rc.search.case.sensitive=no\n"
+    )
+    assert clean_output(raw) == "Context 'sample' set. Use 'task context none' to remove."
+    # a genuine error on stderr is NOT noise — it stays
+    assert clean_output("Configuration override rc.color=off\nNo matches.") == "No matches."
+    # ANSI still stripped
+    assert clean_output("\x1b[4mID\x1b[0m\n1 task") == "ID\n1 task"
+
+
 def test_strip_ansi_removes_sgr_and_osc():
     from jtask_gui.widgets.command_console import strip_ansi
 

@@ -2419,6 +2419,16 @@ brighter in dark). Also fixed a latent bug — `_in` had no `objectName`, so the
 
 `tests/gui/test_command_console.py` +2. Suite **613 passed / 1 skipped**.
 
+## Console output — drop the rc-override noise (2026-09-01)
+
+Taskwarrior prints `Configuration override rc.<x>=<y>` (and `TASKRC override:` /
+`TASKDATA override:`) to **stderr** for every override on the command line —
+jtask's `_RC` prefix means 6+ of these lines followed *every* console command's
+real output. `command_console.clean_output()` (was `strip_ansi`) now also drops
+lines matching `_NOISE_RE` — the exact override/env lines, never anything the
+user typed, so a genuine stderr error still shows. `test_command_console.py`
+`test_clean_output_drops_the_rc_override_noise`.
+
 ## Console → live GUI sync (2026-09-01)
 
 A command run in the Raw Command Console that can mutate Taskwarrior — one of

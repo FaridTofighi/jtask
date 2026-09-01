@@ -43,9 +43,20 @@ def _prompt_icon() -> QIcon:
 # terminal, so strip every CSI/OSC sequence before displaying.
 _ANSI_RE = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))")
 
+# noise Taskwarrior prints to stderr for jtask's own `_RC` prefix / the
+# TASKDATA/TASKRC env — never anything the user typed, so drop it.
+_NOISE_RE = re.compile(
+    r"^(?:Configuration override rc\.\S+=.*|TASKRC override: .*|TASKDATA override: .*)$"
+)
+
 
 def strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
+
+
+def clean_output(text: str) -> str:
+    lines = [ln for ln in strip_ansi(text).splitlines() if not _NOISE_RE.match(ln)]
+    return "\n".join(lines).strip("\n")
 
 
 class _HistoryLineEdit(QLineEdit):
@@ -146,7 +157,7 @@ class CommandConsole(QWidget):
 
     def _done(self, output: object) -> None:
         text = output if isinstance(output, str) else str(output)
-        self._append(strip_ansi(text) or t("console.no_output"))
+        self._append(clean_output(text) or t("console.no_output"))
         self._in.setEnabled(True)
         self._in.setFocus()
         if getattr(self, "_mutating", False):
