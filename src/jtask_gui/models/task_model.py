@@ -192,7 +192,23 @@ class TaskTableModel(QAbstractTableModel):
             return auto_isolate(digits)
         return digits
 
+    _PRIORITY_DOT = {"H": "overdue", "M": "due_soon", "L": "text_muted"}
+
     def _decoration(self, task: dict, col: Column):
+        if col.key == "priority":
+            role = self._PRIORITY_DOT.get(task.get("priority", ""))
+            if role is None:
+                return None
+            d = 8
+            pm = QPixmap(d, d)
+            pm.fill(Qt.GlobalColor.transparent)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(self._pal[role]))
+            p.drawEllipse(0, 0, d, d)
+            p.end()
+            return pm
         if col.key != "indicators":
             return None
         marks = [m for m in ("annotations", "recur", "depends") if task.get(m)]

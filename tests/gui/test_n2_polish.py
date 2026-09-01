@@ -82,3 +82,22 @@ def test_light_elevation_steps_are_real():
 
 def test_toolbutton_has_a_focus_rule():
     assert re.search(r"QToolButton:focus\s*\{[^}]*@focus@", _qss())
+
+
+# --- priority dot --------------------------------------------------
+
+def test_priority_column_shows_a_colour_dot():
+    from PyQt6.QtCore import Qt
+
+    from jtask_gui.models.task_model import TaskTableModel
+
+    m = TaskTableModel()
+    m.set_tasks([
+        {"id": 1, "description": "a", "status": "pending", "priority": "H"},
+        {"id": 2, "description": "b", "status": "pending", "priority": ""},
+    ])
+    col = m.visible_columns().index("priority")
+    hi = m.data(m.index(0, col), Qt.ItemDataRole.DecorationRole)
+    none = m.data(m.index(1, col), Qt.ItemDataRole.DecorationRole)
+    assert hi is not None and not hi.isNull()
+    assert none is None  # no dot when no priority

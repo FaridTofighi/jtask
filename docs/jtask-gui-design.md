@@ -1971,8 +1971,12 @@ the n1 `selection` re-tone.
 border to `@focus@`, matching `QPushButton` / inputs — every interactive
 control shows focus consistently.
 
+**Priority dot.** The `priority` column now leads with an 8 px colour dot
+(High → `@overdue@`, Medium → `@due_soon@`, Low → `@text_muted@`) via
+`DecorationRole` — the level is scannable without reading the label.
+
 **Row density (live toggle).** `Settings.density` (`comfortable` | `compact`,
 default comfortable) + a Settings-dialog combo. `TaskTable.set_density()` sets
 the row height (40 → 30) live — no restart, applied on open and on settings
-accept. `tests/gui/test_n2_polish.py` (5). Snapshot rebaselined for the new
+accept. `tests/gui/test_n2_polish.py` (6). Snapshot rebaselined for the new
 Settings row (documented change).
