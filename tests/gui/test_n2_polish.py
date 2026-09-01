@@ -80,6 +80,30 @@ def test_light_elevation_steps_are_real():
     assert lum(pal["bg"]) - lum(pal["bg_alt"]) >= 0.005  # sidebar distinct
 
 
+def _lum(h: str) -> float:
+    def c(v: float) -> float:
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (int(h.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b)
+
+
+def _cr(a: str, b: str) -> float:
+    la, lb = _lum(a), _lum(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_dark_theme_is_soft_not_near_black():
+    """The window base is a charcoal, not pure black, and dividers are gentle
+    against their surface (regions read by tone, not hard lines)."""
+    pal = theme.palette("dark")
+    assert _lum(pal["bg"]) >= 0.009          # lifted off #0e1014 (~0.005)
+    assert _lum(pal["surface"]) - _lum(pal["bg"]) >= 0.008   # tonal separation
+    assert _cr(pal["border"], pal["surface"]) <= 1.35        # soft border
+    assert _cr(pal["row_line"], pal["surface"]) <= 1.2       # soft divider
+
+
 def test_toolbutton_has_a_focus_rule():
     assert re.search(r"QToolButton:focus\s*\{[^}]*@focus@", _qss())
 

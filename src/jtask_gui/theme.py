@@ -34,36 +34,41 @@ CHART_SERIES_ROLES = ("primary", "completed", "overdue", "due_soon", "accent")
 # press-state flash and the 5th chart-series colour.
 
 # --- شب (dark) --------------------------------------------------------
+# A *soft* dark theme: the base is a charcoal (not near-black) and the
+# elevation ladder is gentle — surface sits a small step above the window, and
+# borders / dividers are low-contrast against their surface so regions read by
+# tone, not by hard lines (mirrors how the light theme separates).  n-mission
+# re-tone: bg #0e1014 → #191c22, borders pulled in toward their surfaces.
 _SHAB = {
-    "bg": "#0e1014",
-    "bg_alt": "#15181e",
-    "surface": "#1b1f27",
-    "elevated": "#232833",
+    "bg": "#191c22",
+    "bg_alt": "#1e222a",
+    "surface": "#252a33",
+    "elevated": "#2e3440",
     "on_danger": "#ffffff",
-    "border": "#2c333f",
-    "border_soft": "#20252e",
-    "hover": "#20252f",
-    "selection": "#294a58",
-    "row_line": "#242a34",
-    "row_alt": "#21262f",
-    "field": "#12151b",
-    "field_focus": "#171b22",
-    "text": "#e8eaef",
-    "text_muted": "#8c94a3",
+    "border": "#333945",
+    "border_soft": "#2b313c",
+    "hover": "#2b313c",
+    "selection": "#2e4d59",
+    "row_line": "#2c323d",
+    "row_alt": "#292f39",
+    "field": "#1c2027",
+    "field_focus": "#232833",
+    "text": "#e0e3ea",
+    "text_muted": "#8f97a6",
     "primary": "#6cc7dd",
     "primary_hi": "#8ad6e8",
     "primary_fg": "#08222a",
-    "primary_soft": "#18333d",
+    "primary_soft": "#22434e",
     "accent": "#b98cf0",
     "focus": "#6cc7dd",
-    "overdue": "#ff6b6b",
+    "overdue": "#ff7b7b",
     "due_soon": "#f5c451",
-    "waiting": "#7f8896",
-    "completed": "#6b7280",
+    "waiting": "#8891a0",
+    "completed": "#767e8c",
     "blocked": "#f472b6",
     "success": "#4ade80",
-    "chip_bg": "#1e2733",
-    "chip_border": "#2f3d4d",
+    "chip_bg": "#26303c",
+    "chip_border": "#38434f",
     "chip_fg": "#a9c7e8",
 }
 

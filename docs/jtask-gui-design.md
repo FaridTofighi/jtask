@@ -2052,3 +2052,25 @@ Two reported search bugs:
 
 3. The panel now scrolls to the top on `load_task()` so the title + Close are
    visible when it opens on a new task.
+
+## n — softer dark theme (2026-09-01)
+
+Feedback: the dark theme felt "overly black, dark and solid" next to the
+softer light theme. Re-toned `_SHAB` — same structure, same hierarchy, same
+colour language — to sit like daylight's dimmer twin:
+
+- **off the black floor:** `bg #0e1014 → #191c22` (a charcoal), the whole
+  ladder lifted ~one stop: `bg_alt #1e222a`, `surface #252a33`,
+  `elevated #2e3440`.
+- **wider tonal separation:** surface now sits ~0.011 luminance above bg (was
+  ~0.0085) so regions separate by tone.
+- **softer lines:** `border #2c333f → #333945` and `row_line #242a34 →
+  #2c323d` are pulled *toward* their surface (border/surface contrast 1.30 →
+  1.24, divider 1.14 → 1.12) — dividers read as hairlines, not cuts.
+- text eased `#e8eaef → #e0e3ea`; `overdue` softened `#ff6b6b → #ff7b7b`;
+  `waiting` / `completed` / `chip_*` / `primary_soft` lifted to match the new
+  base.
+
+WCAG-AA contrast + palette parity green (text/bg 13.3, text_muted/bg_alt 5.4).
+Light theme untouched. `tests/gui/test_n2_polish.py::
+test_dark_theme_is_soft_not_near_black`.
