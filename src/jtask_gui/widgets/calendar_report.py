@@ -19,9 +19,11 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import jalali, reports
+from jtask.rtl import auto_isolate
 
 from .. import fmt, icons
 from .. import tokens as tok
+from ..bidi import align_item
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -185,7 +187,9 @@ class CalendarReport(QWidget):
         )
         self._day_list.clear()
         for task in self._data.get("days", {}).get(key, []):
-            item = QListWidgetItem(f"{task.get('description', '')}")
+            desc = task.get("description", "")
+            item = QListWidgetItem(auto_isolate(desc))
+            align_item(item, desc)
             over = self._is_overdue(task)
             item.setIcon(icons.icon(
                 "overdue" if over else "today",

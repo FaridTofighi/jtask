@@ -2467,6 +2467,26 @@ one-line stderr hint when the entry is missing. The embedded entry is kept in
 lock-step with `packaging/jtask-gui.desktop` by a drift test.
 `tests/gui/test_desktop_install.py` +5. Suite **622 passed / 1 skipped**.
 
+## Content direction everywhere — bd-1 / bd-2 (2026-09-02)
+
+`auto_isolate()` fixes glyph *order within a line* but not block *alignment*, so
+a Persian description in the English (LTR) UI still hugged the left edge on
+every surface except the task table.
+
+**bd-1** — `bidi.py` gains `content_direction(text)` / `content_alignment(text)`
+(pure), `apply_content_direction(label, text)` and `align_item(item, text)`.
+`bind_auto_direction` keeps its exact behaviour.
+
+**bd-2** — wired into: board cards (description + project meta segment),
+annotations tab rows, detail-panel annotation summary, dependency picker,
+dependency-graph nodes (RTL → `ElideLeft` + right-anchored inside the box),
+calendar day list, timesheet tree (description + project columns), running-timer
+indicator. Task-table `_AUTO_DIR_KEYS` gains `project`. `test_d5` dep-graph
+elision check now strips the isolate controls before asserting.
+
+`tests/gui/test_content_direction.py` +7, `tests/gui/test_bidi_surfaces.py` +4,
+`test_task_model.py` +1. Suite **633 passed / 1 skipped**.
+
 Note: on this box Qt 6.11.2 XCB does not serialise `_NET_WM_ICON` for a
 file-backed `QIcon` (only trivial solid pixmaps) — irrelevant under GNOME once
 the `.desktop` entry is installed, but it means non-`.desktop` WMs (i3/XFCE)

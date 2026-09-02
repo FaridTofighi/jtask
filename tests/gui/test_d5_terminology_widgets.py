@@ -71,10 +71,14 @@ def test_dep_graph_text_is_elided_not_clipped(qapp, qtbot):
     texts = [
         it for it in g.scene().items() if isinstance(it, QGraphicsSimpleTextItem)
     ]
+    # strip the bidi isolate controls the node text/tooltip are wrapped in
+    def _bare(s: str) -> str:
+        return s.translate({0x2066: None, 0x2067: None, 0x2068: None, 0x2069: None})
+
     assert texts
     for it in texts:
         # never wider than the node's inner box
         assert it.boundingRect().width() <= dep_graph._W - dep_graph._PAD
         assert it.toolTip()  # full description on hover
-        if it.text() != it.toolTip():
-            assert it.text().endswith("…")
+        if _bare(it.text()) != _bare(it.toolTip()):
+            assert _bare(it.text()).endswith("…")

@@ -21,7 +21,7 @@ from jtask.rtl import auto_isolate, bidi_isolate
 
 from .. import fmt
 from .. import tokens as tok
-from ..bidi import bind_auto_direction
+from ..bidi import apply_content_direction, bind_auto_direction
 from ..calendar_system import active
 from ..i18n import t
 from .chips import TagChipEditor
@@ -296,9 +296,12 @@ class DetailPanel(QScrollArea):
     def _load_annotations(self, task: dict) -> None:
         anns = task.get("annotations") or []
         if not anns:
+            apply_content_direction(self._ann_summary, "")
             self._ann_summary.setText(t("detail.annotations.empty"))
             return
-        first = auto_isolate(anns[0].get("description", ""))
+        first_raw = anns[0].get("description", "")
+        first = auto_isolate(first_raw)
+        apply_content_direction(self._ann_summary, first_raw)
         if len(anns) > 1:
             self._ann_summary.setText(
                 t("detail.annotations.summary", first=first, more=fmt.num(len(anns) - 1))
@@ -337,7 +340,9 @@ class DetailPanel(QScrollArea):
             return reports.report_next()
 
         def choose(tasks):
-            labels = [f"{x.get('id')} — {x.get('description')}" for x in tasks]
+            labels = [
+                f"{x.get('id')} — {auto_isolate(x.get('description') or '')}" for x in tasks
+            ]
             text, ok = QInputDialog.getItem(
                 self, t("form.deps.pick.title"), t("form.deps.pick.label"),
                 labels, 0, False,

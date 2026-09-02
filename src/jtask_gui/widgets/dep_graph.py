@@ -19,6 +19,8 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
+from jtask.rtl import auto_isolate, first_strong_dir
+
 from .. import tokens as tok
 from ..i18n import t
 from ..theme import palette
@@ -140,15 +142,24 @@ class DependencyGraph(QGraphicsView):
         item.setPen(pen)
         scene.addItem(item)
 
-        full = f"#{task.get('id', '?')}  {task.get('description') or ''}".rstrip()
+        desc = task.get("description") or ""
+        full = f"#{task.get('id', '?')}  {desc}".rstrip()
         label = QGraphicsSimpleTextItem()
         label.setBrush(QBrush(QColor(pal["text"])))
         fm = QFontMetrics(label.font())
         # one clean line, ellipsised to the node's inner width — never spilling
         # past the border; the full text is on hover
-        label.setText(fm.elidedText(full, Qt.TextElideMode.ElideRight, _W - 2 * _PAD))
-        label.setToolTip(full)
-        label.setPos(x + _PAD, y + (_H - fm.height()) / 2)
+        inner = _W - 2 * _PAD
+        rtl = first_strong_dir(desc) == "rtl"
+        shown = fm.elidedText(
+            full,
+            Qt.TextElideMode.ElideLeft if rtl else Qt.TextElideMode.ElideRight,
+            inner,
+        )
+        label.setText(auto_isolate(shown))
+        label.setToolTip(auto_isolate(full))
+        text_x = x + _W - _PAD - fm.horizontalAdvance(shown) if rtl else x + _PAD
+        label.setPos(text_x, y + (_H - fm.height()) / 2)
         scene.addItem(label)
 
     def _edge(self, scene, a: QPointF, b: QPointF, pen: QPen):

@@ -157,15 +157,24 @@ numbers, dates, **file paths, URLs, UUIDs** — is wrapped in
 `jtask.rtl.bidi_isolate()` so it stays atomic (`U+2066 … U+2069`).
 
 **Free text follows its own direction, not the paragraph's.** A task
-description or annotation is rendered with its base direction taken from its
-first strong character (`jtask.rtl.first_strong_dir`): "Meeting with Arash"
-reads left-to-right and left-aligned, "جلسه با آرش" right-to-left and
-right-aligned, in either UI language. Read-only text is wrapped in a FIRST
-STRONG ISOLATE (`jtask.rtl.auto_isolate`, `U+2068 … U+2069`) and the task-table
-`description` column sets its `TextAlignmentRole` from the same check
-(`_AUTO_DIR_KEYS` in `models/task_model.py`). Editable fields (description /
-annotation / quick-add) use `jtask_gui.bidi.bind_auto_direction`, which flips
-the widget's `layoutDirection` on every keystroke (empty → the app default).
+description, annotation or project name is rendered with its base direction
+taken from its first strong character (`jtask.rtl.first_strong_dir`): "Meeting
+with Arash" reads left-to-right and left-aligned, "جلسه با آرش" right-to-left
+and right-aligned, in either UI language. Read-only text is wrapped in a FIRST
+STRONG ISOLATE (`jtask.rtl.auto_isolate`, `U+2068 … U+2069`); the widget is then
+oriented by `jtask_gui.bidi`:
+
+| helper | use |
+|---|---|
+| `content_direction(text)` / `content_alignment(text)` | pure — the Qt direction / horizontal-align flag for a string (neutral / empty → the app default) |
+| `apply_content_direction(label, text)` | set a read-only `QLabel`'s `layoutDirection` + alignment |
+| `align_item(item, text)` | set a `QListWidgetItem` / `QTreeWidgetItem`'s `textAlignment` |
+| `bind_auto_direction(field)` | editable `QLineEdit` / `QTextEdit` — re-orients on every keystroke |
+
+Wired at: task table `description` + `project` columns (`_AUTO_DIR_KEYS` →
+`TextAlignmentRole`), board cards, annotations tab + detail-panel summary,
+calendar day list, timesheet tree, running-timer indicator, dependency-graph
+nodes (RTL nodes elide-left and right-align inside the box), dependency picker.
 
 ---
 

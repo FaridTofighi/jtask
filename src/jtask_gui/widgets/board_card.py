@@ -10,6 +10,7 @@ from jtask.rtl import auto_isolate, bidi_isolate
 
 from .. import icons
 from .. import tokens as tok
+from ..bidi import apply_content_direction
 from ..calendar_system import active
 from ..i18n import t
 
@@ -41,9 +42,11 @@ class BoardCard(QFrame):
         self._star.setCheckable(True)
         self._star.setChecked("starred" in (task.get("tags") or []))
         self._star.clicked.connect(self._on_star)
-        desc = QLabel(auto_isolate(task.get("description", "")))
+        description = task.get("description", "")
+        desc = QLabel(auto_isolate(description))
         desc.setObjectName("CardTitle")
         desc.setWordWrap(True)
+        apply_content_direction(desc, description)
         top.addWidget(self._star, 0, Qt.AlignmentFlag.AlignTop)
         top.addWidget(desc, 1)
         lay.addLayout(top)
@@ -63,7 +66,7 @@ class BoardCard(QFrame):
     def _meta_line(self, task: dict) -> str:
         bits: list[str] = []
         if task.get("project"):
-            bits.append(bidi_isolate(task["project"]))
+            bits.append(auto_isolate(task["project"]))
         pri = task.get("priority", "")
         if pri in _PRIORITY_LABEL:
             bits.append(t(_PRIORITY_LABEL[pri]))

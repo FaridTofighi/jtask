@@ -158,6 +158,20 @@ def test_description_direction_follows_content():
         & int(Qt.AlignmentFlag.AlignRight)
 
 
+def test_project_column_direction_follows_content():
+    m = TaskTableModel()
+    m.set_tasks([
+        {"id": 1, "description": "x", "project": "Website", "status": "pending"},
+        {"id": 2, "description": "y", "project": "خانه", "status": "pending"},
+    ])
+    col = _row(m, "project")
+    assert m.data(m.index(0, col), Qt.ItemDataRole.TextAlignmentRole) \
+        & int(Qt.AlignmentFlag.AlignLeft)
+    assert m.data(m.index(1, col), Qt.ItemDataRole.TextAlignmentRole) \
+        & int(Qt.AlignmentFlag.AlignRight)
+    assert _display(m, 1, "project").startswith("⁨")
+
+
 def test_set_tasks_resets_model(qtbot):
     m = TaskTableModel()
     with qtbot.waitSignal(m.modelReset):

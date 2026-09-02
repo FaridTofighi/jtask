@@ -22,7 +22,7 @@ _INDICATOR_ICON = {"annotations": "annotation", "recur": "recur", "depends": "de
 _STRUCTURED_KEYS = frozenset({"due", "scheduled", "wait", "until", "start", "entry", "end"})
 # free-text columns that follow their *own* content direction, not the app's:
 # "Meeting with Arash" reads LTR, "جلسه با آرش" reads RTL.
-_AUTO_DIR_KEYS = frozenset({"description"})
+_AUTO_DIR_KEYS = frozenset({"description", "project"})
 
 
 def _mix(a: str, b: str, t: float) -> str:

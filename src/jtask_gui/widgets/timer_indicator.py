@@ -12,7 +12,10 @@ import datetime as dt
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QWidget
 
+from jtask.rtl import auto_isolate
+
 from .. import fmt
+from ..bidi import apply_content_direction
 from ..i18n import t
 
 
@@ -61,10 +64,12 @@ class TimerIndicator(QLabel):
         if len(self._active) == 1:
             desc = self._active[0].get("description", "")
             el = _elapsed(self._start, now) if self._start else "—"
-            self.setText(f"▶ {desc}  {el}")
+            apply_content_direction(self, desc)
+            self.setText(f"▶ {auto_isolate(desc)}  {el}")
         else:
             n = fmt.digits(str(len(self._active)))
             el = _elapsed(self._start, now) if self._start else "—"
+            apply_content_direction(self, "")
             self.setText(t("timer.n_active", n=n, el=el))
 
     def mousePressEvent(self, ev) -> None:  # noqa: N802

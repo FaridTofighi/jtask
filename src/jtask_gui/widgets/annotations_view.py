@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 from jtask.rtl import auto_isolate
 
 from .. import tokens as tok
-from ..bidi import bind_auto_direction
+from ..bidi import align_item, bind_auto_direction
 from ..calendar_system import active
 from ..i18n import t
 
@@ -74,6 +74,7 @@ class AnnotationsView(QWidget):
             desc = ann.get("description", "")
             item = QListWidgetItem(f"{when} — {auto_isolate(desc)}")
             item.setData(Qt.ItemDataRole.UserRole, desc)
+            align_item(item, desc)
             self._list.addItem(item)
         has = bool(annotations)
         self._list.setVisible(has)
