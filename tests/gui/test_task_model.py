@@ -186,6 +186,35 @@ def test_description_alignment_by_first_strong_char(description, expected):
     other = Qt.AlignmentFlag.AlignLeft if expected == "right" else Qt.AlignmentFlag.AlignRight
     assert align & int(want)
     assert not align & int(other)
+    # absolute, so an RTL view can't flip the visual edge (QStyle.visualAlignment)
+    assert align & int(Qt.AlignmentFlag.AlignAbsolute)
+
+
+def test_persian_description_stays_visual_right_in_the_rtl_ui(qapp):
+    """Regression: in the Persian (RTL) UI a bare AlignRight is flipped to the
+    visual left by the view. The model must pin the edge absolutely so a
+    Persian description keeps reading from the right."""
+    from PyQt6.QtWidgets import QTableView
+
+    prev = qapp.layoutDirection()
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    try:
+        m = TaskTableModel()
+        m.set_tasks([{"id": 1, "description": "جلسه‌ی هفتگی شناخت فردی و تیمی",
+                      "status": "pending"}])
+        view = QTableView()
+        view.setModel(m)
+        view.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        col = _row(m, "description")
+        from PyQt6.QtWidgets import QStyle
+
+        align = Qt.AlignmentFlag(m.data(m.index(0, col), Qt.ItemDataRole.TextAlignmentRole))
+        # what the view actually resolves to after its RTL pass
+        visual = QStyle.visualAlignment(Qt.LayoutDirection.RightToLeft, align)
+        assert visual & Qt.AlignmentFlag.AlignRight
+        assert not visual & Qt.AlignmentFlag.AlignLeft
+    finally:
+        qapp.setLayoutDirection(prev)
 
 
 def test_id_column_alignment_is_unaffected_by_description_direction():

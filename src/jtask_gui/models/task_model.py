@@ -175,26 +175,35 @@ class TaskTableModel(QAbstractTableModel):
 
     # --- rendering helpers --------------------------------------
 
-    @staticmethod
-    def _leading() -> Qt.AlignmentFlag:
+    # ``AlignLeft`` / ``AlignRight`` are *direction-relative* unless
+    # ``AlignAbsolute`` is set: in an RTL view Qt silently flips a bare
+    # ``AlignRight`` to the visual left (``QStyle.visualAlignment``). The
+    # content-direction columns below need a fixed *visual* edge — a Persian
+    # description reads right whatever the UI language — so they pin it absolute.
+    _ABS = Qt.AlignmentFlag.AlignAbsolute
+    _LEFT = Qt.AlignmentFlag.AlignLeft | _ABS
+    _RIGHT = Qt.AlignmentFlag.AlignRight | _ABS
+
+    @classmethod
+    def _leading(cls) -> Qt.AlignmentFlag:
         """The reading-start edge for the current app layout direction."""
         from PyQt6.QtWidgets import QApplication
 
         app = QApplication.instance()
         rtl = app is not None and app.layoutDirection() == Qt.LayoutDirection.RightToLeft
-        return Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
+        return cls._RIGHT if rtl else cls._LEFT
 
     def _halign(self, task: dict, col: Column) -> Qt.AlignmentFlag:
         if col.indicator:
             return Qt.AlignmentFlag.AlignHCenter
         if col.is_id or col.numeric:
-            return Qt.AlignmentFlag.AlignRight        # numeric convention
+            return Qt.AlignmentFlag.AlignRight        # trailing — numeric convention
         if col.key in _AUTO_DIR_KEYS:
             d = first_strong_dir(task.get(col.key) or "")
             if d == "ltr":
-                return Qt.AlignmentFlag.AlignLeft
+                return self._LEFT
             if d == "rtl":
-                return Qt.AlignmentFlag.AlignRight
+                return self._RIGHT
         return self._leading()
 
     @staticmethod

@@ -176,6 +176,11 @@ Wired at: task table `description` + `project` columns (`_AUTO_DIR_KEYS` →
 calendar day list, timesheet tree, running-timer indicator, dependency-graph
 nodes (RTL nodes elide-left and right-align inside the box), dependency picker.
 
+Alignment flags here always carry **`Qt.AlignmentFlag.AlignAbsolute`**: a bare
+`AlignLeft`/`AlignRight` is direction-relative and an RTL view/widget flips it
+to the opposite visual edge, so a Persian string in the Persian UI would land
+left. The helpers name the *visual* edge and pin it.
+
 ---
 
 ## 9. Terminology

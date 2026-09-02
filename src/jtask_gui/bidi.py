@@ -49,15 +49,21 @@ def content_direction(text: str) -> Qt.LayoutDirection:
 
 def content_alignment(text: str) -> Qt.AlignmentFlag:
     """Horizontal alignment flag matching :func:`content_direction` (no vertical
-    bit — combine with ``AlignVCenter`` / ``AlignTop`` at the call site)."""
+    bit — combine with ``AlignVCenter`` / ``AlignTop`` at the call site).
+
+    ``AlignAbsolute`` is always set: a bare ``AlignRight`` is *direction
+    relative* and Qt flips it to the visual left inside an RTL view/widget
+    (``QStyle.visualAlignment``), which is exactly the wrong edge for a Persian
+    string shown in the Persian (RTL) UI. The flag names the visual edge.
+    """
     d = first_strong_dir(text)
     if d in _HALIGN:
-        return _HALIGN[d]
-    return (
-        Qt.AlignmentFlag.AlignRight
-        if _app_direction() == Qt.LayoutDirection.RightToLeft
-        else Qt.AlignmentFlag.AlignLeft
-    )
+        visual = _HALIGN[d]
+    elif _app_direction() == Qt.LayoutDirection.RightToLeft:
+        visual = Qt.AlignmentFlag.AlignRight
+    else:
+        visual = Qt.AlignmentFlag.AlignLeft
+    return visual | Qt.AlignmentFlag.AlignAbsolute
 
 
 def apply_content_direction(widget, text: str) -> None:

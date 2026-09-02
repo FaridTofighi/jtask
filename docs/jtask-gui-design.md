@@ -2487,20 +2487,34 @@ elision check now strips the isolate controls before asserting.
 `tests/gui/test_content_direction.py` +7, `tests/gui/test_bidi_surfaces.py` +4,
 `test_task_model.py` +1. Suite **633 passed / 1 skipped**.
 
-### Follow-up — description-column direction, explicit coverage (2026-09-02)
+### Follow-up — description-column direction: the RTL-flip bug (2026-09-02)
 
-A bug report suspected the task-table `شرح` column rendered genuine Persian
-sentences left-aligned. Investigated: `_halign` → `jtask.rtl.first_strong_dir`
-(canonical Unicode-bidi first-strong via `unicodedata.bidirectional`, `R`/`AL`
-→ RTL) is correct; four-way screenshots (fa/en × dark/light) with real Persian
-*and* English descriptions confirm each row aligns by its own first strong
-character, including Persian sentences that end in a Latin acronym
-(`… به تیم sysops`, `مطالعهٔ RFC 8446 …`) and an English sentence with an
-embedded Persian word (`Deploy کن به production` → left). No code change —
-the previous coverage was incidental (ID-column alignment), so
-`test_task_model.py` gains a 7-case parametrized `test_description_alignment_by
-_first_strong_char` + an explicit id/urgency non-regression test.
-Suite **641 passed / 1 skipped**.
+A bug report: the task-table `شرح` column rendered genuine Persian sentences
+**left**-aligned. The direction *decision* (`_halign` → `first_strong_dir`,
+canonical Unicode-bidi first-strong via `unicodedata.bidirectional`) was
+always correct; the bug was one layer down.
+
+`_halign` returned a bare `Qt.AlignmentFlag.AlignRight`. That flag is
+**direction-relative** — inside an RTL view Qt silently rewrites it to the
+visual left (`QStyle.visualAlignment`). So in the *English* UI a Persian
+description aligned right (correct, no flip) but in the *Persian* UI it flipped
+to the left — which is why every screenshot reviewed before (all English UI,
+or narrow columns where the flip is invisible) missed it. Reproduced with the
+reporter's real tasks at full window width.
+
+Fix: `_halign` / `_leading` now OR in `Qt.AlignmentFlag.AlignAbsolute` and name
+the **visual** edge, so a Persian description reads from the right in either UI
+language. Same fix in `jtask_gui.bidi.content_alignment` (→ `align_item` /
+`apply_content_direction`) for the annotations / calendar / timesheet lists,
+which had the identical flip in the RTL UI.
+
+`test_task_model.py` +3 (7-case parametrized first-strong test asserting
+absolute; an RTL-view non-flip regression test via `QStyle.visualAlignment`;
+id/urgency non-regression). `test_content_direction.py` +1.
+Four-way screenshots (fa/en × dark/light) with real Persian + English
+descriptions confirm each row aligns by its own first strong character —
+including `… به تیم sysops`, `مطالعهٔ RFC 8446 …` (both → right) and
+`Deploy کن به production` (→ left). Suite **643 passed / 1 skipped**.
 
 Note: on this box Qt 6.11.2 XCB does not serialise `_NET_WM_ICON` for a
 file-backed `QIcon` (only trivial solid pixmaps) — irrelevant under GNOME once

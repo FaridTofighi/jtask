@@ -59,9 +59,18 @@ def test_neutral_text_follows_an_rtl_application(app_rtl):
 
 
 def test_alignment_matches_direction(app_ltr):
-    assert content_alignment(FA) == Qt.AlignmentFlag.AlignRight
-    assert content_alignment(EN) == Qt.AlignmentFlag.AlignLeft
-    assert content_alignment(NEUTRAL) == Qt.AlignmentFlag.AlignLeft
+    assert content_alignment(FA) & Qt.AlignmentFlag.AlignRight
+    assert content_alignment(EN) & Qt.AlignmentFlag.AlignLeft
+    assert content_alignment(NEUTRAL) & Qt.AlignmentFlag.AlignLeft
+
+
+def test_alignment_is_absolute_so_an_rtl_view_cannot_flip_it(app_rtl):
+    """A bare AlignRight is direction-relative — Qt flips it to visual-left in
+    an RTL view. The flag must pin the visual edge (AlignAbsolute)."""
+    assert content_alignment(FA) & Qt.AlignmentFlag.AlignAbsolute
+    assert content_alignment(FA) & Qt.AlignmentFlag.AlignRight     # Persian → visual right
+    assert content_alignment(EN) & Qt.AlignmentFlag.AlignLeft      # English → visual left
+    assert content_alignment(EN) & Qt.AlignmentFlag.AlignAbsolute
 
 
 def test_apply_orients_a_label_by_its_text(app_ltr, qtbot):
