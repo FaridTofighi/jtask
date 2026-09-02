@@ -2,6 +2,7 @@
 
 import datetime
 
+import pytest
 from PyQt6.QtCore import Qt
 
 from jtask.rtl import bidi_isolate
@@ -156,6 +157,47 @@ def test_description_direction_follows_content():
     # a date column stays right-aligned regardless
     assert m.data(m.index(0, _row(m, "id")), Qt.ItemDataRole.TextAlignmentRole) \
         & int(Qt.AlignmentFlag.AlignRight)
+
+
+@pytest.mark.parametrize(
+    ("description", "expected"),
+    [
+        # 1. pure Persian sentence -> right
+        ("جلسه‌ی هفتگی شناخت فردی و جمعی", "right"),
+        # 2. pure English sentence -> left (the case _halign was first added for)
+        ("Upgrade Docker Engine on staging servers", "left"),
+        # 3. Persian sentence ending in an embedded Latin acronym/word -> right
+        ("ارسال لیست سرورها جهت آپدیت به تیم sysops", "right"),
+        ("مطالعهٔ RFC 8446 برای پیاده‌سازی TLS", "right"),
+        # 4. English sentence with an embedded Persian word -> left
+        ("Deploy کن به production", "left"),
+        # leading digit / punctuation / emoji before the first Persian letter -> right
+        ("۱۴۰۳ گزارش سالانه", "right"),
+        ("«یادداشت» جلسه", "right"),
+    ],
+)
+def test_description_alignment_by_first_strong_char(description, expected):
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": description, "status": "pending"}])
+    align = m.data(
+        m.index(0, _row(m, "description")), Qt.ItemDataRole.TextAlignmentRole
+    )
+    want = Qt.AlignmentFlag.AlignRight if expected == "right" else Qt.AlignmentFlag.AlignLeft
+    other = Qt.AlignmentFlag.AlignLeft if expected == "right" else Qt.AlignmentFlag.AlignRight
+    assert align & int(want)
+    assert not align & int(other)
+
+
+def test_id_column_alignment_is_unaffected_by_description_direction():
+    """The fix for description direction must not regress the numeric columns:
+    id / urgency always trail (number convention), regardless of any RTL text
+    in the same row."""
+    m = TaskTableModel()
+    m.set_tasks([{"id": 7, "description": "جلسه با آرش", "status": "pending",
+                  "urgency": 4.2}])
+    for key in ("id", "urgency"):
+        align = m.data(m.index(0, _row(m, key)), Qt.ItemDataRole.TextAlignmentRole)
+        assert align & int(Qt.AlignmentFlag.AlignRight)
 
 
 def test_project_column_direction_follows_content():
