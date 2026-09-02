@@ -216,6 +216,8 @@ jtask-gui --install-desktop      # add a menu entry + themed icon (undo: --unins
 - **Vazirmatn is bundled** and auto-loaded — no manual font install.
 
 Design and milestone notes: `docs/jtask-gui-design.md`.
+Step-by-step GTD workflow (capture → clarify → organise → review → engage):
+`docs/gtd-guide.md`.
 
 ### Development
 
