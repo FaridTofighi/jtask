@@ -2541,3 +2541,19 @@ mode stays correct in light mode.
 
 `tests/gui/test_board_engine.py` +6. Suite **649 passed / 1 skipped**. bc-2
 adds the swatch picker to the column editor.
+
+## Board column colours — bc-2 (the picker) (2026-09-03)
+
+`BoardManagerDialog`'s column editor gains a **Colour** row: `_ColorPicker` — a
+"no colour" swatch plus one per `boards.COLUMN_ACCENT_ROLES`, each painted with
+the active theme's hue (`palette(settings.theme)[role]`, the same runtime-hex
+approach as `calendar_report.py`). Exclusive `QButtonGroup`; stores only the
+role name. Below it, `_ColumnHeaderPreview` — a live thumbnail (accent strip +
+title) that tracks the title field and the swatch selection before saving.
+
+Wired through the existing `_col_edited` → `_persist()` → `Settings.save_board`
+path; `color` is written only when set (cleared → key removed). Disabled for
+built-in boards like the other column fields (the colour still shows, greyed).
+
+`tests/gui/test_board_manager.py` +4. Suite **653 passed / 1 skipped**.
+Column-colour feature complete (bc-1 schema + render · bc-2 picker).

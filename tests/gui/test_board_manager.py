@@ -154,6 +154,60 @@ def test_manager_drop_editor_roundtrips_every_type(mgr):
         assert ed.value() == drop
 
 
+# --- bc-2: the column colour picker ----------------------------
+
+def _pick_editable_column(mgr, preset="Kanban"):
+    mgr._from_preset(preset)
+    names = mgr._all_board_names()
+    mgr._boards.setCurrentRow(names.index(f"{preset} 2"))
+    mgr._cols.setCurrentRow(0)
+    return f"{preset} 2"
+
+
+def test_colour_picker_persists_the_role_through_the_board_store(mgr):
+    from jtask_gui.settings import Settings
+
+    board = _pick_editable_column(mgr)
+    assert mgr._color.isEnabled()
+    mgr._color.set_value("overdue")
+    assert mgr._color.value() == "overdue"
+    assert Settings().boards()[board]["columns"][0]["color"] == "overdue"
+
+
+def test_clearing_the_colour_omits_it_from_the_saved_column(mgr):
+    from jtask_gui.settings import Settings
+
+    board = _pick_editable_column(mgr)
+    mgr._color.set_value("success")
+    assert Settings().boards()[board]["columns"][0]["color"] == "success"
+    mgr._color.set_value(None)
+    assert "color" not in Settings().boards()[board]["columns"][0]
+
+
+def test_colour_picker_is_read_only_for_a_builtin_board(mgr):
+    names = mgr._all_board_names()
+    mgr._boards.setCurrentRow(names.index("GTD"))
+    mgr._cols.setCurrentRow(1)                     # Next Actions — has a colour
+    assert not mgr._color.isEnabled()
+    assert mgr._color.value() == "primary"         # still shown, just disabled
+
+
+def test_header_preview_tracks_the_title_and_colour(mgr):
+    _pick_editable_column(mgr)
+    mgr._col_title.setText("Backlog")
+    mgr._color.set_value("blocked")
+    assert mgr._preview._title.text() == "Backlog"
+    hue = _theme_hue("blocked")
+    assert hue in mgr._preview._strip.styleSheet()
+
+
+def _theme_hue(role: str) -> str:
+    from jtask_gui.settings import Settings
+    from jtask_gui.theme import palette
+
+    return palette(Settings().theme)[role]
+
+
 # --- NB-4: export / import --------------------------------------
 
 def test_export_then_import_roundtrips(mgr, tmp_path):

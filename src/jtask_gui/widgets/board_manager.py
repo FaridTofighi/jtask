@@ -6,9 +6,11 @@ import copy
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
+    QButtonGroup,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -28,6 +30,7 @@ from jtask import taskwarrior
 from .. import boards as B
 from .. import tokens as tok
 from ..i18n import t
+from ..theme import palette
 from .filter_builder import FilterBuilder
 
 
@@ -44,6 +47,87 @@ def _tags_str(xs: list[str]) -> str:
 
 def _tags_list(s: str) -> list[str]:
     return [x.lstrip("+-#") for x in s.split() if x.strip()]
+
+
+class _ColorPicker(QWidget):
+    """A row of swatches — "no colour" + one per ``boards.COLUMN_ACCENT_ROLES`` —
+    each painted with the given theme's hue. Stores only the *role name*."""
+
+    changed = pyqtSignal()
+
+    def __init__(self, theme_name: str, parent=None) -> None:
+        super().__init__(parent)
+        pal = palette(theme_name)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(tok.SP_4)
+
+        self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
+        self._buttons: dict[str, QToolButton] = {}
+
+        options = [("", t("board.color.none"), pal["field"])]
+        options += [(r, t(f"board.color.{r}"), pal[r]) for r in B.COLUMN_ACCENT_ROLES]
+        for role, label, hue in options:
+            b = QToolButton()
+            b.setCheckable(True)
+            b.setToolTip(label)
+            b.setFixedSize(20, 20)
+            b.setStyleSheet(
+                f"QToolButton {{ background:{hue}; border:1px solid {pal['border']};"
+                f" border-radius:{tok.R_SM}px; }}"
+                f"QToolButton:checked {{ border:2px solid {pal['text']}; }}"
+            )
+            self._buttons[role] = b
+            self._group.addButton(b)
+            lay.addWidget(b)
+        lay.addStretch(1)
+        self._group.buttonToggled.connect(self._on_toggle)
+
+    def _on_toggle(self, _btn, checked: bool) -> None:
+        if checked:
+            self.changed.emit()
+
+    def value(self) -> str | None:
+        for role, b in self._buttons.items():
+            if b.isChecked():
+                return role or None
+        return None
+
+    def set_value(self, role: str | None) -> None:
+        self._buttons.get(role or "", self._buttons[""]).setChecked(True)
+
+
+class _ColumnHeaderPreview(QFrame):
+    """A live thumbnail of the column header — accent strip + title — so the
+    colour choice is visible before saving."""
+
+    def __init__(self, theme_name: str, parent=None) -> None:
+        super().__init__(parent)
+        self._pal = palette(theme_name)
+        self.setObjectName("ColHeaderPreview")
+        self.setStyleSheet(
+            f"QFrame#ColHeaderPreview {{ background:{self._pal['bg_alt']};"
+            f" border:1px solid {self._pal['border_soft']};"
+            f" border-radius:{tok.R_MD}px; }}"
+        )
+        v = QVBoxLayout(self)
+        v.setContentsMargins(tok.SP_6, tok.SP_6, tok.SP_6, tok.SP_6)
+        v.setSpacing(tok.SP_4)
+        self._strip = QFrame()
+        self._strip.setFixedHeight(3)
+        self._title = QLabel("")
+        self._title.setStyleSheet(
+            f"color:{self._pal['text_muted']}; font-weight:700;"
+        )
+        v.addWidget(self._strip)
+        v.addWidget(self._title)
+        self.show_header("", None)
+
+    def show_header(self, title: str, role: str | None) -> None:
+        self._title.setText(title or t("board.col.title"))
+        hue = self._pal[role] if role in B.COLUMN_ACCENT_ROLES else "transparent"
+        self._strip.setStyleSheet(f"background:{hue}; border-radius:2px;")
 
 
 class _DropEditor(QWidget):
@@ -241,6 +325,14 @@ class BoardManagerDialog(QDialog):
         self._drop = _DropEditor()
         self._drop.changed.connect(self._col_edited)
         editor.addWidget(self._drop)
+
+        editor.addWidget(QLabel(t("board.col.color")))
+        self._color = _ColorPicker(settings.theme)
+        self._color.changed.connect(self._col_edited)
+        editor.addWidget(self._color)
+
+        self._preview = _ColumnHeaderPreview(settings.theme)
+        editor.addWidget(self._preview)
         editor.addStretch(1)
         crow = QHBoxLayout()
         add_c = QPushButton(t("board.col.add"))
@@ -375,21 +467,25 @@ class BoardManagerDialog(QDialog):
         editable = self._current is not None and not self._is_builtin(self._current)
         cols = (d or {}).get("columns", [])
         active = editable and 0 <= row < len(cols)
-        for w in (self._col_title, self._col_filter, self._drop):
+        for w in (self._col_title, self._col_filter, self._drop, self._color):
             w.setEnabled(active)
         if not (0 <= row < len(cols)):
             self._loading = True
             self._col_title.clear()
             self._col_filter.clear()
             self._drop.load({"type": "none"})
+            self._color.set_value(None)
             self._loading = False
+            self._preview.show_header("", None)
             return
         self._loading = True
         col = cols[row]
         self._col_title.setText(col.get("title", ""))
         self._col_filter.setText(col.get("filter", ""))
         self._drop.load(col.get("drop") or {"type": "none"})
+        self._color.set_value(col.get("color"))
         self._loading = False
+        self._preview.show_header(col.get("title", ""), col.get("color"))
 
     def _col_edited(self, *_a) -> None:
         if self._loading or self._current is None or self._is_builtin(self._current):
@@ -403,9 +499,13 @@ class BoardManagerDialog(QDialog):
             "filter": self._col_filter.text().strip(),
             "drop": self._drop.value(),
         }
+        color = self._color.value()
+        if color:
+            cols[row]["color"] = color
         it = self._cols.item(row)
         if it is not None:
             it.setText(cols[row]["title"])
+        self._preview.show_header(cols[row]["title"], color)
         self._persist()
 
     def _edit_filter(self) -> None:
