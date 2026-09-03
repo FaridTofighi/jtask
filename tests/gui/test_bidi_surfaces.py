@@ -1,5 +1,6 @@
-"""bd-2 — every surface that shows user-authored free text orients it to the
-content's own direction, not the UI's."""
+"""Every surface that shows user-authored free text orients it by the two-tier
+rule (UI language, overridden only by a clear majority of the opposite script)
+— including a Persian sentence that starts with a Latin term."""
 
 from __future__ import annotations
 
@@ -8,6 +9,7 @@ from PyQt6.QtCore import Qt
 
 FA = "خرید نان از نانوایی"
 EN = "Buy bread from the bakery"
+FA_LATIN_FIRST = "Backup را بررسی کنم مربوط به دیتابیس Production"
 
 RTL = Qt.LayoutDirection.RightToLeft
 LTR = Qt.LayoutDirection.LeftToRight
@@ -34,13 +36,17 @@ def test_board_card_description_orients_to_its_text(qtbot):
 
     fa_card = BoardCard({"uuid": "1", "description": FA})
     en_card = BoardCard({"uuid": "2", "description": EN})
-    qtbot.addWidget(fa_card)
-    qtbot.addWidget(en_card)
+    bug_card = BoardCard({"uuid": "3", "description": FA_LATIN_FIRST})
+    for c in (fa_card, en_card, bug_card):
+        qtbot.addWidget(c)
 
     assert _card_title(fa_card).layoutDirection() == RTL
     assert _card_title(fa_card).alignment() & Qt.AlignmentFlag.AlignRight
     assert _card_title(en_card).layoutDirection() == LTR
     assert _card_title(en_card).alignment() & Qt.AlignmentFlag.AlignLeft
+    # the bug case: Persian sentence, Latin first word → still RTL
+    assert _card_title(bug_card).layoutDirection() == RTL
+    assert _card_title(bug_card).alignment() & Qt.AlignmentFlag.AlignRight
 
 
 def test_annotation_rows_align_to_their_text(qtbot, tw_env):
@@ -51,11 +57,11 @@ def test_annotation_rows_align_to_their_text(qtbot, tw_env):
     v.load_task({"uuid": "u", "annotations": [
         {"entry": "20250101T000000Z", "description": FA},
         {"entry": "20250101T000100Z", "description": EN},
+        {"entry": "20250101T000200Z", "description": FA_LATIN_FIRST},
     ]})
-    a0 = v._list.item(0).textAlignment()
-    a1 = v._list.item(1).textAlignment()
-    assert a0 & Qt.AlignmentFlag.AlignRight
-    assert a1 & Qt.AlignmentFlag.AlignLeft
+    assert v._list.item(0).textAlignment() & Qt.AlignmentFlag.AlignRight
+    assert v._list.item(1).textAlignment() & Qt.AlignmentFlag.AlignLeft
+    assert v._list.item(2).textAlignment() & Qt.AlignmentFlag.AlignRight  # bug case
 
 
 def test_timer_indicator_follows_the_running_task_description(qtbot):

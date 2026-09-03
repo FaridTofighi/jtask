@@ -136,85 +136,84 @@ def test_foreground_muting_and_priority_colours():
     assert fg(0, "priority") == pal["completed"].lower()
 
 
-def test_description_direction_follows_content():
-    m = TaskTableModel()
-    m.set_tasks([
-        {"id": 1, "description": "Meeting with Arash", "status": "pending"},
-        {"id": 2, "description": "جلسه با آرش", "status": "pending"},
-    ])
-    col = _row(m, "description")
-
-    en = m.data(m.index(0, col), Qt.ItemDataRole.TextAlignmentRole)
-    fa = m.data(m.index(1, col), Qt.ItemDataRole.TextAlignmentRole)
-    assert en & int(Qt.AlignmentFlag.AlignLeft)
-    assert fa & int(Qt.AlignmentFlag.AlignRight)
-
-    # the display text is wrapped in a FIRST STRONG ISOLATE either way
-    for r in (0, 1):
-        disp = _display(m, r, "description")
-        assert disp.startswith("⁨") and disp.endswith("⁩")
-
-    # a date column stays right-aligned regardless
-    assert m.data(m.index(0, _row(m, "id")), Qt.ItemDataRole.TextAlignmentRole) \
-        & int(Qt.AlignmentFlag.AlignRight)
-
-
-@pytest.mark.parametrize(
-    ("description", "expected"),
-    [
-        # 1. pure Persian sentence -> right
-        ("جلسه‌ی هفتگی شناخت فردی و جمعی", "right"),
-        # 2. pure English sentence -> left (the case _halign was first added for)
-        ("Upgrade Docker Engine on staging servers", "left"),
-        # 3. Persian sentence ending in an embedded Latin acronym/word -> right
-        ("ارسال لیست سرورها جهت آپدیت به تیم sysops", "right"),
-        ("مطالعهٔ RFC 8446 برای پیاده‌سازی TLS", "right"),
-        # 4. English sentence with an embedded Persian word -> left
-        ("Deploy کن به production", "left"),
-        # leading digit / punctuation / emoji before the first Persian letter -> right
-        ("۱۴۰۳ گزارش سالانه", "right"),
-        ("«یادداشت» جلسه", "right"),
-    ],
-)
-def test_description_alignment_by_first_strong_char(description, expected):
-    m = TaskTableModel()
-    m.set_tasks([{"id": 1, "description": description, "status": "pending"}])
-    align = m.data(
-        m.index(0, _row(m, "description")), Qt.ItemDataRole.TextAlignmentRole
-    )
-    want = Qt.AlignmentFlag.AlignRight if expected == "right" else Qt.AlignmentFlag.AlignLeft
-    other = Qt.AlignmentFlag.AlignLeft if expected == "right" else Qt.AlignmentFlag.AlignRight
-    assert align & int(want)
-    assert not align & int(other)
-    # absolute, so an RTL view can't flip the visual edge (QStyle.visualAlignment)
-    assert align & int(Qt.AlignmentFlag.AlignAbsolute)
-
-
-def test_persian_description_stays_visual_right_in_the_rtl_ui(qapp):
-    """Regression: in the Persian (RTL) UI a bare AlignRight is flipped to the
-    visual left by the view. The model must pin the edge absolutely so a
-    Persian description keeps reading from the right."""
-    from PyQt6.QtWidgets import QTableView
-
+@pytest.fixture
+def ui_fa(qapp):
     prev = qapp.layoutDirection()
     qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-    try:
-        m = TaskTableModel()
-        m.set_tasks([{"id": 1, "description": "جلسه‌ی هفتگی شناخت فردی و تیمی",
-                      "status": "pending"}])
-        view = QTableView()
-        view.setModel(m)
-        view.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        col = _row(m, "description")
-        from PyQt6.QtWidgets import QStyle
+    yield
+    qapp.setLayoutDirection(prev)
 
-        align = Qt.AlignmentFlag(m.data(m.index(0, col), Qt.ItemDataRole.TextAlignmentRole))
-        # what the view actually resolves to after its RTL pass
-        visual = QStyle.visualAlignment(Qt.LayoutDirection.RightToLeft, align)
-        assert visual & Qt.AlignmentFlag.AlignRight
-        assert not visual & Qt.AlignmentFlag.AlignLeft
-    finally:
-        qapp.setLayoutDirection(prev)
+
+@pytest.fixture
+def ui_en(qapp):
+    prev = qapp.layoutDirection()
+    qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+    yield
+    qapp.setLayoutDirection(prev)
+
+
+def _align(m, row, key):
+    return m.data(m.index(row, _row(m, key)), Qt.ItemDataRole.TextAlignmentRole)
+
+
+# the exact strings the first-strong heuristic mis-classified as LTR
+BUG_DESCRIPTIONS = [
+    "Backup را بررسی کنم مربوط به دیتابیس Production",
+    "SSL Certificate یکی از سرویس‌ها را تمدید کنم",
+]
+
+
+@pytest.mark.parametrize("desc", BUG_DESCRIPTIONS)
+def test_persian_sentence_starting_with_a_latin_term_is_right_aligned(ui_fa, desc):
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": desc, "status": "pending"}])
+    align = _align(m, 0, "description")
+    assert align & int(Qt.AlignmentFlag.AlignRight)
+    assert not align & int(Qt.AlignmentFlag.AlignLeft)
+    assert align & int(Qt.AlignmentFlag.AlignAbsolute)
+    # the cell text is wrapped in a RIGHT-TO-LEFT ISOLATE so the paragraph
+    # reads RTL regardless of the view; the embedded Latin runs are untouched
+    disp = _display(m, 0, "description")
+    assert disp.startswith("⁧") and disp.endswith("⁩")
+    assert disp[1:-1] == desc
+
+
+@pytest.mark.parametrize("desc", BUG_DESCRIPTIONS)
+def test_the_bug_descriptions_are_rtl_in_the_english_ui_too(ui_en, desc):
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": desc, "status": "pending"}])
+    assert _align(m, 0, "description") & int(Qt.AlignmentFlag.AlignRight)
+
+
+def test_persian_first_sentence_still_right_aligned(ui_fa):
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": "جلسه‌ی هفتگی شناخت فردی و تیمی",
+                  "status": "pending"}])
+    assert _align(m, 0, "description") & int(Qt.AlignmentFlag.AlignRight)
+
+
+def test_a_real_english_description_is_left_aligned_in_the_persian_ui(ui_fa):
+    """The majority-script override still catches a genuinely English value."""
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": "Upgrade Docker Engine on staging servers",
+                  "status": "pending"}])
+    align = _align(m, 0, "description")
+    assert align & int(Qt.AlignmentFlag.AlignLeft)
+    assert not align & int(Qt.AlignmentFlag.AlignRight)
+    assert _display(m, 0, "description").startswith("⁦")   # LEFT-TO-RIGHT ISOLATE
+
+
+def test_persian_description_stays_visual_right_after_the_views_rtl_pass(ui_fa):
+    """A bare AlignRight is flipped to the visual left by an RTL view; the model
+    pins the edge absolutely so the description keeps reading from the right."""
+    from PyQt6.QtWidgets import QStyle
+
+    m = TaskTableModel()
+    m.set_tasks([{"id": 1, "description": BUG_DESCRIPTIONS[0], "status": "pending"}])
+    align = Qt.AlignmentFlag(_align(m, 0, "description"))
+    visual = QStyle.visualAlignment(Qt.LayoutDirection.RightToLeft, align)
+    assert visual & Qt.AlignmentFlag.AlignRight
+    assert not visual & Qt.AlignmentFlag.AlignLeft
 
 
 def test_id_column_alignment_is_unaffected_by_description_direction():
@@ -229,7 +228,7 @@ def test_id_column_alignment_is_unaffected_by_description_direction():
         assert align & int(Qt.AlignmentFlag.AlignRight)
 
 
-def test_project_column_direction_follows_content():
+def test_project_column_direction_follows_content(ui_en):
     m = TaskTableModel()
     m.set_tasks([
         {"id": 1, "description": "x", "project": "Website", "status": "pending"},
@@ -240,7 +239,7 @@ def test_project_column_direction_follows_content():
         & int(Qt.AlignmentFlag.AlignLeft)
     assert m.data(m.index(1, col), Qt.ItemDataRole.TextAlignmentRole) \
         & int(Qt.AlignmentFlag.AlignRight)
-    assert _display(m, 1, "project").startswith("⁨")
+    assert _display(m, 1, "project").startswith("⁧")     # RTL project name → RLI
 
 
 def test_set_tasks_resets_model(qtbot):

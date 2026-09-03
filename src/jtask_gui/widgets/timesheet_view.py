@@ -22,11 +22,10 @@ from PyQt6.QtWidgets import (
 )
 
 from jtask import timesheet, timew
-from jtask.rtl import auto_isolate
 
 from .. import fmt
 from .. import tokens as tok
-from ..bidi import content_alignment
+from ..bidi import content_alignment, directional_isolate
 from ..calendar_system import active
 from ..i18n import t
 from ..workers import submit
@@ -173,11 +172,13 @@ class TimesheetView(QWidget):
         self._tree.clear()
         vc = Qt.AlignmentFlag.AlignVCenter
         for row in sheet.rows:
-            top = QTreeWidgetItem(
-                [auto_isolate(row.description), auto_isolate(row.project or "—"), _hm(row.total)]
-            )
+            top = QTreeWidgetItem([
+                directional_isolate(row.description),
+                directional_isolate(row.project or "—"),
+                _hm(row.total),
+            ])
             if row.running:
-                top.setText(0, "▶ " + auto_isolate(row.description))
+                top.setText(0, "▶ " + directional_isolate(row.description))
             top.setTextAlignment(0, content_alignment(row.description) | vc)
             top.setTextAlignment(1, content_alignment(row.project or "") | vc)
             self._tree.addTopLevelItem(top)

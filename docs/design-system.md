@@ -156,20 +156,32 @@ the calendar. Any LTR-structured token rendered inside RTL text — signed
 numbers, dates, **file paths, URLs, UUIDs** — is wrapped in
 `jtask.rtl.bidi_isolate()` so it stays atomic (`U+2066 … U+2069`).
 
-**Free text follows its own direction, not the paragraph's.** A task
-description, annotation or project name is rendered with its base direction
-taken from its first strong character (`jtask.rtl.first_strong_dir`): "Meeting
-with Arash" reads left-to-right and left-aligned, "جلسه با آرش" right-to-left
-and right-aligned, in either UI language. Read-only text is wrapped in a FIRST
-STRONG ISOLATE (`jtask.rtl.auto_isolate`, `U+2068 … U+2069`); the widget is then
-oriented by `jtask_gui.bidi`:
+**Free-text base direction is a two-tier rule** (`jtask_gui.bidi`), not a
+first-character guess. A task description / annotation / project name renders
+with:
+
+1. **the UI language's direction by default** (like a word processor's
+   paragraph direction tied to the input locale);
+2. **the opposite direction only when the value is a clear majority
+   (`≥ 60 %`) of the opposite script** (`jtask.rtl.script_balance`) — a
+   genuinely foreign-language value.
+
+So "جلسه با آرش" reads RTL, "Backup را بررسی کنم…" (Persian sentence, leading
+Latin term) *also* reads RTL, and "Upgrade Docker Engine on staging servers"
+(really English) reads LTR — in either UI language. Embedded opposite-script
+runs shape and order natively *within* the paragraph; this only fixes the
+paragraph's base direction. Surfaces that can't set a per-item base direction
+(table cells, graphics items) wrap the text in a matching directional isolate
+(`jtask_gui.bidi.directional_isolate` → `U+2067…U+2069` RTL / `U+2066…U+2069`
+LTR).
 
 | helper | use |
 |---|---|
-| `content_direction(text)` / `content_alignment(text)` | pure — the Qt direction / horizontal-align flag for a string (neutral / empty → the app default) |
+| `content_direction(text)` / `content_alignment(text)` | pure — the Qt direction / absolute horizontal-align flag by the two-tier rule |
+| `directional_isolate(text)` | wrap text so its paragraph base direction is pinned regardless of the surrounding widget |
 | `apply_content_direction(label, text)` | set a read-only `QLabel`'s `layoutDirection` + alignment |
 | `align_item(item, text)` | set a `QListWidgetItem` / `QTreeWidgetItem`'s `textAlignment` |
-| `bind_auto_direction(field)` | editable `QLineEdit` / `QTextEdit` — re-orients on every keystroke |
+| `bind_auto_direction(field)` | editable `QLineEdit` / `QTextEdit` — tracks the two-tier rule as the field's content changes |
 
 Wired at: task table `description` + `project` columns (`_AUTO_DIR_KEYS` →
 `TextAlignmentRole`), board cards, annotations tab + detail-panel summary,

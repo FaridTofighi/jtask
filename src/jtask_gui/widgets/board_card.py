@@ -6,11 +6,11 @@ from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
 from PyQt6.QtGui import QDrag
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QToolButton, QVBoxLayout
 
-from jtask.rtl import auto_isolate, bidi_isolate
+from jtask.rtl import bidi_isolate
 
 from .. import icons
 from .. import tokens as tok
-from ..bidi import apply_content_direction
+from ..bidi import apply_content_direction, directional_isolate
 from ..calendar_system import active
 from ..i18n import t
 
@@ -43,7 +43,7 @@ class BoardCard(QFrame):
         self._star.setChecked("starred" in (task.get("tags") or []))
         self._star.clicked.connect(self._on_star)
         description = task.get("description", "")
-        desc = QLabel(auto_isolate(description))
+        desc = QLabel(directional_isolate(description))
         desc.setObjectName("CardTitle")
         desc.setWordWrap(True)
         apply_content_direction(desc, description)
@@ -66,7 +66,7 @@ class BoardCard(QFrame):
     def _meta_line(self, task: dict) -> str:
         bits: list[str] = []
         if task.get("project"):
-            bits.append(auto_isolate(task["project"]))
+            bits.append(directional_isolate(task["project"]))
         pri = task.get("priority", "")
         if pri in _PRIORITY_LABEL:
             bits.append(t(_PRIORITY_LABEL[pri]))

@@ -19,9 +19,8 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
-from jtask.rtl import auto_isolate, first_strong_dir
-
 from .. import tokens as tok
+from ..bidi import content_direction, directional_isolate
 from ..i18n import t
 from ..theme import palette
 
@@ -150,14 +149,14 @@ class DependencyGraph(QGraphicsView):
         # one clean line, ellipsised to the node's inner width — never spilling
         # past the border; the full text is on hover
         inner = _W - 2 * _PAD
-        rtl = first_strong_dir(desc) == "rtl"
+        rtl = content_direction(desc) == Qt.LayoutDirection.RightToLeft
         shown = fm.elidedText(
             full,
             Qt.TextElideMode.ElideLeft if rtl else Qt.TextElideMode.ElideRight,
             inner,
         )
-        label.setText(auto_isolate(shown))
-        label.setToolTip(auto_isolate(full))
+        label.setText(directional_isolate(shown))
+        label.setToolTip(directional_isolate(full))
         text_x = x + _W - _PAD - fm.horizontalAdvance(shown) if rtl else x + _PAD
         label.setPos(text_x, y + (_H - fm.height()) / 2)
         scene.addItem(label)

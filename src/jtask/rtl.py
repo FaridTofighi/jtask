@@ -18,13 +18,15 @@ from .jalali import normalize_digits, to_persian_digits
 
 __all__ = [
     "rtl", "fa_digits", "en_digits", "num", "set_digit_mode", "digit_mode",
-    "bidi_isolate", "first_strong_dir", "auto_isolate",
+    "bidi_isolate", "bidi_isolate_rtl", "first_strong_dir", "auto_isolate",
+    "script_balance",
 ]
 
 # Unicode isolate controls — wrap a structured token (a signed number, a
 # hyphen-separated date) so the bidi algorithm treats it as one atomic LTR run
 # and never floats its sign/separators to the wrong side inside RTL text.
 _LRI = "⁦"  # LEFT-TO-RIGHT ISOLATE
+_RLI = "⁧"  # RIGHT-TO-LEFT ISOLATE
 _PDI = "⁩"  # POP DIRECTIONAL ISOLATE
 _FSI = "⁨"  # FIRST STRONG ISOLATE — base direction taken from 1st strong char
 
@@ -34,6 +36,31 @@ def bidi_isolate(text: str) -> str:
     if not text:
         return text
     return f"{_LRI}{text}{_PDI}"
+
+
+def bidi_isolate_rtl(text: str) -> str:
+    """Wrap *text* in a RIGHT-TO-LEFT ISOLATE — its paragraph base direction is
+    RTL regardless of the surrounding text, while embedded LTR runs (Latin
+    words, numbers) still shape and order natively within it."""
+    if not text:
+        return text
+    return f"{_RLI}{text}{_PDI}"
+
+
+def script_balance(text: str) -> tuple[int, int]:
+    """``(rtl_letters, ltr_letters)`` — the count of strong right-to-left
+    (Arabic/Hebrew) vs strong left-to-right (Latin, …) characters in *text*.
+    Digits, punctuation and format characters don't count. Used to decide a
+    free-text value's *base* direction by which script actually dominates it,
+    not by whichever character happens to come first."""
+    rtl = ltr = 0
+    for ch in text:
+        bidi = unicodedata.bidirectional(ch)
+        if bidi in ("R", "AL"):
+            rtl += 1
+        elif bidi == "L":
+            ltr += 1
+    return rtl, ltr
 
 
 def first_strong_dir(text: str) -> str | None:

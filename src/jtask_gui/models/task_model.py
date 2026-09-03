@@ -8,7 +8,7 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
 
 from jtask import jalali
-from jtask.rtl import auto_isolate, bidi_isolate, en_digits, first_strong_dir
+from jtask.rtl import bidi_isolate, en_digits
 
 from ..theme import palette
 from .column_spec import COLUMNS, Column
@@ -175,36 +175,16 @@ class TaskTableModel(QAbstractTableModel):
 
     # --- rendering helpers --------------------------------------
 
-    # ``AlignLeft`` / ``AlignRight`` are *direction-relative* unless
-    # ``AlignAbsolute`` is set: in an RTL view Qt silently flips a bare
-    # ``AlignRight`` to the visual left (``QStyle.visualAlignment``). The
-    # content-direction columns below need a fixed *visual* edge — a Persian
-    # description reads right whatever the UI language — so they pin it absolute.
-    _ABS = Qt.AlignmentFlag.AlignAbsolute
-    _LEFT = Qt.AlignmentFlag.AlignLeft | _ABS
-    _RIGHT = Qt.AlignmentFlag.AlignRight | _ABS
-
-    @classmethod
-    def _leading(cls) -> Qt.AlignmentFlag:
-        """The reading-start edge for the current app layout direction."""
-        from PyQt6.QtWidgets import QApplication
-
-        app = QApplication.instance()
-        rtl = app is not None and app.layoutDirection() == Qt.LayoutDirection.RightToLeft
-        return cls._RIGHT if rtl else cls._LEFT
-
     def _halign(self, task: dict, col: Column) -> Qt.AlignmentFlag:
+        from ..bidi import content_alignment
+
         if col.indicator:
             return Qt.AlignmentFlag.AlignHCenter
         if col.is_id or col.numeric:
             return Qt.AlignmentFlag.AlignRight        # trailing — numeric convention
         if col.key in _AUTO_DIR_KEYS:
-            d = first_strong_dir(task.get(col.key) or "")
-            if d == "ltr":
-                return self._LEFT
-            if d == "rtl":
-                return self._RIGHT
-        return self._leading()
+            return content_alignment(task.get(col.key) or "")
+        return content_alignment("")                  # everything else: UI direction
 
     @staticmethod
     def _is_starred(task: dict) -> bool:
@@ -234,9 +214,12 @@ class TaskTableModel(QAbstractTableModel):
         # them atomic so bidi never floats a '-' or a separator to the wrong end.
         if text and (col.is_id or col.numeric or col.key in _STRUCTURED_KEYS):
             return bidi_isolate(digits)
-        # free text follows its own first-strong direction, not the paragraph's
+        # free text: pin the paragraph base direction (UI language, unless the
+        # value is majority the other script) so a Persian sentence starting
+        # with a Latin term still reads right-to-left.
         if text and col.key in _AUTO_DIR_KEYS:
-            return auto_isolate(digits)
+            from ..bidi import directional_isolate
+            return directional_isolate(digits)
         return digits
 
     _PRIORITY_DOT = {"H": "overdue", "M": "due_soon", "L": "text_muted"}

@@ -2669,3 +2669,32 @@ everywhere. Not one shared key — the fix touched **two** GUI catalog keys
 literals (`cli.py` ×2, `gtd._REVIEW_TITLES`) and the docs (glossary, README).
 `tests/gui/test_d5_terminology_widgets.py` pins the exact GUI strings + a
 «شاید» ⇒ «یک‌روزی» guard; `tests/test_review_steps.py` pins the CLI title.
+
+## Free-text base direction — first-strong → two-tier rule (2026-09-04)
+
+The bd-1/bd-2 fix keyed free-text base direction off the **first strong
+character** (`first_strong_dir`) — the `dir="auto"` heuristic — which
+misclassifies a Persian sentence that starts with a Latin term ("Backup را
+بررسی کنم… Production") as an LTR paragraph, scrambling the word order.
+
+Replaced with a two-tier rule in `jtask_gui.bidi.content_direction`:
+
+1. default = the **UI language's** direction;
+2. overridden to the opposite direction **only when the value is ≥ 60 % of the
+   opposite script** by letter count (`jtask.rtl.script_balance`).
+
+`content_alignment` keeps the `AlignAbsolute` pin. New
+`jtask_gui.bidi.directional_isolate` wraps display text in RLI…PDI / LRI…PDI by
+the resolved direction (replacing the FSI `auto_isolate`) so the paragraph
+direction is fixed even where a per-item base direction can't be set (table
+cells, `QGraphicsSimpleTextItem`). Swept every consumer:
+`task_model._display`/`_halign`, `board_card`, `annotations_view`,
+`detail_panel`, `calendar_report`, `timesheet_view`, `timer_indicator`,
+`dep_graph`. `first_strong_dir` / `auto_isolate` stay in `jtask.rtl` (unused by
+the GUI now).
+
+Tests rewritten: `test_content_direction.py`, `test_bidi_surfaces.py`,
+`test_task_model.py` — the ticket's exact examples ("Backup را بررسی کنم مربوط
+به دیتابیس Production", "SSL Certificate یکی از سرویس‌ها را تمدید کنم") are named
+cases asserting RTL in both UIs; a real English description still asserts LTR
+via the majority override.
