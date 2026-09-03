@@ -113,6 +113,28 @@ class Settings:
         )
         self._s.sync()
 
+    # --- weekly-review wizard resume state ---
+    @property
+    def review_step(self) -> int:
+        try:
+            return max(0, int(self._s.value("review/step", 0)))
+        except (TypeError, ValueError):
+            return 0
+
+    @review_step.setter
+    def review_step(self, value: int) -> None:
+        self._s.setValue("review/step", int(value))
+        self._s.sync()
+
+    @property
+    def review_started(self) -> str:
+        return self._s.value("review/started", "", str) or ""
+
+    @review_started.setter
+    def review_started(self, value: str) -> None:
+        self._s.setValue("review/started", value)
+        self._s.sync()
+
     # --- colour-coding threshold ---
     @property
     def due_soon_days(self) -> int:

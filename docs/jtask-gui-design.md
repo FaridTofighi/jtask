@@ -2593,3 +2593,18 @@ an alert icon. `weekly_review`'s stuck section switched to the shared rule.
 
 `tests/test_stuck_projects.py` +6, `tests/gui/test_stuck_project_indicator.py`
 +4.
+
+## gtd-W1 — shared weekly-review steps + CLI (2026-09-03)
+
+`jtask.gtd.REVIEW_STEPS` — the single ordered step list (`inbox`, `overdue`,
+`due_this_week`, `next_actions`, `waiting_for`, `stuck_projects`, `someday`,
+`stale`). `ReviewStep.filter()` gives the live Taskwarrior filter (for the GUI
+wizard's interactive table); `ReviewStep.gather()` gives the rows (for the CLI
+and the `stuck_projects` list). `gtd.weekly_review` (the `jtask review` CLI) now
+iterates `REVIEW_STEPS` + a `_REVIEW_TITLES` map — dead `_projects_without_next
+_action` / `_stale` removed. The CLI gains `inbox` and `next_actions` sections
+(additive) and its "projects without next action" section is the shared
+`stuck_projects` rule (approved Phase-0 change).
+
+`tests/test_review_steps.py` +6 (order, CLI-covers-exactly-the-shared-steps,
+per-step membership, end-to-end CLI render).

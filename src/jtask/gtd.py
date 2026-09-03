@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import jdatetime
 from rich.table import Table
@@ -14,6 +16,7 @@ from .rtl import num, rtl
 
 __all__ = [
     "project_summary", "weekly_review", "stuck_project_names", "stuck_projects",
+    "REVIEW_STEPS", "ReviewStep", "review_step",
 ]
 
 
@@ -52,6 +55,70 @@ def stuck_project_names(tasks: list[dict]) -> set[str]:
 def stuck_projects() -> list[str]:
     """Sorted names of the stuck projects (does its own ``task export``)."""
     return sorted(stuck_project_names(taskwarrior.export(["status:pending"])))
+
+
+# --- weekly review: one step definition, two surfaces -------------
+# `jtask review` (CLI) and the GUI Weekly Review Wizard both iterate REVIEW_STEPS
+# so the sequence and the per-step data live in exactly one place.
+
+def _week_window() -> list[str]:
+    ws, we = jalali.week_range(jdatetime.date.today())
+    lo = (ws - datetime.timedelta(days=1)).togregorian()
+    hi = (we + datetime.timedelta(days=1)).togregorian()
+    return [f"due.after:{lo:%Y-%m-%d}", f"due.before:{hi:%Y-%m-%d}"]
+
+
+@dataclass(frozen=True)
+class ReviewStep:
+    key: str
+    #: the live Taskwarrior filter this step maps to (``None`` for the
+    #: aggregate-only ``stuck_projects`` step, which has no single filter).
+    filter_fn: Callable[[], list[str]] | None
+
+    def filter(self) -> list[str] | None:
+        return list(self.filter_fn()) if self.filter_fn else None
+
+    def gather(self) -> list[dict]:
+        """The rows for this step — real tasks, or synthetic project rows for
+        ``stuck_projects``."""
+        if self.key == "stuck_projects":
+            return [
+                {"description": f"پروژهٔ «{p}» گام بعدی مشخص ندارد",
+                 "project": p, "status": "pending"}
+                for p in stuck_projects()
+            ]
+        return taskwarrior.export(self.filter() or [])
+
+
+REVIEW_STEPS: list[ReviewStep] = [
+    ReviewStep("inbox", lambda: ["status:pending", "-PROJECT", "-TAGGED"]),
+    ReviewStep("overdue", lambda: ["status:pending", "+OVERDUE"]),
+    ReviewStep("due_this_week", lambda: ["status:pending", *_week_window()]),
+    ReviewStep("next_actions", lambda: [
+        "status:pending", "-BLOCKED", "-waiting", "-someday",
+        "(", "+PROJECT", "or", "+TAGGED", ")",
+    ]),
+    ReviewStep("waiting_for", lambda: ["status:pending", "+waiting"]),
+    ReviewStep("stuck_projects", None),
+    ReviewStep("someday", lambda: ["status:pending", "+someday"]),
+    ReviewStep("stale", lambda: ["status:pending", "modified.before:now-30d"]),
+]
+
+
+def review_step(key: str) -> ReviewStep:
+    return next(s for s in REVIEW_STEPS if s.key == key)
+
+
+_REVIEW_TITLES = {
+    "inbox": "۱) صندوق ورودی — پروژه یا برچسب بدهید، یا حذف کنید",
+    "overdue": "۲) کارهای عقب‌افتاده — سررسید را به‌روز کنید یا انجام دهید",
+    "due_this_week": "۳) سررسید در همین هفته",
+    "next_actions": "۴) اقدامات بعدی — آیا هرکدام واقعاً گام بعدی است؟",
+    "waiting_for": "۵) در انتظارِ دیگران (Waiting-For) — پیگیری کنید",
+    "stuck_projects": "۶) پروژه‌های بدون گام بعدی",
+    "someday": "۷) روزی/شاید (Someday-Maybe) — آیا وقتش رسیده؟",
+    "stale": "۸) کارهای راکد (بیش از ۳۰ روز بدون تغییر)",
+}
 
 
 def _overdue(task: dict) -> bool:
@@ -111,26 +178,9 @@ def weekly_review(rt, args: list[str]) -> None:
         style=f"bold {rt.theme.color('primary')}",
     )
 
-    sections = [
-        ("۱) کارهای عقب‌افتاده — سررسید را به‌روز کنید یا انجام دهید",
-         [t for t in taskwarrior.export(["status:pending"]) if _overdue(t)]),
-        ("۲) سررسید در همین هفته",
-         taskwarrior.export([
-             "status:pending",
-             f"due.after:{(ws - datetime.timedelta(days=1)).togregorian():%Y-%m-%d}",
-             f"due.before:{(we + datetime.timedelta(days=1)).togregorian():%Y-%m-%d}",
-         ])),
-        ("۳) در انتظارِ دیگران (Waiting-For) — پیگیری کنید",
-         taskwarrior.export(["status:pending", "+WAITING"])),
-        ("۴) روزی/شاید (Someday-Maybe) — آیا وقتش رسیده؟",
-         taskwarrior.export(["status:pending", "+someday"])),
-        ("۵) پروژه‌های بدون گام بعدی",
-         _projects_without_next_action(rt)),
-        ("۶) کارهای راکد (بیش از ۳۰ روز بدون تغییر)",
-         _stale(rt)),
-    ]
-
-    for title, items in sections:
+    for step in REVIEW_STEPS:
+        title = _REVIEW_TITLES[step.key]
+        items = step.gather()
         rt.console.print()
         rt.console.print(rtl(title), style=f"bold {rt.theme.color('accent')}")
         if not items:
@@ -141,28 +191,3 @@ def weekly_review(rt, args: list[str]) -> None:
         prepared = rewrite_export(items, fmt=rt.theme.date_format, date_udas=rt.date_udas,
                                   keep_gregorian=True)
         rt.out(task_table(prepared, rt.theme))
-
-
-def _projects_without_next_action(rt) -> list[dict]:
-    # A project is "stuck" when it has pending work but nothing you could pick
-    # up now (not blocked / +waiting / +someday) — the GTD board's Next-Actions
-    # rule, shared with the GUI sidebar badge and the review wizard.
-    tasks = taskwarrior.export(["status:pending"])
-    return [
-        {"description": f"پروژهٔ «{proj}» گام بعدی مشخص ندارد",
-         "project": proj, "status": "pending"}
-        for proj in sorted(stuck_project_names(tasks))
-    ]
-
-
-def _stale(rt) -> list[dict]:
-    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
-    out = []
-    for t in taskwarrior.export(["status:pending"]):
-        m = jalali._TW_TS_RE.match(t.get("modified", "") or "")
-        if not m:
-            continue
-        y, mo, d, hh, mi, ss = (int(x) for x in m.groups())
-        if datetime.datetime(y, mo, d, hh, mi, ss, tzinfo=datetime.timezone.utc) < cutoff:
-            out.append(t)
-    return out

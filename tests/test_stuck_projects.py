@@ -82,10 +82,10 @@ def test_report_projects_flags_stuck_rows(tw_env):
     assert rows["Fine"]["stuck"] is False
 
 
-def test_cli_projects_without_next_action_uses_the_shared_rule(tw_env):
+def test_review_stuck_step_uses_the_shared_rule(tw_env):
     taskwarrior.add(["actionable", "project:Ok"])
-    taskwarrior.add(["blocked-only", "project:Wedged", "+someday"])
+    taskwarrior.add(["someday-only", "project:Wedged", "+someday"])
     taskwarrior.refresh_lookups()
 
-    flagged = gtd._projects_without_next_action(rt=None)
-    assert [row["project"] for row in flagged] == ["Wedged"]
+    rows = gtd.review_step("stuck_projects").gather()
+    assert [row["project"] for row in rows] == ["Wedged"]
