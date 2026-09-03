@@ -2557,3 +2557,39 @@ built-in boards like the other column fields (the colour still shows, greyed).
 
 `tests/gui/test_board_manager.py` +4. Suite **653 passed / 1 skipped**.
 Column-colour feature complete (bc-1 schema + render · bc-2 picker).
+
+## GTD UX — Phase 0 decisions (2026-09-03)
+
+Approved after Phase 0. Three features, four milestones (gtd-S · gtd-W1 · gtd-W2
+· gtd-T).
+
+- **Triage Mode** reuses the board engine's drop-action vocabulary — a triage
+  decision is `compile_drop(column.drop)` on the current card, using the open
+  board's own droppable columns as the options, + built-in Skip / Edit… /
+  Trash. Actions needing input: one inline **Project** field for the common
+  case; **Edit…** dispatches to the full detail panel for anything richer, then
+  resumes.
+- **Stuck project** = has pending work but nothing pickable now:
+  `project:P status:pending -BLOCKED -waiting -someday` is empty (the GTD board's
+  Next-Actions rule). Computed by `jtask.gtd.stuck_project_names(tasks)` from an
+  already-fetched task list — **zero extra `task export`** — folded into
+  `report_projects` and recomputed on every `refresh_all`.
+- **`jtask review` exists** (`cli.cmd_review` → `gtd.weekly_review`). Shared
+  logic: `gtd.stuck_project_names` now backs the CLI's "projects without next
+  action" section too (was a `+next`-tag heuristic — **deliberate CLI change,
+  approved**); gtd-W1 adds `gtd.REVIEW_STEPS` as the single step definition for
+  the CLI and the GUI wizard.
+- **Wizard is resumable** — `review/step` + `review/started` in `Settings`;
+  Resume/Start-over prompt within a 48 h window.
+
+## gtd-S — stuck-project indicator (2026-09-03)
+
+`jtask.gtd.stuck_project_names(tasks)` / `stuck_projects()`; `reports.
+report_projects` rows gain `stuck: bool`. Sidebar project rows render a
+`blocked`-role dot badge on the folder icon (`_badged_icon`) + a tooltip;
+right-click → **"Add a next action…"** (`addNextActionRequested` →
+`_open_task_form("add", project=…)`). The Projects report marks stuck rows with
+an alert icon. `weekly_review`'s stuck section switched to the shared rule.
+
+`tests/test_stuck_projects.py` +6, `tests/gui/test_stuck_project_indicator.py`
++4.

@@ -18,6 +18,7 @@ _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
 _SECTION_ROLE = Qt.ItemDataRole.UserRole + 6
 _COLOUR_ROLE = Qt.ItemDataRole.UserRole + 7
+_STUCK_ROLE = Qt.ItemDataRole.UserRole + 8
 UUID_MIME = "application/x-jtask-uuids"
 
 
@@ -30,6 +31,23 @@ def _colour_dot(hex_colour: str, size: int = 10) -> QIcon:
     p.setPen(Qt.PenStyle.NoPen)
     p.setBrush(QColor(hex_colour))
     p.drawEllipse(0, 0, size - 1, size - 1)
+    p.end()
+    return QIcon(pm)
+
+
+def _badged_icon(base: QIcon, badge_hex: str, size: int = 16) -> QIcon:
+    """*base* with a small filled dot in the bottom-right — the stuck-project
+    marker, in the ``blocked`` state colour."""
+    pm = base.pixmap(size, size)
+    if pm.isNull():
+        pm = QPixmap(size, size)
+        pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(badge_hex))
+    d = max(6, size // 2)
+    p.drawEllipse(size - d, size - d, d - 1, d - 1)
     p.end()
     return QIcon(pm)
 
@@ -87,6 +105,7 @@ class Sidebar(QTreeWidget):
     boardManageRequested = pyqtSignal()
     savedFilterDeleteRequested = pyqtSignal(str)  # name
     savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
+    addNextActionRequested = pyqtSignal(str)  # project — open Add Task pre-filled
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -167,9 +186,15 @@ class Sidebar(QTreeWidget):
             glyph = item.data(0, _ICON_ROLE)
             hx = to_hex(tw) if tw else None
             if hx:
-                item.setIcon(0, _colour_dot(hx))
+                base = _colour_dot(hx)
             elif glyph:
-                item.setIcon(0, icons.icon(glyph, "text_muted"))
+                base = icons.icon(glyph, "text_muted")
+            else:
+                base = None
+            if base is not None:
+                if item.data(0, _STUCK_ROLE):
+                    base = _badged_icon(base, pal["blocked"])
+                item.setIcon(0, base)
             if item.data(0, _SECTION_ROLE):
                 item.setForeground(0, muted)
         self._hint_colour = muted
@@ -214,6 +239,9 @@ class Sidebar(QTreeWidget):
             if tw:
                 item.setData(0, _COLOUR_ROLE, tw)
                 item.setToolTip(0, t("project_color.tooltip", color=tw))
+            if row.get("stuck"):
+                item.setData(0, _STUCK_ROLE, True)
+                item.setToolTip(0, t("sidebar.project_stuck.tip"))
         self.retint()
 
     def populate_tags(self, rows: list[dict]) -> None:
@@ -361,9 +389,13 @@ class Sidebar(QTreeWidget):
             act_color_clear = menu.addAction(t("sidebar.menu.project_color_clear"))
             act_color_clear.setEnabled(bool(current))
             menu.addSeparator()
+            act_next = menu.addAction(t("sidebar.menu.project_add_next"))
+            menu.addSeparator()
             act_delete = menu.addAction(t("sidebar.menu.project_delete"))
             chosen = menu.exec(self.viewport().mapToGlobal(pos))
-            if chosen == act_rename:
+            if chosen == act_next:
+                self.addNextActionRequested.emit(name)
+            elif chosen == act_rename:
                 new, ok = QInputDialog.getText(
                     self, t("sidebar.project_rename.title"),
                     t("sidebar.project_rename.label", project=name), text=name,

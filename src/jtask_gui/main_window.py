@@ -472,6 +472,9 @@ class MainWindow(QMainWindow):
         self._sidebar.projectDeleteRequested.connect(self._delete_project)
         self._sidebar.projectColorRequested.connect(self._set_project_color)
         self._sidebar.projectColorClearRequested.connect(self._clear_project_color)
+        self._sidebar.addNextActionRequested.connect(
+            lambda proj: self._open_task_form("add", project=proj)
+        )
         self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
         self._sidebar.boardActivated.connect(self._show_board)
         self._sidebar.boardManageRequested.connect(self._open_board_manager)
@@ -946,13 +949,16 @@ class MainWindow(QMainWindow):
         self._reveal_console()
         self._console.prefill(text)
 
-    def _open_task_form(self, mode: str) -> None:
+    def _open_task_form(self, mode: str, *, project: str | None = None) -> None:
         from .widgets.task_form import TaskFormDialog
 
         dlg = TaskFormDialog(
             mode, taskwarrior.list_projects(), taskwarrior.list_tags(), self,
             settings=self.settings,
         )
+        if project:
+            dlg._project.setCurrentText(project)
+            dlg._description.setFocus()
         if not dlg.exec():
             return
         args = dlg.args()

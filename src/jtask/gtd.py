@@ -12,7 +12,46 @@ from . import jalali, taskwarrior
 from .render.tables import message_panel, task_table
 from .rtl import num, rtl
 
-__all__ = ["project_summary", "weekly_review"]
+__all__ = [
+    "project_summary", "weekly_review", "stuck_project_names", "stuck_projects",
+]
+
+
+def _dep_list(task: dict) -> list[str]:
+    deps = task.get("depends") or []
+    if isinstance(deps, str):
+        return [d for d in deps.split(",") if d]
+    return list(deps)
+
+
+def stuck_project_names(tasks: list[dict]) -> set[str]:
+    """Projects with pending work but **no next action you could pick up now** —
+    nothing pending that isn't blocked, ``+waiting`` or ``+someday``. This is the
+    GTD board's *Next Actions* definition; the sidebar badge and the wizard both
+    use it, computed from an already-fetched task list so it costs no extra
+    ``task export``.
+    """
+    pending = [t for t in tasks if t.get("status") == "pending"]
+    pending_uuids = {t.get("uuid") for t in pending}
+    with_project: set[str] = set()
+    has_next: set[str] = set()
+    for t in pending:
+        proj = t.get("project")
+        if not proj:
+            continue
+        with_project.add(proj)
+        tags = t.get("tags") or []
+        if "waiting" in tags or "someday" in tags:
+            continue
+        if any(d in pending_uuids for d in _dep_list(t)):   # blocked
+            continue
+        has_next.add(proj)
+    return with_project - has_next
+
+
+def stuck_projects() -> list[str]:
+    """Sorted names of the stuck projects (does its own ``task export``)."""
+    return sorted(stuck_project_names(taskwarrior.export(["status:pending"])))
 
 
 def _overdue(task: dict) -> bool:
@@ -105,17 +144,15 @@ def weekly_review(rt, args: list[str]) -> None:
 
 
 def _projects_without_next_action(rt) -> list[dict]:
+    # A project is "stuck" when it has pending work but nothing you could pick
+    # up now (not blocked / +waiting / +someday) — the GTD board's Next-Actions
+    # rule, shared with the GUI sidebar badge and the review wizard.
     tasks = taskwarrior.export(["status:pending"])
-    by_project: dict[str, list[dict]] = {}
-    for t in tasks:
-        if t.get("project"):
-            by_project.setdefault(t["project"], []).append(t)
-    flagged = []
-    for proj, items in by_project.items():
-        if not any("next" in (t.get("tags") or []) for t in items):
-            flagged.append({"description": f"پروژهٔ «{proj}» گام بعدی مشخص ندارد",
-                            "project": proj, "status": "pending"})
-    return flagged
+    return [
+        {"description": f"پروژهٔ «{proj}» گام بعدی مشخص ندارد",
+         "project": proj, "status": "pending"}
+        for proj in sorted(stuck_project_names(tasks))
+    ]
 
 
 def _stale(rt) -> list[dict]:

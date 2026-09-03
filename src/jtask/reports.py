@@ -356,7 +356,13 @@ def report_completed(filter_args=None): return _list(["status:completed"], filte
 
 
 def report_projects(filter_args=None) -> list[dict]:
-    return shape_projects(_all(filter_args))
+    tasks = _all(filter_args)
+    rows = shape_projects(tasks)
+    from .gtd import stuck_project_names
+    stuck = stuck_project_names(tasks)
+    for r in rows:
+        r["stuck"] = r["project"] in stuck
+    return rows
 
 
 def report_tags(filter_args=None) -> list[dict]:

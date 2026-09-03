@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from .. import fmt
+from .. import fmt, icons
 from ..i18n import t
 
 
@@ -70,7 +70,11 @@ class ProjectsReport(_BaseTableReport):
         self.setSortingEnabled(False)
         self.setRowCount(len(rows))
         for r, row in enumerate(rows):
-            self.setItem(r, 0, QTableWidgetItem(row["project"]))
+            name_item = QTableWidgetItem(row["project"])
+            if row.get("stuck"):
+                name_item.setIcon(icons.icon("overdue", "blocked"))
+                name_item.setToolTip(t("sidebar.project_stuck.tip"))
+            self.setItem(r, 0, name_item)
             self.setItem(r, 1, _NumItem(row.get("open", 0)))
             self.setItem(r, 2, _NumItem(row.get("waiting", 0)))
             self.setItem(r, 3, _NumItem(row.get("overdue", 0)))
