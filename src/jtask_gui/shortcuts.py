@@ -31,6 +31,7 @@ SHORTCUTS: list[Shortcut] = [
     Shortcut("Ctrl+F", "sc.focus_filter", "sc.cat.navigate"),
     Shortcut("Ctrl+B", "sc.board", "sc.cat.navigate"),
     Shortcut("Ctrl+R", "sc.review", "sc.cat.navigate"),
+    Shortcut("Ctrl+Shift+I", "sc.triage", "sc.cat.navigate"),
     Shortcut("Ctrl+`", "sc.console", "sc.cat.navigate"),
     Shortcut("Ctrl+1", "sc.view_today", "sc.cat.navigate"),
     Shortcut("Ctrl+2", "sc.view_next", "sc.cat.navigate"),

@@ -381,6 +381,17 @@ QListWidget#ReviewStuckList {
     border-radius: @r_md@;
 }
 
+/* ============================ triage mode =============== */
+QWidget#TriageView { background-color: @bg@; }
+QWidget#TriageCard {
+    background-color: @surface@;
+    border: 1px solid @border@;
+    border-radius: @r_lg@;
+}
+QPushButton#TriageColButton { padding: @sp_8@ @sp_16@; font-weight: 700; }
+QToolButton#BoardColTriage { border: none; background: transparent; padding: 0; }
+QPushButton#DangerButton { color: @overdue@; }
+
 /* ============================ shortcut cheat sheet ======= */
 QDialog#ShortcutSheet { background-color: @elevated@; }
 QScrollArea#SheetScroll { background: transparent; border: none; }

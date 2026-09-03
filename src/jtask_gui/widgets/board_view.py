@@ -17,12 +17,14 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QScrollArea,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from jtask import reports
 
+from .. import icons
 from .. import tokens as tok
 from ..boards import Board, drop_label
 from ..i18n import t
@@ -31,7 +33,8 @@ from .board_card import UUID_MIME, BoardCard
 
 
 class _Column(QFrame):
-    dropped = pyqtSignal(str, int)  # uuid, column index
+    dropped = pyqtSignal(str, int)     # uuid, column index
+    triageRequested = pyqtSignal(int)  # column index — "process one by one"
 
     def __init__(self, index: int, title: str, subtitle: str, droppable: bool,
                  color: str | None = None, parent=None) -> None:
@@ -57,9 +60,19 @@ class _Column(QFrame):
 
         head = QVBoxLayout()
         head.setSpacing(0)
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
         self._title = QLabel(title)
         self._title.setObjectName("BoardColTitle")
-        head.addWidget(self._title)
+        title_row.addWidget(self._title, 1)
+        self._triage_btn = QToolButton()
+        self._triage_btn.setObjectName("BoardColTriage")
+        self._triage_btn.setIcon(icons.icon("triage", "text_muted"))
+        self._triage_btn.setToolTip(t("triage.start.tip"))
+        self._triage_btn.setAutoRaise(True)
+        self._triage_btn.clicked.connect(lambda: self.triageRequested.emit(self.index))
+        title_row.addWidget(self._triage_btn, 0)
+        head.addLayout(title_row)
         if subtitle:
             sub = QLabel(subtitle)
             sub.setObjectName("BoardColSub")
@@ -118,6 +131,7 @@ class BoardView(QWidget):
     boardDrop = pyqtSignal(dict, dict)   # (task, drop_config)
     taskActivated = pyqtSignal(str)
     starToggled = pyqtSignal(str, bool)
+    triageRequested = pyqtSignal(int)    # column index
 
     def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
@@ -191,6 +205,7 @@ class BoardView(QWidget):
             droppable = col.drop.get("type", "none") != "none"
             column = _Column(i, col.title, drop_label(col.drop), droppable, col.color)
             column.dropped.connect(self._on_dropped)
+            column.triageRequested.connect(self.triageRequested)
             self._cols_lay.addWidget(column, 1)
             self._columns.append(column)
         self._cols_lay.addStretch(0)

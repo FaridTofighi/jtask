@@ -2631,3 +2631,30 @@ i18n: `review.*` (`step.<key>` / `hint.<key>` ×9, nav, resume prompt),
 rebaselined (5 new wizard strings). `shortcuts.py` +`Ctrl+R`.
 
 `tests/gui/test_review_wizard.py` +8. Suite **676 passed / 1 skipped**.
+
+## gtd-T — Triage Mode (2026-09-03)
+
+`widgets/triage_view.TriageView` — a new `_content` stack page (index 3),
+entered from a per-column button on the board (`BoardColTriage` →
+`BoardView.triageRequested(int)`), the toolbar `action.triage`, the command
+palette, or **Ctrl+Shift+I**.
+
+Reuses the board engine's drop vocabulary: one button per **droppable column of
+the current board** (built-in GTD → Next Actions / Waiting For / Someday /
+Done; `compile_drop`-`None` columns like Inbox are skipped). Pressing one emits
+`decision(uuid, verb, mods)` → `MainWindow._triage_decision` → `_write(...,
+refresh=False, then=self._triage.advance)` — same undoable path as a drag, minus
+the full board reload per card. Built-ins: **Skip** (advance), **Edit…**
+(`_content` → index 0, load the detail panel, resume + advance on close via
+`_detail.closed`), **Trash** (the standard destructive-confirm → delete). An
+inline **Project** field (`make_token_completer`) covers the common "organise
+into a project" case. Counter «۳ از ۱۲» (`fmt.num`); empty / finished →
+`#EmptyState` completion message. Exit restores the pre-triage view + one
+`refresh_all`.
+
+`_write` gained `refresh=` / `then=` (additive). i18n `triage.*` /
+`action.triage*` / `sc.triage`; fa snapshot rebaselined (8 strings);
+`shortcuts.py` +Ctrl+Shift+I; `icons` +`triage` / +`review`.
+
+`tests/gui/test_triage_mode.py` +11. Suite **687 passed / 1 skipped**. GTD-UX
+mission complete (gtd-S · gtd-W1 · gtd-W2 · gtd-T).

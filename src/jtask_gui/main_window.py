@@ -140,9 +140,13 @@ class MainWindow(QMainWindow):
         self._detail_host.setVisible(False)
         self._split.setSizes([1_000_000, 0])
 
+        from .widgets.triage_view import TriageView
+
+        self._triage = TriageView()
         self._content.addWidget(self._split)     # index 0: tasks (table)
         self._content.addWidget(self._reports)   # index 1: reports & charts
         self._content.addWidget(self._board)     # index 2: board engine
+        self._content.addWidget(self._triage)    # index 3: triage mode
 
         # A gutter of the window background around the content so the task
         # table / reports read as an elevated card, distinct from the chrome
@@ -292,6 +296,13 @@ class MainWindow(QMainWindow):
         self._review_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
         self._review_action.triggered.connect(self._open_review)
         row2.addAction(self._review_action)
+
+        self._triage_action = QAction(icons.icon("triage"), t("action.triage"), self)
+        self._triage_action.setToolTip(t("action.triage.tip"))
+        self._triage_action.setShortcut(QKeySequence("Ctrl+Shift+I"))
+        self._triage_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+        self._triage_action.triggered.connect(lambda: self._start_triage())
+        row2.addAction(self._triage_action)
 
         row2.addSeparator()
 
@@ -454,6 +465,89 @@ class MainWindow(QMainWindow):
             self._on_view_selected(self._pre_review_spec)
         self._toast.show_message(t("msg.review_closed"))
 
+    # --- triage mode -----------------------------------------
+
+    def _start_triage(self, column_index: int | None = None) -> None:
+        import shlex
+
+        from .boards import builtin_board
+
+        board = self._board.current_board() or builtin_board("gtd")
+        if column_index is not None and 0 <= column_index < len(board.columns):
+            col = board.columns[column_index]
+        else:  # default: the first "view only" column (Inbox), else the first
+            col = next(
+                (c for c in board.columns if c.drop.get("type", "none") == "none"),
+                board.columns[0] if board.columns else None,
+            )
+        if col is None:
+            return
+        tokens = shlex.split(col.filter)
+
+        def loaded(rows: list[dict]) -> None:
+            self._triage.set_projects(taskwarrior.list_projects())
+            self._triage.start(board, rows)
+            self._pre_triage_spec = dict(self._view_spec)
+            self._content.setCurrentIndex(3)
+
+        self._begin_busy(t("status.loading"))
+        submit(
+            functools.partial(reports.report_list, tokens),
+            lambda rows: (self._end_busy(), loaded(rows)),
+            self._on_load_error,
+        )
+
+    def _triage_decision(self, uuid: str, verb: str, mods: list) -> None:
+        self._write(
+            functools.partial(taskwarrior.command, [uuid], verb, mods),
+            t("msg.task_updated"), refresh=False, then=self._triage.advance,
+        )
+
+    def _triage_project(self, uuid: str, project: str) -> None:
+        self._write(
+            functools.partial(taskwarrior.command, [uuid], "modify", [f"project:{project}"]),
+            t("msg.task_updated"), refresh=False, then=self._triage.advance,
+        )
+
+    def _triage_delete(self, uuid: str) -> None:
+        if not confirm(
+            self,
+            title=t("confirm.delete.title"),
+            body=t("confirm.delete.body"),
+            count=1,
+            destructive=True,
+            confirm_label=t("confirm.delete.ok"),
+        ):
+            return
+        self._write(
+            functools.partial(taskwarrior.command, [uuid], "delete"),
+            t("msg.tasks_deleted"), refresh=False, then=self._triage.advance,
+        )
+
+    def _triage_edit(self, uuid: str) -> None:
+        self._return_to_triage = True
+        self._content.setCurrentIndex(0)
+        submit(
+            functools.partial(taskwarrior.export, [uuid]),
+            lambda rows: self._show_detail(rows[0]) if rows else None,
+            self._error,
+        )
+
+    def _after_triage_edit(self) -> None:
+        if not self._return_to_triage:
+            return
+        self._return_to_triage = False
+        self._content.setCurrentIndex(3)
+        self._triage.advance()
+
+    def _exit_triage(self) -> None:
+        self._return_to_triage = False
+        self._content.setCurrentIndex(0)
+        if getattr(self, "_pre_triage_spec", None) is not None:
+            self._on_view_selected(self._pre_triage_spec)
+        else:
+            self.refresh_all()
+
     def _build_tray(self) -> None:
         from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
@@ -581,6 +675,7 @@ class MainWindow(QMainWindow):
         self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
+        self._detail.closed.connect(self._after_triage_edit)
         self._detail.saveRequested.connect(self._save_task)
         self._detail.starToggled.connect(self._toggle_star)
         self._model.cellEdited.connect(self._inline_edit)
@@ -588,6 +683,14 @@ class MainWindow(QMainWindow):
         self._board.boardDrop.connect(self._board_drop)
         self._board.starToggled.connect(self._toggle_star)
         self._board.taskActivated.connect(self._open_card)
+        self._board.triageRequested.connect(self._start_triage)
+
+        self._triage.decision.connect(self._triage_decision)
+        self._triage.projectAssigned.connect(self._triage_project)
+        self._triage.editRequested.connect(self._triage_edit)
+        self._triage.deleteRequested.connect(self._triage_delete)
+        self._triage.exited.connect(self._exit_triage)
+        self._return_to_triage = False
 
         from PyQt6.QtGui import QShortcut
 
@@ -1465,7 +1568,7 @@ class MainWindow(QMainWindow):
         if self._pending_ops == 0 and self._op_status.state == "running":
             self._op_status.idle()
 
-    def _write(self, fn, success_msg: str) -> None:
+    def _write(self, fn, success_msg: str, *, refresh: bool = True, then=None) -> None:
         self._begin_busy(t("op.applying"))
 
         def done(_result):
@@ -1473,7 +1576,10 @@ class MainWindow(QMainWindow):
             self._op_status.success(success_msg)
             self.statusBar().showMessage(success_msg, 2500)
             self._toast.show_message(success_msg)
-            self.refresh_all()
+            if refresh:
+                self.refresh_all()
+            if then is not None:
+                then()
 
         submit(fn, done, self._op_failed)
 

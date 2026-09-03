@@ -147,7 +147,7 @@ inside the Recurrence field; "Templates ▾" is in the dialog header.
 | column accent | رنگ ستون | Column colour | an optional per-column accent, a curated theme role (`boards.COLUMN_ACCENT_ROLES`), rendered as a 3 px strip. Colour names: فیروزه‌ای/بنفش/سبز/کهربایی/قرمز/صورتی/خاکستری. |
 | stuck project | پروژهٔ بدون گام بعدی | Stuck project | a project with pending work but **no next action you could pick up now** — nothing pending that isn't blocked, `+waiting` or `+someday`. `gtd.stuck_project_names`. Sidebar badge in the `blocked` state colour. |
 | next action | گام بعدی | Next action | the single concrete physical step to move a project forward — the GTD term. |
-| triage mode | حالت پردازش | Triage Mode | a focused one-card-at-a-time pass over the Inbox; each decision applies a board column's drop action and advances. Entry: «شروع پردازش». |
+| triage mode | پردازش (صندوق ورودی) | Triage Mode | a focused one-card-at-a-time pass over a board column (usually the Inbox); each decision applies another column's drop action and advances. Skip / Edit… / Trash are built in; an inline Project field covers "organise into a project". `action.triage`, `triage.*`, Ctrl+Shift+I. |
 | weekly review | مرور هفتگی | Weekly Review | the guided pass through Inbox → Overdue → Next Actions → Waiting For → this week → stuck projects → Someday → stale. `gtd.REVIEW_STEPS`, shared by `jtask review` and the GUI wizard. |
 
 The GTD board is **not** engine code — it is the first entry in
