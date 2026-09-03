@@ -2658,3 +2658,14 @@ into a project" case. Counter «۳ از ۱۲» (`fmt.num`); empty / finished →
 
 `tests/gui/test_triage_mode.py` +11. Suite **687 passed / 1 skipped**. GTD-UX
 mission complete (gtd-S · gtd-W1 · gtd-W2 · gtd-T).
+
+## Terminology — «یک‌روزی / شاید» for Someday/Maybe (2026-09-03)
+
+Persian «روزی» alone reads as "sustenance" (رزق و روزی), not "someday". The GTD
+Someday/Maybe label now reads **«یک‌روزی / شاید»** (یک + ZWNJ + روزی)
+everywhere. Not one shared key — the fix touched **two** GUI catalog keys
+(`board.gtd.someday` → the board column header + Triage column button;
+`review.step.someday` → the wizard step) **plus** three Persian-first CLI
+literals (`cli.py` ×2, `gtd._REVIEW_TITLES`) and the docs (glossary, README).
+`tests/gui/test_d5_terminology_widgets.py` pins the exact GUI strings + a
+«شاید» ⇒ «یک‌روزی» guard; `tests/test_review_steps.py` pins the CLI title.

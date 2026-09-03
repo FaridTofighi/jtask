@@ -229,7 +229,7 @@ def cmd_waiting(rt: Runtime, args: list[str]) -> int:
 
 def cmd_someday(rt: Runtime, args: list[str]) -> int:
     tasks = taskwarrior.export(_rw(rt, ["+someday", "status:pending", *args]))
-    _emit_tasks(rt, tasks, title="روزی/شاید (Someday-Maybe)")
+    _emit_tasks(rt, tasks, title="یک‌روزی/شاید (Someday-Maybe)")
     return 0
 
 
@@ -345,7 +345,7 @@ jtask — پوستهٔ فارسی/جلالی برای Taskwarrior
   start/stop شروع/توقف زمان‌سنجی
   annotate   افزودن یادداشت
   waiting    نمای «در انتظارِ» (GTD)
-  someday    نمای «روزی/شاید» (GTD)
+  someday    نمای «یک‌روزی/شاید» (GTD)
   projects   خلاصهٔ پروژه‌ها
   calendar   تقویم جلالی کارها
   review     مرور هفتگی هدایت‌شده (GTD)

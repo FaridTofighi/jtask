@@ -143,7 +143,7 @@ inside the Recurrence field; "Templates ▾" is in the dialog header.
 | column | ستون | Column | one board column: a title + a **raw Taskwarrior filter** (the M3 `FilterBuilder` string) + an optional **drop action**. |
 | drop action | کنش رهاسازی | Drop action | what a card dragged **into** this column does, in real `task` terms — one of: view only / add·remove tags / set an attribute / set a UDA / a lifecycle verb (`board.drop.*`, `board.verb.*`). Never an open scripting surface. |
 | preset | پیش‌فرض | Preset | a built-in board shipped in code (`BUILTIN_BOARDS`) — **GTD** and **Kanban**. Usable as-is or duplicated to edit. |
-| GTD board columns | صندوق ورودی · اقدامات بعدی · در انتظار · روزی/شاید · انجام‌شده | Inbox · Next Actions · Waiting For · Someday/Maybe · Done | uses the project's existing `+waiting` / `+someday` conventions, not new tags. Inbox = pending, no project, no tags. |
+| GTD board columns | صندوق ورودی · اقدامات بعدی · در انتظار · یک‌روزی/شاید · انجام‌شده | Inbox · Next Actions · Waiting For · Someday/Maybe · Done | uses the project's existing `+waiting` / `+someday` conventions, not new tags. Inbox = pending, no project, no tags. |
 | column accent | رنگ ستون | Column colour | an optional per-column accent, a curated theme role (`boards.COLUMN_ACCENT_ROLES`), rendered as a 3 px strip. Colour names: فیروزه‌ای/بنفش/سبز/کهربایی/قرمز/صورتی/خاکستری. |
 | stuck project | پروژهٔ بدون گام بعدی | Stuck project | a project with pending work but **no next action you could pick up now** — nothing pending that isn't blocked, `+waiting` or `+someday`. `gtd.stuck_project_names`. Sidebar badge in the `blocked` state colour. |
 | next action | گام بعدی | Next action | the single concrete physical step to move a project forward — the GTD term. |

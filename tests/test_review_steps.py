@@ -37,6 +37,11 @@ def test_the_cli_renders_exactly_the_shared_steps():
     assert set(gtd._REVIEW_TITLES) == {s.key for s in gtd.REVIEW_STEPS}
 
 
+def test_cli_someday_title_reads_yek_roozi_not_bare_roozi():
+    # «روزی» alone = "sustenance"; the someday concept is «یک‌روزی/شاید».
+    assert "یک‌روزی" in gtd._REVIEW_TITLES["someday"]
+
+
 def test_every_step_but_stuck_projects_maps_to_a_live_filter():
     for s in gtd.REVIEW_STEPS:
         if s.key == "stuck_projects":

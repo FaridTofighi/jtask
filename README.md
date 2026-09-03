@@ -48,7 +48,7 @@ jtask theme set روز                     # تغییر تم به روشن
 | `start` / `stop` | شروع/توقف زمان‌سنجی |
 | `annotate` | افزودن یادداشت: `jtask annotate 2 "پیگیری با ایمیل"` |
 | `waiting` | نمای «در انتظارِ» (GTD) — کارهای `+WAITING` |
-| `someday` | نمای «روزی/شاید» (GTD) — کارهای `+someday` |
+| `someday` | نمای «یک‌روزی/شاید» (GTD) — کارهای `+someday` |
 | `projects` | خلاصهٔ پروژه‌ها با شمار باز/مسدود/عقب‌افتاده |
 | `calendar` | تقویم ماه جلالی (`jtask calendar 1403.07`)؛ `--week` برای نمای هفته |
 | `review` | مرور هفتگی هدایت‌شدهٔ GTD |

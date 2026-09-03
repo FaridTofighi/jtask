@@ -35,6 +35,21 @@ def test_no_critical_wording_anywhere():
                 assert "بحرانی" not in v and "Critical" not in v, k
 
 
+# «روزی» on its own reads as "sustenance" (رزق و روزی) in Persian, not "someday".
+# The GTD Someday/Maybe concept is «یک‌روزی / شاید» everywhere (یک + ZWNJ + روزی).
+_YEK_ROOZI = "یک‌روزی"
+
+
+def test_someday_maybe_wording_is_yek_roozi():
+    for key in ("board.gtd.someday", "review.step.someday"):
+        assert fa_cat.CATALOG[key] == f"{_YEK_ROOZI} / شاید", key
+        assert en_cat.CATALOG[key] == "Someday / Maybe", key
+    # and the bare «روزی/شاید» form can't creep back into any fa value
+    for k, v in fa_cat.CATALOG.items():
+        if "شاید" in v:
+            assert _YEK_ROOZI in v, k
+
+
 def test_sync_path_is_bidi_isolated(qapp, qtbot, tw_env, monkeypatch):
     from jtask_gui.settings import Settings
     from jtask_gui.widgets import sync_dialog
