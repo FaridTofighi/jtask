@@ -2608,3 +2608,26 @@ _action` / `_stale` removed. The CLI gains `inbox` and `next_actions` sections
 
 `tests/test_review_steps.py` +6 (order, CLI-covers-exactly-the-shared-steps,
 per-step membership, end-to-end CLI render).
+
+## gtd-W2 — Weekly Review Wizard (2026-09-03)
+
+`widgets/review_wizard.ReviewWizard` in a **top dock** (`ReviewDock`, non-modal
+like the console). `STEP_KEYS` = the 8 shared `gtd.REVIEW_STEPS` + a GUI-only
+`reports` glance. Per step it emits `stepEntered`; `MainWindow._on_review_step`
+loads that step's `gtd.review_step(key).filter()` into the **real task table**
+(interactive, undoable — the user acts on tasks normally through `_write`). The
+`stuck_projects` step renders its list in the dock (double-click → Add Task
+pre-filled) while the table shows the pickable next actions.
+
+Navigation: a `SegmentedControl` of step numbers ۱…۹ + Back / Next / Finish +
+Exit. **Resumable** — `Settings.review_step` / `review_started`; on `Ctrl+R`
+(also toolbar `action.review` + command palette) a Resume/Start-over prompt
+appears when the last review was < 48 h ago, otherwise it starts at step 1.
+Exiting (button, closing the dock, or Finish) clears the resume state and
+restores the pre-review view.
+
+i18n: `review.*` (`step.<key>` / `hint.<key>` ×9, nav, resume prompt),
+`dock.review`, `action.review*`, `sc.review`, `msg.review_closed`; fa snapshot
+rebaselined (5 new wizard strings). `shortcuts.py` +`Ctrl+R`.
+
+`tests/gui/test_review_wizard.py` +8. Suite **676 passed / 1 skipped**.

@@ -373,6 +373,14 @@ QLabel#CardTitle { color: @text@; }
 QLabel#CardMeta { color: @text_muted@; font-size: @fs_xs@; }
 QToolButton#CardStar { border: none; background: transparent; padding: 0; }
 
+/* ============================ weekly review wizard ====== */
+QWidget#ReviewWizard { background-color: @bg_alt@; }
+QListWidget#ReviewStuckList {
+    background-color: @surface@;
+    border: 1px solid @border_soft@;
+    border-radius: @r_md@;
+}
+
 /* ============================ shortcut cheat sheet ======= */
 QDialog#ShortcutSheet { background-color: @elevated@; }
 QScrollArea#SheetScroll { background: transparent; border: none; }

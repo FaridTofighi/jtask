@@ -57,6 +57,7 @@ _MAP = {
     "star_outline": "mdi.star-outline",
     "folder": "mdi.folder-outline",
     "board": "mdi.view-column-outline",
+    "review": "mdi.clipboard-check-outline",
     "add": "mdi.plus-circle-outline",
     "clear": "mdi.close-circle-outline",
     "calendar": "mdi.calendar-blank-outline",
