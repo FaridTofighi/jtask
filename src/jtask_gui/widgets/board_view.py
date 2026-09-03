@@ -34,7 +34,7 @@ class _Column(QFrame):
     dropped = pyqtSignal(str, int)  # uuid, column index
 
     def __init__(self, index: int, title: str, subtitle: str, droppable: bool,
-                 parent=None) -> None:
+                 color: str | None = None, parent=None) -> None:
         super().__init__(parent)
         self.index = index
         self._droppable = droppable
@@ -45,6 +45,16 @@ class _Column(QFrame):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(*tok.INSET_TIGHT)
         lay.setSpacing(tok.SP_6)
+
+        # accent strip — a curated theme role (boards.COLUMN_ACCENT_ROLES) drawn
+        # via QSS tokens, so it re-colours itself on a theme switch. Hidden when
+        # the column has no colour, leaving the neutral appearance untouched.
+        self._accent = QFrame()
+        self._accent.setObjectName("BoardColAccent")
+        self._accent.setProperty("accent", color or "")
+        self._accent.setVisible(bool(color))
+        lay.addWidget(self._accent)
+
         head = QVBoxLayout()
         head.setSpacing(0)
         self._title = QLabel(title)
@@ -179,7 +189,7 @@ class BoardView(QWidget):
 
         for i, col in enumerate(board.columns):
             droppable = col.drop.get("type", "none") != "none"
-            column = _Column(i, col.title, drop_label(col.drop), droppable)
+            column = _Column(i, col.title, drop_label(col.drop), droppable, col.color)
             column.dropped.connect(self._on_dropped)
             self._cols_lay.addWidget(column, 1)
             self._columns.append(column)

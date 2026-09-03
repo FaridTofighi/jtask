@@ -2520,3 +2520,24 @@ Note: on this box Qt 6.11.2 XCB does not serialise `_NET_WM_ICON` for a
 file-backed `QIcon` (only trivial solid pixmaps) — irrelevant under GNOME once
 the `.desktop` entry is installed, but it means non-`.desktop` WMs (i3/XFCE)
 still rely on that entry too.
+
+## Board column colours — bc-1 (schema + render) (2026-09-03)
+
+Each board column can carry an optional **accent colour**, chosen from a curated
+set of theme *roles* (`boards.COLUMN_ACCENT_ROLES` = primary / accent / success
+/ due_soon / overdue / blocked / waiting) rather than raw hex — every role
+already passes the WCAG-AA gate in both palettes, so a colour picked in dark
+mode stays correct in light mode.
+
+- `boards.Column` gains `color: str | None`; `to_dict` omits it when unset
+  (existing boards stay byte-identical), `from_dict` is lenient (unknown role →
+  `None`), `validate` is strict (`board.err.color`).
+- `board_view._Column` renders it as a 3 px strip above the header
+  (`QFrame#BoardColAccent[accent="<role>"]` → `background: @<role>@`), hidden
+  when no colour is set — the neutral appearance is untouched.
+- Built-in defaults (carried into any "from preset" copy, so overridable): GTD
+  Next `primary` · Waiting `waiting` · Someday `accent` · Done `success`;
+  Kanban Doing `primary` · Done `success`.
+
+`tests/gui/test_board_engine.py` +6. Suite **649 passed / 1 skipped**. bc-2
+adds the swatch picker to the column editor.

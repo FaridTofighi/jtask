@@ -24,6 +24,20 @@ DROP_TYPES = ("none", "tags", "attr", "uda", "verb")
 ATTR_FIELDS = ("project", "priority")
 VERBS = ("start", "stop", "done", "reopen")
 
+# --- column accent colours ------------------------------------------
+# A curated set of *theme roles* (not raw hex): each already resolves per
+# theme and passes the WCAG-AA contrast gate in `tests/gui/test_theme.py`, so a
+# colour chosen in dark mode stays correct in light mode. Rendered as a thin
+# strip on the column header (`QFrame#BoardColAccent[accent="<role>"]`).
+COLUMN_ACCENT_ROLES = (
+    "primary", "accent", "success", "due_soon", "overdue", "blocked", "waiting",
+)
+
+
+def normalize_color(value: object) -> str | None:
+    """A known accent role, or ``None`` (no accent) for anything else."""
+    return value if value in COLUMN_ACCENT_ROLES else None
+
 
 def drop_label(drop: dict) -> str:
     """A short human description of a drop action, for the column subtitle."""
@@ -75,14 +89,19 @@ class Column:
     title: str
     filter: str = ""
     drop: dict = field(default_factory=lambda: {"type": "none"})
+    color: str | None = None          # an accent role, or None for the neutral look
 
     def to_dict(self) -> dict:
-        return {"title": self.title, "filter": self.filter, "drop": dict(self.drop)}
+        d = {"title": self.title, "filter": self.filter, "drop": dict(self.drop)}
+        if self.color:                # omitted when unset — existing boards stay identical
+            d["color"] = self.color
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> Column:
         return cls(str(d.get("title", "")), str(d.get("filter", "")),
-                   dict(d.get("drop") or {"type": "none"}))
+                   dict(d.get("drop") or {"type": "none"}),
+                   normalize_color(d.get("color")))
 
 
 @dataclass
@@ -120,6 +139,9 @@ def validate(d: dict) -> None:
         drop = c.get("drop") or {"type": "none"}
         if drop.get("type", "none") not in DROP_TYPES:
             raise BoardValidationError(t("board.err.drop_type"))
+        color = c.get("color")
+        if color is not None and color not in COLUMN_ACCENT_ROLES:
+            raise BoardValidationError(t("board.err.color"))
 
 
 def to_json(board: Board) -> str:
@@ -135,6 +157,8 @@ def from_json(text: str) -> Board:
 # --- built-in presets --------------------------------------------
 # Column titles are i18n keys resolved at read time (see BoardStore.get).
 
+# Preset colours are just defaults — a "New ▾ → from preset" copy carries them
+# into an editable board where the swatch picker can override them.
 _GTD = {
     "name": "board.preset.gtd",
     "columns": [
@@ -143,16 +167,20 @@ _GTD = {
          "drop": {"type": "none"}},
         {"title": "board.gtd.next",
          "filter": "status:pending -BLOCKED -waiting -someday ( +PROJECT or +TAGGED )",
-         "drop": {"type": "tags", "add": [], "remove": ["waiting", "someday"]}},
+         "drop": {"type": "tags", "add": [], "remove": ["waiting", "someday"]},
+         "color": "primary"},
         {"title": "board.gtd.waiting",
          "filter": "status:pending +waiting",
-         "drop": {"type": "tags", "add": ["waiting"], "remove": ["someday"]}},
+         "drop": {"type": "tags", "add": ["waiting"], "remove": ["someday"]},
+         "color": "waiting"},
         {"title": "board.gtd.someday",
          "filter": "status:pending +someday",
-         "drop": {"type": "tags", "add": ["someday"], "remove": ["waiting"]}},
+         "drop": {"type": "tags", "add": ["someday"], "remove": ["waiting"]},
+         "color": "accent"},
         {"title": "board.gtd.done",
          "filter": "status:completed",
-         "drop": {"type": "verb", "verb": "done"}},
+         "drop": {"type": "verb", "verb": "done"},
+         "color": "success"},
     ],
 }
 
@@ -162,9 +190,9 @@ _STATUS = {
         {"title": "kanban.col.todo", "filter": "status:pending -ACTIVE",
          "drop": {"type": "verb", "verb": "stop"}},
         {"title": "kanban.col.doing", "filter": "status:pending +ACTIVE",
-         "drop": {"type": "verb", "verb": "start"}},
+         "drop": {"type": "verb", "verb": "start"}, "color": "primary"},
         {"title": "kanban.col.done", "filter": "status:completed",
-         "drop": {"type": "verb", "verb": "done"}},
+         "drop": {"type": "verb", "verb": "done"}, "color": "success"},
     ],
 }
 

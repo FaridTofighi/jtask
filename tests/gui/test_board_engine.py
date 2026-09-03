@@ -50,6 +50,69 @@ def test_board_json_roundtrip():
     assert b2.to_dict() == b.to_dict()
 
 
+# --- bc-1: per-column accent colour ------------------------------
+
+def test_column_colour_is_optional_and_omitted_when_unset():
+    c = boards.Column("A", "status:pending")
+    assert c.color is None
+    assert "color" not in c.to_dict()                       # existing boards unchanged
+    assert boards.Column.from_dict({"title": "A"}).color is None
+
+
+def test_column_colour_roundtrips_through_dict_and_json():
+    c = boards.Column("Done", "status:completed", color="success")
+    assert c.to_dict()["color"] == "success"
+    b = boards.Board("B", [c])
+    assert boards.from_json(boards.to_json(b)).columns[0].color == "success"
+
+
+def test_unknown_colour_is_dropped_on_load_but_rejected_by_validate():
+    assert boards.Column.from_dict({"title": "A", "color": "chartreuse"}).color is None
+    with pytest.raises(boards.BoardValidationError):
+        boards.validate({"name": "x", "columns": [
+            {"title": "c", "filter": "a", "color": "chartreuse"}]})
+
+
+def test_builtin_presets_carry_default_colours():
+    gtd = {c.title: c.color for c in boards.builtin_board("gtd").columns}
+    assert set(gtd.values()) >= {"primary", "waiting", "accent", "success"}
+    assert list(gtd.values())[0] is None                    # Inbox has no accent
+    kanban = [c.color for c in boards.builtin_board("status").columns]
+    assert kanban == [None, "primary", "success"]
+    # every preset colour is a known role
+    for board in boards.all_builtins():
+        for col in board.columns:
+            assert col.color is None or col.color in boards.COLUMN_ACCENT_ROLES
+
+
+def test_column_colour_survives_the_settings_persistence_path(qapp):
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask_gui.settings import Settings
+
+    Settings().save_board("Mine", {"columns": [
+        {"title": "Done", "filter": "status:completed",
+         "drop": {"type": "none"}, "color": "success"}]})
+    reloaded = Settings().boards()["Mine"]["columns"][0]
+    assert reloaded["color"] == "success"
+    assert boards.Board.from_dict({"name": "Mine", **Settings().boards()["Mine"]}) \
+        .columns[0].color == "success"
+
+
+def test_board_view_renders_the_accent_strip_only_when_a_colour_is_set(qtbot):
+    from jtask_gui.widgets.board_view import BoardView
+
+    v = BoardView("dark")
+    qtbot.addWidget(v)
+    v.set_board(boards.Board("B", [
+        boards.Column("Plain", "status:pending"),
+        boards.Column("Done", "status:completed", color="success"),
+    ]))
+    plain, done = v._columns
+    assert plain._accent.isHidden() and not plain._accent.property("accent")
+    assert not done._accent.isHidden()
+    assert done._accent.property("accent") == "success"
+
+
 # --- persistence -------------------------------------------------
 
 def test_board_store_roundtrips_and_orders(qapp):

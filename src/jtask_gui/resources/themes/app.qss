@@ -348,6 +348,20 @@ QLabel#BoardColSub {
     color: @text_muted@; font-size: @fs_xs@;
     padding: 0 @sp_4@ @sp_2@ @sp_4@;
 }
+/* per-column accent strip — a curated theme role, hidden when the column has
+   no colour (boards.COLUMN_ACCENT_ROLES) */
+QFrame#BoardColAccent {
+    min-height: 3px; max-height: 3px;
+    border: none; border-radius: @r_sm@;
+    background-color: transparent;
+}
+QFrame#BoardColAccent[accent="primary"]  { background-color: @primary@; }
+QFrame#BoardColAccent[accent="accent"]   { background-color: @accent@; }
+QFrame#BoardColAccent[accent="success"]  { background-color: @success@; }
+QFrame#BoardColAccent[accent="due_soon"] { background-color: @due_soon@; }
+QFrame#BoardColAccent[accent="overdue"]  { background-color: @overdue@; }
+QFrame#BoardColAccent[accent="blocked"]  { background-color: @blocked@; }
+QFrame#BoardColAccent[accent="waiting"]  { background-color: @waiting@; }
 QFrame#BoardCard {
     background-color: @surface@;
     border: 1px solid @border@;
