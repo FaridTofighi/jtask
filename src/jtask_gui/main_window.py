@@ -684,6 +684,7 @@ class MainWindow(QMainWindow):
         self._board.starToggled.connect(self._toggle_star)
         self._board.taskActivated.connect(self._open_card)
         self._board.triageRequested.connect(self._start_triage)
+        self._board.columnSortChanged.connect(self._persist_column_sort)
 
         self._triage.decision.connect(self._triage_decision)
         self._triage.projectAssigned.connect(self._triage_project)
@@ -992,6 +993,22 @@ class MainWindow(QMainWindow):
             if b.name == name:
                 return b
         return None
+
+    def _persist_column_sort(self, col_index: int, order: str) -> None:
+        """A per-column sort change is already applied live by BoardView. Save
+        it for *user* boards through the normal board-persistence path;
+        built-in presets are session-only (like their filters/titles/drops —
+        duplicate the preset for a permanent change)."""
+        board = self._board.current_board()
+        if board is None:
+            return
+        user = self.settings.boards()
+        if board.name in user:
+            self.settings.save_board(
+                board.name, {"columns": [c.to_dict() for c in board.columns]}
+            )
+        else:
+            self._toast.show_message(t("board.sort.session_only"))
 
     def _toggle_board(self, on: bool) -> None:
         self._board_mode = on

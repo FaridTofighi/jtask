@@ -389,7 +389,10 @@ QWidget#TriageCard {
     border-radius: @r_lg@;
 }
 QPushButton#TriageColButton { padding: @sp_8@ @sp_16@; font-weight: 700; }
-QToolButton#BoardColTriage { border: none; background: transparent; padding: 0; }
+QToolButton#BoardColTriage, QToolButton#BoardColSort {
+    border: none; background: transparent; padding: 0;
+}
+QToolButton#BoardColSort::menu-indicator { image: none; width: 0; }
 QPushButton#DangerButton { color: @overdue@; }
 
 /* ============================ shortcut cheat sheet ======= */

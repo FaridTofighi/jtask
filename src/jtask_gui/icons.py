@@ -59,6 +59,7 @@ _MAP = {
     "board": "mdi.view-column-outline",
     "review": "mdi.clipboard-check-outline",
     "triage": "mdi.filter-menu-outline",
+    "sort": "mdi.sort",
     "add": "mdi.plus-circle-outline",
     "clear": "mdi.close-circle-outline",
     "calendar": "mdi.calendar-blank-outline",

@@ -48,6 +48,12 @@ def normalize_color(value: object) -> str | None:
 # does its own sort in Python.
 SORT_ORDERS = ("urgency-", "urgency+", "entry-", "entry+")
 DEFAULT_SORT = "urgency-"          # highest urgency first
+SORT_LABEL_KEYS = {
+    "urgency-": "board.sort.urgency_desc",
+    "urgency+": "board.sort.urgency_asc",
+    "entry-": "board.sort.newest",
+    "entry+": "board.sort.oldest",
+}
 
 
 def normalize_sort(value: object) -> str:

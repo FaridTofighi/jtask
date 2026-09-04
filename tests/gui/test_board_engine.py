@@ -187,6 +187,80 @@ def test_board_view_default_column_order_is_urgency_desc(qtbot):
     assert [t["uuid"] for t in v._col_tasks[0]] == ["h", "m", "l"]
 
 
+# --- bs-2: the per-column header control -----------------------
+
+def _card_uuids(column):
+    layout = column._cards
+    return [layout.itemAt(i).widget().uuid
+            for i in range(layout.count() - 1)          # skip trailing stretch
+            if layout.itemAt(i).widget()]
+
+
+def test_header_menu_has_the_four_orders_and_checks_the_columns_sort(qtbot):
+    from jtask_gui.widgets.board_view import BoardView
+
+    v = BoardView("dark")
+    qtbot.addWidget(v)
+    v.set_board(boards.Board("B", [boards.Column("C", "status:pending", sort="entry-")]))
+    col = v._columns[0]
+    actions = col._sort_btn.menu().actions()
+    assert len(actions) == 4
+    assert [a for a in actions if a.isChecked()][0] is col._sort_actions["entry-"]
+
+
+def test_choosing_a_sort_from_the_menu_re_sorts_live_without_reload(qtbot):
+    from jtask_gui.widgets.board_view import BoardView
+
+    v = BoardView("dark")
+    qtbot.addWidget(v)
+    v.set_board(boards.Board("B", [boards.Column("C", "status:pending")]))
+    v._fill_column(v._gen, 0, list(_SAMPLE))
+    assert _card_uuids(v._columns[0]) == ["h", "m", "l"]     # default urgency-
+
+    changed = []
+    v.columnSortChanged.connect(lambda i, o: changed.append((i, o)))
+    # trigger the menu action, exactly as a click would
+    v._columns[0]._sort_actions["entry+"].trigger()
+
+    assert _card_uuids(v._columns[0]) == ["h", "l", "m"]     # oldest → newest, live
+    assert v._board.columns[0].sort == "entry+"
+    assert changed == [(0, "entry+")]                        # MainWindow gets told
+
+
+def test_user_board_sort_change_persists_across_a_reload(qapp, qtbot, tw_env):
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    QSettings("jtask", "jtask-gui").clear()
+    s = Settings()
+    s.save_board("Mine", {"columns": [
+        {"title": "All", "filter": "status:pending", "drop": {"type": "none"}}]})
+
+    w = MainWindow(s)
+    qtbot.addWidget(w)
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+    w._show_board("Mine")
+    for _ in range(6):
+        qapp.processEvents()
+        wait_for_done(3000)
+        qapp.processEvents()
+
+    w._board._columns[0]._sort_actions["entry+"].trigger()
+    assert Settings().boards()["Mine"]["columns"][0]["sort"] == "entry+"
+
+    # a built-in stays session-only
+    w._show_board("GTD")
+    for _ in range(4):
+        qapp.processEvents()
+        wait_for_done(3000)
+    w._board._columns[0]._sort_actions["urgency+"].trigger()
+    assert "GTD" not in Settings().boards()
+
+
 # --- persistence -------------------------------------------------
 
 def test_board_store_roundtrips_and_orders(qapp):

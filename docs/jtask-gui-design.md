@@ -2714,3 +2714,25 @@ in a `.taskrc` report never reaches `task export`. `board_view._fill_column`
 sorts before building cards.
 
 `tests/gui/test_board_engine.py` +8. bs-2 adds the per-column header control.
+
+## Board column card sort — bs-2 (per-column header control) (2026-09-04)
+
+Each column header gains a small `mdi.sort` `QToolButton` (next to the triage
+button) with an instant-popup menu of the four exclusive orders
+(`board.sort.*`). Choosing one:
+
+- re-sorts that column's **current** cards immediately via
+  `BoardView._on_sort_changed` → `sort_rows` → `_render_cards` — **no board
+  reload**;
+- mutates the live `Board.columns[i].sort` and emits `columnSortChanged(i, order)`;
+- `MainWindow._persist_column_sort` saves it for **user** boards through
+  `Settings.save_board` (the established path). **Built-in presets are
+  session-only** — like their filters/titles/drops, which also can't be
+  persist-edited; a toast points to "duplicate the preset". (Decision A of the
+  mission Phase 0.)
+
+Menu labels via `t()`; `#BoardColSort` styled like `#BoardColTriage`, menu
+indicator hidden. Verified fa/RTL + en/LTR: the icons sit at the header's
+trailing edge and the menu opens in the layout direction.
+
+`tests/gui/test_board_engine.py` +6. Suite **708 passed / 1 skipped**.

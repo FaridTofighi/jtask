@@ -12,10 +12,12 @@ from __future__ import annotations
 import shlex
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QActionGroup
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QScrollArea,
     QToolButton,
     QVBoxLayout,
@@ -26,7 +28,14 @@ from jtask import reports
 
 from .. import icons
 from .. import tokens as tok
-from ..boards import Board, drop_label, sort_rows
+from ..boards import (
+    SORT_LABEL_KEYS,
+    SORT_ORDERS,
+    Board,
+    drop_label,
+    normalize_sort,
+    sort_rows,
+)
 from ..i18n import t
 from ..workers import submit
 from .board_card import UUID_MIME, BoardCard
@@ -35,9 +44,10 @@ from .board_card import UUID_MIME, BoardCard
 class _Column(QFrame):
     dropped = pyqtSignal(str, int)     # uuid, column index
     triageRequested = pyqtSignal(int)  # column index — "process one by one"
+    sortChanged = pyqtSignal(int, str) # column index, sort order
 
     def __init__(self, index: int, title: str, subtitle: str, droppable: bool,
-                 color: str | None = None, parent=None) -> None:
+                 color: str | None = None, sort: str = "", parent=None) -> None:
         super().__init__(parent)
         self.index = index
         self._droppable = droppable
@@ -65,6 +75,28 @@ class _Column(QFrame):
         self._title = QLabel(title)
         self._title.setObjectName("BoardColTitle")
         title_row.addWidget(self._title, 1)
+
+        self._sort_btn = QToolButton()
+        self._sort_btn.setObjectName("BoardColSort")
+        self._sort_btn.setIcon(icons.icon("sort", "text_muted"))
+        self._sort_btn.setToolTip(t("board.sort"))
+        self._sort_btn.setAutoRaise(True)
+        self._sort_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(self._sort_btn)
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        current = normalize_sort(sort)
+        self._sort_actions: dict[str, object] = {}
+        for order in SORT_ORDERS:
+            act = menu.addAction(t(SORT_LABEL_KEYS[order]))
+            act.setCheckable(True)
+            act.setChecked(order == current)
+            act.triggered.connect(lambda _c=False, o=order: self.sortChanged.emit(self.index, o))
+            group.addAction(act)
+            self._sort_actions[order] = act
+        self._sort_btn.setMenu(menu)
+        title_row.addWidget(self._sort_btn, 0)
+
         self._triage_btn = QToolButton()
         self._triage_btn.setObjectName("BoardColTriage")
         self._triage_btn.setIcon(icons.icon("triage", "text_muted"))
@@ -96,6 +128,18 @@ class _Column(QFrame):
         self._cards.insertWidget(self._cards.count() - 1, card)
         if card.uuid:
             self._uuids.add(card.uuid)
+
+    def clear_cards(self) -> None:
+        self._uuids.clear()
+        while self._cards.count() > 1:            # keep the trailing stretch
+            item = self._cards.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    def set_sort_checked(self, order: str) -> None:
+        act = self._sort_actions.get(normalize_sort(order))
+        if act is not None:
+            act.setChecked(True)
 
     def set_count(self, n: int) -> None:
         self._title.setText(f"{self._base_title}  ·  {n}")
@@ -132,6 +176,7 @@ class BoardView(QWidget):
     taskActivated = pyqtSignal(str)
     starToggled = pyqtSignal(str, bool)
     triageRequested = pyqtSignal(int)    # column index
+    columnSortChanged = pyqtSignal(int, str)  # column index, sort order
 
     def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
@@ -203,9 +248,11 @@ class BoardView(QWidget):
 
         for i, col in enumerate(board.columns):
             droppable = col.drop.get("type", "none") != "none"
-            column = _Column(i, col.title, drop_label(col.drop), droppable, col.color)
+            column = _Column(i, col.title, drop_label(col.drop), droppable,
+                             col.color, col.sort)
             column.dropped.connect(self._on_dropped)
             column.triageRequested.connect(self.triageRequested)
+            column.sortChanged.connect(self._on_sort_changed)
             self._cols_lay.addWidget(column, 1)
             self._columns.append(column)
         self._cols_lay.addStretch(0)
@@ -232,15 +279,28 @@ class BoardView(QWidget):
         if gen != self._gen or idx >= len(self._columns):
             return
         order = self._board.columns[idx].sort if self._board else None
-        rows = sort_rows(rows, order or "")
-        self._col_tasks[idx] = rows
+        self._col_tasks[idx] = sort_rows(rows, order or "")
+        self._render_cards(idx)
+
+    def _render_cards(self, idx: int) -> None:
         col = self._columns[idx]
+        col.clear_cards()
+        rows = self._col_tasks[idx]
         for tk in rows:
             card = BoardCard(tk, self._theme)
             card.activated.connect(self.taskActivated)
             card.starToggled.connect(self.starToggled)
             col.add_card(card)
         col.set_count(len(rows))
+
+    def _on_sort_changed(self, idx: int, order: str) -> None:
+        """Live re-sort of the column's *current* cards — no board reload."""
+        if self._board is None or not 0 <= idx < len(self._board.columns):
+            return
+        self._board.columns[idx].sort = order
+        self._col_tasks[idx] = sort_rows(self._col_tasks[idx], order)
+        self._render_cards(idx)
+        self.columnSortChanged.emit(idx, order)
 
     def _on_dropped(self, uuid: str, col_index: int) -> None:
         if self._board is None or col_index >= len(self._board.columns):
