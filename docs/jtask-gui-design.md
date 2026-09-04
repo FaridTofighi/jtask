@@ -2698,3 +2698,19 @@ Tests rewritten: `test_content_direction.py`, `test_bidi_surfaces.py`,
 به دیتابیس Production", "SSL Certificate یکی از سرویس‌ها را تمدید کنم") are named
 cases asserting RTL in both UIs; a real English description still asserts LTR
 via the majority override.
+
+## Board column card sort — bs-1 (default = urgency) (2026-09-04)
+
+Cards within a board column were in `task export` storage order (no sort).
+`boards.Column` gains `sort: str` — `"urgency-"` (default, high→low) / `"urgency+"`
+/ `"entry-"` (newest) / `"entry+"` (oldest), matching Taskwarrior's `-`/`+` =
+desc/asc. `to_dict` omits it when default (existing boards & JSON unchanged, and
+pick up the new default with no migration); `from_dict` lenient; `validate`
+strict (`board.err.sort`). `boards.sort_rows(rows, order)` — a pure, stable sort
+reusing each shaped row's own `urgency` (the exact value the main task table
+shows) and `entry_gregorian` (creation date) — **no new `task` call**: `urgency`
+is already a numeric field in `task export` (verified on TW 3.4.1), and `sort=`
+in a `.taskrc` report never reaches `task export`. `board_view._fill_column`
+sorts before building cards.
+
+`tests/gui/test_board_engine.py` +8. bs-2 adds the per-column header control.

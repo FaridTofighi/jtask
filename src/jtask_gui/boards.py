@@ -39,6 +39,43 @@ def normalize_color(value: object) -> str | None:
     return value if value in COLUMN_ACCENT_ROLES else None
 
 
+# --- per-column card sort ------------------------------------------
+# Taskwarrior's own convention: trailing "-" = descending, "+" = ascending.
+# The keys ("urgency" / "entry") come straight off the shaped `task export`
+# rows the board already loads — the same `urgency` the main table shows and
+# the same `entry` creation date — no separate computation, no extra `task`
+# call. `sort=` in a `.taskrc` report never reaches `task export`, so the board
+# does its own sort in Python.
+SORT_ORDERS = ("urgency-", "urgency+", "entry-", "entry+")
+DEFAULT_SORT = "urgency-"          # highest urgency first
+
+
+def normalize_sort(value: object) -> str:
+    """A known sort order, or the default for anything else."""
+    return value if value in SORT_ORDERS else DEFAULT_SORT
+
+
+def sort_rows(rows: list[dict], order: str) -> list[dict]:
+    """Order shaped ``reports.report_list`` rows for a board column.
+
+    Reuses each row's own ``urgency`` (the exact value the main task table
+    shows) and ``entry_gregorian`` (the task's creation date) — no separate
+    calculation. Stable: equal keys keep their ``task export`` order.
+    """
+    order = normalize_sort(order)
+    if order.startswith("urgency"):
+        def key(r: dict) -> float:
+            try:
+                return float(r.get("urgency") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+    else:  # "entry" — the ISO YYYYMMDDTHHMMSSZ string sorts chronologically
+        def key(r: dict) -> str:
+            return r.get("entry_gregorian") or r.get("entry") or ""
+
+    return sorted(rows, key=key, reverse=order.endswith("-"))
+
+
 def drop_label(drop: dict) -> str:
     """A short human description of a drop action, for the column subtitle."""
     dt = drop.get("type", "none")
@@ -90,18 +127,22 @@ class Column:
     filter: str = ""
     drop: dict = field(default_factory=lambda: {"type": "none"})
     color: str | None = None          # an accent role, or None for the neutral look
+    sort: str = DEFAULT_SORT          # card order within the column
 
     def to_dict(self) -> dict:
         d = {"title": self.title, "filter": self.filter, "drop": dict(self.drop)}
         if self.color:                # omitted when unset — existing boards stay identical
             d["color"] = self.color
+        if self.sort != DEFAULT_SORT:  # ditto — the new default needs no migration
+            d["sort"] = self.sort
         return d
 
     @classmethod
     def from_dict(cls, d: dict) -> Column:
         return cls(str(d.get("title", "")), str(d.get("filter", "")),
                    dict(d.get("drop") or {"type": "none"}),
-                   normalize_color(d.get("color")))
+                   normalize_color(d.get("color")),
+                   normalize_sort(d.get("sort")))
 
 
 @dataclass
@@ -142,6 +183,9 @@ def validate(d: dict) -> None:
         color = c.get("color")
         if color is not None and color not in COLUMN_ACCENT_ROLES:
             raise BoardValidationError(t("board.err.color"))
+        sort = c.get("sort")
+        if sort is not None and sort not in SORT_ORDERS:
+            raise BoardValidationError(t("board.err.sort"))
 
 
 def to_json(board: Board) -> str:

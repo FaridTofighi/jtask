@@ -113,6 +113,80 @@ def test_board_view_renders_the_accent_strip_only_when_a_colour_is_set(qtbot):
     assert done._accent.property("accent") == "success"
 
 
+# --- bs-1: per-column card sort ---------------------------------
+
+_R_HIGH = {"uuid": "h", "description": "urgent old", "urgency": 12.0,
+           "entry_gregorian": "20240101T000000Z"}
+_R_MID = {"uuid": "m", "description": "mid new", "urgency": 5.0,
+          "entry_gregorian": "20260101T000000Z"}
+_R_LOW = {"uuid": "l", "description": "calm middle", "urgency": 1.0,
+          "entry_gregorian": "20250101T000000Z"}
+_SAMPLE = [_R_MID, _R_HIGH, _R_LOW]        # deliberately not pre-ordered
+
+
+def test_column_sort_defaults_to_urgency_high_first_and_is_omitted_when_unset():
+    c = boards.Column("A", "status:pending")
+    assert c.sort == "urgency-" == boards.DEFAULT_SORT
+    assert "sort" not in c.to_dict()                       # existing boards unchanged
+    assert boards.Column.from_dict({"title": "A"}).sort == "urgency-"
+
+
+@pytest.mark.parametrize(("order", "expected"), [
+    ("urgency-", ["h", "m", "l"]),        # high → low  (the default)
+    ("urgency+", ["l", "m", "h"]),        # low → high
+    ("entry-", ["m", "l", "h"]),          # newest → oldest
+    ("entry+", ["h", "l", "m"]),          # oldest → newest
+])
+def test_sort_rows_produces_the_right_order(order, expected):
+    assert [r["uuid"] for r in boards.sort_rows(_SAMPLE, order)] == expected
+
+
+def test_sort_rows_is_stable_and_tolerates_missing_keys():
+    rows = [{"uuid": "a"}, {"uuid": "b", "urgency": 9}, {"uuid": "c"}]
+    # b (9) first, then a and c (0) keep their input order
+    assert [r["uuid"] for r in boards.sort_rows(rows, "urgency-")] == ["b", "a", "c"]
+
+
+def test_unknown_sort_is_dropped_on_load_but_rejected_by_validate():
+    assert boards.Column.from_dict({"title": "A", "sort": "bananas"}).sort == "urgency-"
+    with pytest.raises(boards.BoardValidationError):
+        boards.validate({"name": "x", "columns": [
+            {"title": "c", "filter": "a", "sort": "bananas"}]})
+
+
+def test_column_sort_roundtrips_through_dict_and_json():
+    c = boards.Column("Backlog", "status:pending", sort="entry+")
+    assert c.to_dict()["sort"] == "entry+"
+    b = boards.Board("B", [c])
+    assert boards.from_json(boards.to_json(b)).columns[0].sort == "entry+"
+
+
+def test_builtin_presets_default_every_column_to_urgency_desc():
+    for board in boards.all_builtins():
+        for col in board.columns:
+            assert col.sort == "urgency-"
+
+
+def test_board_view_orders_cards_by_the_columns_sort(qtbot):
+    from jtask_gui.widgets.board_view import BoardView
+
+    v = BoardView("dark")
+    qtbot.addWidget(v)
+    v.set_board(boards.Board("B", [boards.Column("C", "status:pending", sort="entry+")]))
+    v._fill_column(v._gen, 0, list(_SAMPLE))
+    assert [t["uuid"] for t in v._col_tasks[0]] == ["h", "l", "m"]   # oldest → newest
+
+
+def test_board_view_default_column_order_is_urgency_desc(qtbot):
+    from jtask_gui.widgets.board_view import BoardView
+
+    v = BoardView("dark")
+    qtbot.addWidget(v)
+    v.set_board(boards.Board("B", [boards.Column("C", "status:pending")]))  # no sort
+    v._fill_column(v._gen, 0, list(_SAMPLE))
+    assert [t["uuid"] for t in v._col_tasks[0]] == ["h", "m", "l"]
+
+
 # --- persistence -------------------------------------------------
 
 def test_board_store_roundtrips_and_orders(qapp):

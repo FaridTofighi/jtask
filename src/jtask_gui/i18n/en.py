@@ -181,6 +181,7 @@ CATALOG.update({
     "board.err.col_title": "Every column needs a title.",
     "board.err.drop_type": "Unknown drop-action type.",
     "board.err.color": "Unknown column colour.",
+    "board.err.sort": "Unknown column sort order.",
     "board.preset.gtd": "GTD",
     "board.preset.status": "Kanban",
     "board.gtd.inbox": "Inbox",

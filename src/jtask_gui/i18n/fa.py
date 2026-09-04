@@ -172,6 +172,7 @@ CATALOG: dict[str, str] = {
     "board.err.col_title": "هر ستون باید عنوان داشته باشد.",
     "board.err.drop_type": "نوع کنش رهاسازی ناشناخته است.",
     "board.err.color": "رنگ ستون ناشناخته است.",
+    "board.err.sort": "ترتیب مرتب‌سازی ستون ناشناخته است.",
     "board.preset.gtd": "GTD",
     "board.preset.status": "کانبان",
     "board.gtd.inbox": "صندوق ورودی",

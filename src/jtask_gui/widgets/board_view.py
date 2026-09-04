@@ -26,7 +26,7 @@ from jtask import reports
 
 from .. import icons
 from .. import tokens as tok
-from ..boards import Board, drop_label
+from ..boards import Board, drop_label, sort_rows
 from ..i18n import t
 from ..workers import submit
 from .board_card import UUID_MIME, BoardCard
@@ -231,6 +231,8 @@ class BoardView(QWidget):
     def _fill_column(self, gen: int, idx: int, rows: list[dict]) -> None:
         if gen != self._gen or idx >= len(self._columns):
             return
+        order = self._board.columns[idx].sort if self._board else None
+        rows = sort_rows(rows, order or "")
         self._col_tasks[idx] = rows
         col = self._columns[idx]
         for tk in rows:
