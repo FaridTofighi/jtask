@@ -256,6 +256,35 @@ The primary surface, so its rendering rules are specific (`models/task_model.py`
 
 ---
 
+## 12. Wrapped-card lists (annotations tab)
+
+`widgets/annotations_view.py` is the pattern for a list of free-text items that
+must wrap to the panel width and read as distinct-but-calm cards, not a single
+scrolling text block:
+
+- **Real wrapping, not a single-line item.** Each entry is its own item
+  *widget* (`QListWidget.setItemWidget`), not `QListWidgetItem.setText()` — a
+  plain list item never word-wraps to the viewport, which is exactly the bug
+  this fixed. The list subclass re-applies every item's `sizeHint()` from the
+  current viewport width on every `resizeEvent`, and
+  `setHorizontalScrollBarPolicy(ScrollBarAlwaysOff)` makes "needs a wider
+  panel to read a note" structurally impossible rather than just unlikely.
+- **A curated, bounded tint set — never arbitrary colour.** `theme.
+  NOTE_TINT_ROLES` (4 roles, same discipline as `boards.COLUMN_ACCENT_ROLES`):
+  each is the sidebar's own `bg_alt` washed ~10 % with an existing hue
+  (`primary`/`accent`/`success`/`waiting`), defined per theme in `_SHAB`/`_RUZ`
+  — a "slight variation," never a jump to a saturated card. Cycled by list
+  position (`i % len(NOTE_TINT_ROLES)`), not assigned per-item independently.
+- **Selection reuses the table-row convention** (§11): `background-color`
+  only, via the same `@selection@` token — no per-card border swap, no new
+  selection style invented for this list.
+- Timestamp and body are two labels, not one string — the timestamp through
+  the shared `calendar_system.active().format_utc()` path, `bidi_isolate`d
+  (mirroring the detail-panel audit line), body through `bidi.
+  directional_isolate` (§8).
+
+---
+
 ## Enforcement summary
 
 | rule | test |

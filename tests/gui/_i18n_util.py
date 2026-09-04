@@ -19,12 +19,16 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
+    QPlainTextEdit,
     QTableWidget,
     QTabWidget,
+    QTextEdit,
     QTreeWidget,
     QTreeWidgetItem,
     QWidget,
 )
+
+_PLACEHOLDER_WIDGETS = (QLineEdit, QPlainTextEdit, QTextEdit)
 
 _PERSIAN = re.compile(r"[؀-ۿ]")
 _PERSIAN_LETTER = re.compile(r"[ء-يٹ-ۿ]")
@@ -73,7 +77,7 @@ def visible_strings(root: QWidget) -> list[str]:
         if isinstance(w, (QLabel, QAbstractButton, QGroupBox)):
             if w.text():
                 out.append(w.text())
-        if isinstance(w, QLineEdit) and w.placeholderText():
+        if isinstance(w, _PLACEHOLDER_WIDGETS) and w.placeholderText():
             out.append(w.placeholderText())
         if isinstance(w, QComboBox):
             out.extend(w.itemText(i) for i in range(w.count()))

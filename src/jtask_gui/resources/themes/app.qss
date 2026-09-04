@@ -217,6 +217,33 @@ QWidget#DetailPanel QPlainTextEdit { background-color: @field@; }
 QFrame#DetailHeader { border-bottom: 1px solid @border@; }
 
 QLabel#EmptyState { color: @text_muted@; font-size: @fs_lg@; background: transparent; }
+
+/* annotations tab — each note is its own wrapped, tinted card */
+QWidget#AnnotationsView { background-color: @bg_alt@; }
+QListWidget#AnnotationsList {
+    background: transparent;
+    border: none;
+}
+QFrame#AnnotationCard {
+    background-color: @bg_alt@;
+    border: 1px solid @border_soft@;
+    border-radius: @r_md@;
+}
+QFrame#AnnotationCard[tint="1"] { background-color: @note_tint_1@; }
+QFrame#AnnotationCard[tint="2"] { background-color: @note_tint_2@; }
+QFrame#AnnotationCard[tint="3"] { background-color: @note_tint_3@; }
+QFrame#AnnotationCard[tint="4"] { background-color: @note_tint_4@; }
+/* selection is background-only, same convention as a table row (no border artifact) */
+QFrame#AnnotationCard[selected="true"] { background-color: @selection@; border-color: @selection@; }
+QLabel#AnnotationWhen { color: @text_muted@; font-size: @fs_xs@; background: transparent; }
+QLabel#AnnotationBody { color: @text@; background: transparent; }
+QPlainTextEdit#AnnotationInput {
+    background-color: @field@;
+    border: 1px solid @border@;
+    border-radius: @r_md@;
+    padding: @sp_8@;
+}
+QPlainTextEdit#AnnotationInput:focus { border-color: @focus@; }
 QLabel#DepEmpty { color: @text_muted@; font-size: @fs_h2@; background: transparent; }
 QGraphicsView { border: 1px solid @border@; border-radius: @r_md@; background: @surface@; }
 

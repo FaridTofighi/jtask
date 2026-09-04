@@ -59,9 +59,13 @@ def test_annotation_rows_align_to_their_text(qtbot, tw_env):
         {"entry": "20250101T000100Z", "description": EN},
         {"entry": "20250101T000200Z", "description": FA_LATIN_FIRST},
     ]})
-    assert v._list.item(0).textAlignment() & Qt.AlignmentFlag.AlignRight
-    assert v._list.item(1).textAlignment() & Qt.AlignmentFlag.AlignLeft
-    assert v._list.item(2).textAlignment() & Qt.AlignmentFlag.AlignRight  # bug case
+
+    def card_body(row):
+        return v._list.itemWidget(v._list.item(row))._body
+
+    assert card_body(0).alignment() & Qt.AlignmentFlag.AlignRight
+    assert card_body(1).alignment() & Qt.AlignmentFlag.AlignLeft
+    assert card_body(2).alignment() & Qt.AlignmentFlag.AlignRight  # bug case
 
 
 def test_timer_indicator_follows_the_running_task_description(qtbot):

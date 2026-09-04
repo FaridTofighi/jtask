@@ -95,12 +95,13 @@ def test_annotations_tab_lists_and_adds(win, qapp, qtbot):
     view = win._annotations_view
     win._show_detail(tw.export([uuid])[0])
     assert view._list.count() == 1
-    assert "یادداشت یک" in view._list.item(0).text()
+    card = view._list.itemWidget(view._list.item(0))
+    assert card.desc == "یادداشت یک"
 
     # the edit form shows a read-only summary, not an editor
     assert "یادداشت یک" in win._detail._ann_summary.text()
 
-    view._input.setText("یادداشت دو")
+    view._input.setPlainText("یادداشت دو")
     with qtbot.waitSignal(view.annotateRequested, timeout=1000) as sig:
         view._add()
     assert sig.args == [uuid, "یادداشت دو"]

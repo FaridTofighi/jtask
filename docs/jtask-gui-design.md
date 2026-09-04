@@ -2736,3 +2736,38 @@ indicator hidden. Verified fa/RTL + en/LTR: the icons sit at the header's
 trailing edge and the menu opens in the layout direction.
 
 `tests/gui/test_board_engine.py` +6. Suite **708 passed / 1 skipped**.
+
+## Annotations tab redesign — wrapping, input, per-note cards (2026-09-04)
+
+Three problems in one tab, all in `widgets/annotations_view.py`:
+
+1. **Notes didn't wrap.** `_list` held one `QListWidgetItem.setText("when — desc")`
+   per note — a plain list item never word-wraps, so long prose needed
+   horizontal scroll or widening the panel. Fixed by giving every annotation
+   its own item **widget** (`_NoteCard`, a `QFrame` with a wrapped `QLabel`
+   body); a `_WrapList` subclass re-applies each item's `sizeHint()` from the
+   live viewport width on every `resizeEvent`, and the list's horizontal
+   scrollbar is permanently off.
+2. **The add-note box was a cramped `QLineEdit` wedged between the buttons.**
+   Replaced with a `QPlainTextEdit` (`min-height` ≈ 3 lines) placed **above**
+   the Add / Delete row — the primary input for the tab, not an afterthought.
+3. **No per-note separation.** `_NoteCard` gets a hairline `border_soft`
+   border and a background from `theme.NOTE_TINT_ROLES` — a new curated,
+   4-role, theme-derived tint set (`bg_alt` + ~10 % of an existing hue),
+   cycled by position, same discipline as `boards.COLUMN_ACCENT_ROLES`.
+   Selection is background-only via `@selection@` (§11's table-row
+   convention, not a new style) — `QFrame#AnnotationCard[selected="true"]`.
+   Timestamp (shared `format_utc` + `bidi_isolate`, mirroring the detail-panel
+   audit line) and body sit as two separate labels.
+
+Two real bugs caught by the new tests before they shipped: `QListWidgetItem`
+is unhashable in PyQt6 (`set(selectedItems())` raised — switched to
+`item.isSelected()` per row), and the `_i18n_util.py` snapshot harness only
+recognised `QLineEdit` placeholders, silently losing coverage of the new
+`QPlainTextEdit` one — extended to also capture `QPlainTextEdit`/`QTextEdit`.
+
+`tests/gui/test_annotations_view.py` +11 (wrapping proven via
+`heightForWidth`, tint cycling bounded to the 4 roles, input position, the
+unhashable-item regression, selection convention, both-theme QSS resolves).
+`test_m6.py` / `test_bidi_surfaces.py` updated for the new card structure. No
+new i18n keys — every string reused. Suite **719 passed / 1 skipped**.

@@ -15,7 +15,7 @@ from . import tokens
 
 __all__ = [
     "THEMES", "DEFAULT_THEME", "palette", "render_qss", "template_text",
-    "other_theme", "canonical_theme", "CHART_SERIES_ROLES",
+    "other_theme", "canonical_theme", "CHART_SERIES_ROLES", "NOTE_TINT_ROLES",
 ]
 
 # The GUI charts colour their series by semantic palette role (see
@@ -23,6 +23,11 @@ __all__ = [
 # discoverable. The CLI keeps its own ``DEFAULT_CHART_PALETTE`` in
 # ``jtask.themes`` for plotext, which has no palette roles to draw on.
 CHART_SERIES_ROLES = ("primary", "completed", "overdue", "due_soon", "accent")
+
+# A curated, bounded set of near-`bg_alt` tints for annotation cards — cycled
+# for consecutive notes (see AnnotationsView), never an arbitrary/unbounded
+# colour. Same discipline as `boards.COLUMN_ACCENT_ROLES`.
+NOTE_TINT_ROLES = ("note_tint_1", "note_tint_2", "note_tint_3", "note_tint_4")
 
 # The palette is organised as elevation layers — each surface sits visibly
 # above the one behind it:  bg (window)  <  bg_alt (sidebar / recessed rail)
@@ -76,6 +81,13 @@ _SHAB = {
     "console_fg": "#dfe3ea",
     "console_border": "#3b4252",
     "console_prompt": "#8fbcbb",
+    # annotation cards — a curated, bounded set (like COLUMN_ACCENT_ROLES): each
+    # is `bg_alt` (the sidebar's own tone) with a ~10% wash of an existing hue,
+    # so adjacent notes are distinguishable without reading as coloured cards.
+    "note_tint_1": "#26323c",   # bg_alt + primary
+    "note_tint_2": "#2e2d3e",   # bg_alt + accent
+    "note_tint_3": "#223533",   # bg_alt + success
+    "note_tint_4": "#292d36",   # bg_alt + waiting
 }
 
 # --- روز (light) -----------------------------------------------------
@@ -121,6 +133,12 @@ _RUZ = {
     "console_fg": "#dfe3ea",
     "console_border": "#3b4252",
     "console_prompt": "#4a8f8a",
+    # annotation cards — bg_alt (the sidebar's own tone) with a ~12% wash of an
+    # existing hue; see _SHAB for the rationale.
+    "note_tint_1": "#b6c8d5",   # bg_alt + primary
+    "note_tint_2": "#c4c2dd",   # bg_alt + accent
+    "note_tint_3": "#b8c9cb",   # bg_alt + success
+    "note_tint_4": "#c1c7d2",   # bg_alt + waiting
 }
 
 # Stable theme keys (i2). Display labels come from the i18n catalog
