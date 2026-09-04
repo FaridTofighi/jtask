@@ -208,6 +208,12 @@ class DetailPanel(QScrollArea):
         if self._task:
             self._dep_graph.show_task(self._task, tasks)
 
+    def current_uuid(self) -> str | None:
+        """The uuid of the task currently loaded (open or not) — lets
+        MainWindow re-fetch and reload this panel's own content when that
+        task changes elsewhere, without depending on table selection."""
+        return self._task.get("uuid") if self._task else None
+
     def set_theme(self, name: str) -> None:
         self._dep_graph.set_theme(name)
         self._retint_star()

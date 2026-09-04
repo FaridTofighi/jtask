@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QMimeData, QSortFilterProxyModel, Qt, pyqtSignal
+from PyQt6.QtCore import (
+    QItemSelection,
+    QItemSelectionModel,
+    QMimeData,
+    QSortFilterProxyModel,
+    Qt,
+    pyqtSignal,
+)
 from PyQt6.QtGui import QColor, QDrag, QKeySequence, QPainter, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -300,6 +307,38 @@ class TaskTable(QTableView):
             task for src in self._selected_flat_rows()
             if (task := self._model.data(src, TASK_ROLE))
         ]
+
+    def select_uuids(self, uuids) -> None:
+        """Reselect the rows for *uuids* (id/uuid continuity across a reload,
+        not row-index continuity — the row a task was at may not exist, or may
+        hold a different task, after the table is rebuilt)."""
+        wanted = set(uuids)
+        if not wanted:
+            return
+        model = self.model()
+        if model is None or model.columnCount() == 0:
+            return
+        last_col = model.columnCount() - 1
+        selection = QItemSelection()
+        first: object = None
+        for row in range(model.rowCount()):
+            idx = model.index(row, 0)
+            if model.data(idx, UUID_ROLE) in wanted:
+                selection.select(idx, model.index(row, last_col))
+                if first is None:
+                    first = idx
+        if first is None:
+            return
+        sel_model = self.selectionModel()
+        # set the current index *before* selecting, so a selectionChanged
+        # listener (e.g. this view's own _on_selection) sees the right
+        # current_task() rather than whatever the reset left behind.
+        sel_model.setCurrentIndex(first, QItemSelectionModel.SelectionFlag.NoUpdate)
+        sel_model.select(
+            selection,
+            QItemSelectionModel.SelectionFlag.ClearAndSelect
+            | QItemSelectionModel.SelectionFlag.Rows,
+        )
 
     def _timer_shortcut(self, start: bool) -> None:
         uuids = self.selected_uuids()

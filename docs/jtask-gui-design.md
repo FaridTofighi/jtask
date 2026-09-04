@@ -2771,3 +2771,53 @@ recognised `QLineEdit` placeholders, silently losing coverage of the new
 unhashable-item regression, selection convention, both-theme QSS resolves).
 `test_m6.py` / `test_bidi_surfaces.py` updated for the new card structure. No
 new i18n keys — every string reused. Suite **719 passed / 1 skipped**.
+
+## Bugfix: selection lost / detail panel stale after a write (2026-09-04)
+
+Adding an annotation (or any in-panel edit) dropped the table's row selection
+and left the still-open detail panel showing pre-write data until the user
+manually reselected the task. One root cause, two symptoms:
+
+1. **Selection loss** — every write ends in the standard `refresh_all` →
+   `_load_current_view` → `_populate_table` reload, which calls
+   `TaskTableModel.set_tasks()` — a full `beginResetModel()/endResetModel()`
+   that Qt uses to unconditionally drop `QItemSelectionModel` state. Row-index
+   continuity was never a safe way to restore it.
+2. **Stale panel** — `_populate_table` only ever called
+   `self._detail.set_all_tasks(tasks)` (for the dependency-graph combo), never
+   asked the panel to reload *its own* displayed task. The panel repainted
+   only in response to a fresh `taskActivated` selection event, not to "the
+   task I'm showing just changed."
+
+Fix, in `main_window.py`: `refresh_all` snapshots `self._table.selected_uuids()`
+into `self._pending_reselect` before reloading; `_populate_table` reapplies it
+via a new `TaskTable.select_uuids(uuids)` (`task_table.py`) that finds rows by
+the existing `UUID_ROLE`, not index, and calls
+`selectionModel().setCurrentIndex(..., NoUpdate)` **before** `.select(...)` so
+a `selectionChanged` listener reading `currentIndex()` mid-call sees the right
+row. Independently — because the written task can fall out of the current
+view's filter entirely (e.g. marking done while viewing "ready") —
+`_populate_table` also calls new `_refresh_open_detail(tasks)`: if the open
+panel's `DetailPanel.current_uuid()` (new accessor) task is in the fresh
+`tasks` list, reload it in place; if not, fetch it directly via
+`taskwarrior.export([uuid])` (same by-uuid pattern as `_triage_edit`/
+`_open_card`) so the panel still reflects the write instead of going stale
+until manually reopened. The two mechanisms are deliberately independent, not
+layered — in the common case (task stays in view) both end up calling
+`_show_detail`, accepted as cheap, harmless redundancy rather than adding
+signal-suppression complexity.
+
+One bug caught mid-fix: `_refresh_open_detail`'s early-return guard used
+`self._detail_host.isVisible()`, which is ancestor-composed and reports
+`False` for any descendant of a `MainWindow` that was never explicitly
+`.show()`n (true of every offscreen GUI test) even after a genuine internal
+`setVisible(True)` — silently skipping the reload it guards. Switched to
+`isVisibleTo(self)`, the same fix already established for this exact quirk
+elsewhere in the test suite.
+
+`tests/gui/test_detail_refresh.py` (new, +5): annotate-from-panel keeps
+selection and shows the note immediately; a field edit from the panel updates
+its own displayed value; marking the shown task done from elsewhere (Ctrl+D)
+and an undo affecting it both refresh the open panel without reopening it;
+switching selection to a different task still loads that task's own data, no
+cross-contamination. Suite **724 passed / 1 skipped**.

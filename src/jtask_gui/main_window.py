@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
 
         self._view_spec: dict = dict(_DEFAULT_VIEW, title=t("view.next"))
         self._extra_filter: list[str] = []
+        self._pending_reselect: set[str] = set()
         self._pending_ops = 0
 
         self._model = TaskTableModel(
@@ -916,6 +917,10 @@ class MainWindow(QMainWindow):
     # --- data flow ------------------------------------------
 
     def refresh_all(self) -> None:
+        # remember who was selected — a refresh rebuilds the table model
+        # wholesale (Qt drops selection on a model reset), so row-index
+        # continuity can't be relied on; reselect by uuid once reloaded.
+        self._pending_reselect = set(self._table.selected_uuids())
         taskwarrior.refresh_lookups()
         self._quick_add.refresh_completions()
         self._filter_bar.refresh_completions()
@@ -1072,6 +1077,34 @@ class MainWindow(QMainWindow):
         self._table.show_empty_state(self._view_spec.get("key", ""), len(tasks) == 0)
         title = self._view_spec.get("title") or t("view.tasks")
         self._status_count.setText(t("status.count", n=fmt.num(len(tasks)), title=title))
+
+        if self._pending_reselect:
+            self._table.select_uuids(self._pending_reselect)
+            self._pending_reselect = set()
+        self._refresh_open_detail(tasks)
+
+    def _refresh_open_detail(self, tasks: list[dict]) -> None:
+        """The detail panel must never silently show stale data for the task
+        it has open — a write to that task (an annotation added from inside
+        the panel, a bulk edit, an undo, anything) is its own trigger to
+        reload, independent of whether the table's selection survived."""
+        if not self._detail_host.isVisibleTo(self):
+            return
+        uuid = self._detail.current_uuid()
+        if not uuid:
+            return
+        fresh = next((tk for tk in tasks if tk.get("uuid") == uuid), None)
+        if fresh is not None:
+            self._show_detail(fresh)
+            return
+        # the task fell out of the current view's filter (e.g. marked done
+        # while viewing "pending") — fetch it directly so the panel still
+        # reflects the write instead of going stale until manually reopened.
+        submit(
+            functools.partial(taskwarrior.export, [uuid]),
+            lambda rows: self._show_detail(rows[0]) if rows else None,
+            lambda _e: None,
+        )
 
     def _on_load_error(self, err: object) -> None:
         self._end_busy()
