@@ -271,7 +271,6 @@ def test_main_window_tag_management_flow(qtbot, tw_env, qapp, monkeypatch):
 
     QSettings("jtask", "jtask-gui").clear()
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.main_window import MainWindow
     from jtask_gui.settings import Settings
     from jtask_gui.workers import wait_for_done
@@ -297,8 +296,9 @@ def test_main_window_tag_management_flow(qtbot, tw_env, qapp, monkeypatch):
     for u in uuids:
         assert "sprint" in (tw.export([u])[0].get("tags") or [])
 
-    # rename: confirm dialog auto-accepts
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    # rename: confirm dialog auto-accepts (_rename_tag lives in
+    # mixins/tags_projects.py — MainWindow decomposition)
+    monkeypatch.setattr("jtask_gui.mixins.tags_projects.confirm", lambda *a, **k: True)
     win._rename_tag("draft", "review")
     _drain()
     tw.refresh_lookups()
@@ -463,7 +463,6 @@ def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):
 
     QSettings("jtask", "jtask-gui").clear()
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.main_window import MainWindow
     from jtask_gui.settings import Settings
     from jtask_gui.workers import wait_for_done
@@ -481,7 +480,8 @@ def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):
             qapp.processEvents()
 
     _drain()
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    # _rename_project lives in mixins/tags_projects.py (MainWindow decomposition)
+    monkeypatch.setattr("jtask_gui.mixins.tags_projects.confirm", lambda *a, **k: True)
 
     # rename: Work + Work.Admin -> Client + Client.Admin ; Workshop untouched
     win._rename_project("Work", "Client")

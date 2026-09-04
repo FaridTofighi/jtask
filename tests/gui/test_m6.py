@@ -137,7 +137,8 @@ def test_bulk_annotate_from_table_menu(win, qapp, monkeypatch):
     monkeypatch.setattr(
         "PyQt6.QtWidgets.QInputDialog.getText", lambda *a, **k: ("یادداشت گروهی", True)
     )
-    monkeypatch.setattr("jtask_gui.main_window.confirm", lambda *a, **k: True)
+    # _annotate_bulk lives in mixins/task_lifecycle.py (MainWindow decomposition)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: True)
 
     win._annotate_bulk(uuids)
     for _ in range(6):

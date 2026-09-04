@@ -60,8 +60,17 @@ def test_write_path_raises_a_toast(qapp, qtbot, tw_env):
 
 
 def test_destructive_actions_still_use_a_blocking_confirm():
-    """The toast must not have replaced any confirmation dialog."""
-    src = (Path(__file__).parents[2] / "src" / "jtask_gui" / "main_window.py").read_text()
+    """The toast must not have replaced any confirmation dialog.
+
+    ``_delete``/``_purge`` live in ``mixins/task_lifecycle.py`` (MainWindow
+    decomposition, 2026-09-05) — search every module MainWindow is composed
+    from, not just main_window.py itself, so this gate survives future moves
+    too."""
+    root = Path(__file__).parents[2] / "src" / "jtask_gui"
+    src = "\n".join(
+        p.read_text()
+        for p in [root / "main_window.py", *sorted((root / "mixins").glob("*.py"))]
+    )
     for verb in ("_delete", "_purge"):
         m = re.search(rf"def {verb}\(.*?(?=\n    def )", src, re.S)
         assert m and "confirm(" in m.group(0), f"{verb} lost its confirm()"

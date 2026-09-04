@@ -2862,3 +2862,65 @@ Full version-compatibility writeup in `docs/taskwarrior-compatibility.md`.
 Suite: **729 passed**, 0 skipped (this machine has both `timew` and a
 Taskwarrior ≥ 3.5.0 first on `PATH`, so no test here goes through the
 version-gated skip path in `test_environment.py`).
+
+## MainWindow decomposition (2026-09-05)
+
+`main_window.py` had grown to 1716 lines / ~121 methods across every
+milestone since M1, with no internal organization beyond loose `# ---`
+comment dividers — a maintainability risk, not a functional bug. Fixed with a
+**behaviour-neutral** split into mixins: method bodies moved verbatim (same
+code, same order, same names), nothing rewritten. Verified neutral by the
+full suite passing identically before and after (**729 passed**, same count)
+plus a plain-Python AST/ruff pass over every new file confirming no
+undefined names (only the expected unused-import noise from copying the
+full top-of-file import block into each file, auto-fixed with
+`ruff --fix`).
+
+**New package `src/jtask_gui/mixins/`** — ten plain classes (no Qt base),
+composed into `MainWindow` by multiple inheritance
+(`class MainWindow(QMainWindow, BoardsMixin, ConsolePaletteMixin, ...)`);
+`self` is still the one `MainWindow` instance everywhere, so every existing
+cross-reference between these methods keeps working unchanged:
+
+| mixin | owns |
+|---|---|
+| `boards.py` `BoardsMixin` | Board switching/persistence, per-column sort, card drops, board manager |
+| `console_palette.py` `ConsolePaletteMixin` | Raw command console toggle, command palette, shortcut sheet, view navigation, Settings dialog |
+| `data_safety.py` `DataSafetyMixin` | M7 export / import / sync dialogs, Config/Tools managers, opening the add/edit task form |
+| `detail_panel.py` `DetailPanelMixin` | Detail-panel slide animation, show/hide, Esc-to-close |
+| `review.py` `ReviewWizardMixin` | Weekly-review wizard open/step/exit |
+| `tags_projects.py` `TagsProjectsMixin` | Drag-drop reassignment, tag rename/remove, project rename/delete/colour, saved-filter CRUD |
+| `task_lifecycle.py` `TaskLifecycleMixin` | M5 verbs: delete, duplicate, append/prepend, annotate, purge, bulk edit, start/stop, star, inline edit, save, undo, context |
+| `theme.py` `ThemeMixin` | Theme toggle/sync/apply |
+| `tray.py` `TrayMixin` | System tray icon, background-run show/hide, quit |
+| `triage.py` `TriageModeMixin` | Triage mode: start/decision/project/delete/edit/exit |
+
+**Stayed in `MainWindow` itself** (763 lines, down from 1716) — the parts
+that are genuinely the shell's own job, not a delegable feature area:
+`__init__`/`_ensure_styled` and the `_build_*`/`_wire` construction methods
+(they create nearly every `self._x` widget attribute every mixin above
+reads), the central data-flow trio (`refresh_all` → `_load_current_view` →
+`_populate_table`/`_refresh_open_detail`/`_on_load_error`), the four view/
+filter event handlers, the write funnel and busy/error plumbing (`_write`,
+`_begin_busy`/`_end_busy`, `_op_failed`, `_error`), and the Qt lifecycle
+overrides (`resizeEvent`, `closeEvent`).
+
+**A future feature belongs in an existing mixin if it fits one of the rows
+above; a genuinely new feature area gets its own new `mixins/<name>.py`** —
+add it to both the import block and the `class MainWindow(...)` base list in
+`main_window.py`. Do not grow `main_window.py` itself for anything covered
+by a row in the table.
+
+**One piece of test fallout, not a functional change**: several tests
+monkeypatched `jtask_gui.main_window.confirm` (or `mw.confirm`) — with
+`confirm` now imported inside the owning mixin module instead, that name no
+longer exists on `main_window`. Updated each to patch the confirm binding
+where the call now actually happens (e.g.
+`jtask_gui.mixins.task_lifecycle.confirm`,
+`jtask_gui.mixins.tags_projects.confirm`) — `tests/gui/test_task_shortcuts.py`,
+`test_m3.py`, `test_m5.py`, `test_m6.py`. `test_d6_toast_empty_states.py`'s
+source-scanning test for "`_delete`/`_purge` still call `confirm(...)`" now
+scans `main_window.py` **and** every file under `mixins/`, so it keeps
+working regardless of which file a verb lives in next.
+
+Suite: **729 passed**, unchanged from before the split.

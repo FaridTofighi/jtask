@@ -262,7 +262,6 @@ def test_undo_preview_reports_count_and_leaves_state_untouched(tw_env):
 
 def test_undo_flow_shows_confirm_with_preview_then_applies(win, qapp, monkeypatch):
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.workers import wait_for_done
 
     tw.add(["کار واگرد"])
@@ -274,7 +273,7 @@ def test_undo_flow_shows_confirm_with_preview_then_applies(win, qapp, monkeypatc
         seen.update(kw)
         return True
 
-    monkeypatch.setattr(mw, "confirm", fake_confirm)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", fake_confirm)
     win._undo()
     wait_for_done(4000)
     qapp.processEvents()
@@ -288,11 +287,10 @@ def test_undo_flow_shows_confirm_with_preview_then_applies(win, qapp, monkeypatc
 
 
 def test_undo_flow_noop_when_nothing_to_undo(win, qapp, monkeypatch):
-    from jtask_gui import main_window as mw
     from jtask_gui.workers import wait_for_done
 
     called = []
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: called.append(1) or True)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: called.append(1) or True)
     win._undo()
     wait_for_done(4000)
     qapp.processEvents()
@@ -370,19 +368,18 @@ def test_bulk_edit_dialog_until_row(qapp):
 
 def test_delete_flow_confirms_then_deletes(win, qapp, monkeypatch):
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.workers import wait_for_done
 
     tw.add(["حذف‌شونده"])
     uuid = tw.export()[0]["uuid"]
 
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: False)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: False)
     win._delete([uuid])
     wait_for_done(3000)
     qapp.processEvents()
     assert tw.export([uuid])[0]["status"] == "pending"
 
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: True)
     win._delete([uuid])
     wait_for_done(3000)
     qapp.processEvents()
@@ -418,20 +415,19 @@ def test_append_flow_updates_description(win, qapp, monkeypatch):
 
 def test_purge_flow_requires_confirm_and_removes_deleted_task(win, qapp, monkeypatch):
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.workers import wait_for_done
 
     tw.add(["رفتنی"])
     uuid = tw.export()[0]["uuid"]
     tw.command([uuid], "delete")
 
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: False)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: False)
     win._purge([uuid])
     wait_for_done(3000)
     qapp.processEvents()
     assert len(tw.export(["status:deleted"])) == 1
 
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: True)
     win._purge([uuid])
     wait_for_done(3000)
     qapp.processEvents()
@@ -440,7 +436,6 @@ def test_purge_flow_requires_confirm_and_removes_deleted_task(win, qapp, monkeyp
 
 def test_bulk_edit_flow_applies_mods_to_all_selected(win, qapp, monkeypatch):
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.workers import wait_for_done
 
     tw.add(["گروهی الف"])
@@ -458,7 +453,7 @@ def test_bulk_edit_flow_applies_mods_to_all_selected(win, qapp, monkeypatch):
             return ["priority:M", "+بازبینی"]
 
     monkeypatch.setattr("jtask_gui.widgets.bulk_edit.BulkEditDialog", FakeDialog)
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr("jtask_gui.mixins.task_lifecycle.confirm", lambda *a, **k: True)
     win._bulk_edit(uuids)
     wait_for_done(4000)
     qapp.processEvents()

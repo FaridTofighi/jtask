@@ -78,7 +78,18 @@ The CLI (`cli.py`): `main()` dispatches recognised verbs via `_DISPATCH`;
   direction → theme QSS → `MainWindow`.
 - `main_window.py` — the shell. `_write(fn, msg)` is the **single mutation
   funnel** (`_begin_busy` → `workers.submit` → status + toast + `refresh_all`).
-  `_content` is a `QStackedWidget`: index 0 tasks, index 1 reports.
+  `_content` is a `QStackedWidget`: index 0 tasks, index 1 reports. Owns
+  construction/wiring and the central data-flow trio (`refresh_all` →
+  `_load_current_view` → `_populate_table`); every other feature area is
+  composed in from `mixins/` (below) by multiple inheritance — a new feature
+  goes in the matching existing mixin, or a new `mixins/<name>.py`, **not**
+  grown directly onto `main_window.py`. Full map in `docs/jtask-gui-design.md`
+  ("MainWindow decomposition").
+- `mixins/` — one file per `MainWindow` feature area (plain classes, no Qt
+  base): `boards.py`, `console_palette.py`, `data_safety.py` (export/import/
+  sync), `detail_panel.py`, `review.py` (weekly-review wizard),
+  `tags_projects.py`, `task_lifecycle.py` (M5 verbs), `theme.py`, `tray.py`,
+  `triage.py`.
 - `workers.py` — `submit(fn, on_ok, on_err)` runs `fn` on a `QThreadPool`;
   `_Signals.failed` carries the exception. `wait_for_done(ms)` for tests.
 - `settings.py` — typed wrapper over `QSettings("jtask", "jtask-gui")`.

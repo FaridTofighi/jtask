@@ -65,14 +65,17 @@ def test_delete_via_shortcut_goes_through_the_confirm_dialog(qapp, qtbot, tw_env
 
     QSettings("jtask", "jtask-gui").clear()
     from jtask import taskwarrior as tw
-    from jtask_gui import main_window as mw
     from jtask_gui.main_window import MainWindow
     from jtask_gui.settings import Settings
     from jtask_gui.workers import wait_for_done
 
     tw.add(["shortcut delete me"])
     seen = {}
-    monkeypatch.setattr(mw, "confirm", lambda *a, **k: seen.setdefault("asked", True) or True)
+    # _delete lives in mixins/task_lifecycle.py (MainWindow decomposition)
+    monkeypatch.setattr(
+        "jtask_gui.mixins.task_lifecycle.confirm",
+        lambda *a, **k: seen.setdefault("asked", True) or True,
+    )
 
     w = MainWindow(Settings())
     qtbot.addWidget(w)
