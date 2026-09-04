@@ -63,6 +63,28 @@ Rules (from the mission's cross-cutting requirements):
 - ANSI SGR header underlines appear in some report output (`context list`,
   `show`) **even with `rc.color=off`/`rc._forcecolor=off`** — already handled by
   `strip_ansi()` in the Raw Console and to be reused by every new text view.
+- **`task undo`'s confirmation-preview *wording* is not version-stable** —
+  verified directly against the real apt-packaged **Taskwarrior 2.6.2** binary
+  alongside 3.5.0 (both installed side by side on the dev machine: `/usr/bin/task`
+  vs `/usr/local/bin/task`). This is a text-format gap the capability-probe
+  system (`task _commands` / `_columns` / `_config`) doesn't cover — those probe
+  what exists, not how a command phrases its output. `taskwarrior._parse_undo_preview`
+  (pure function, `undo_preview()`'s parsing half) handles both shapes:
+  - **3.x**: `"The following N operations would be reverted:"` → `count = N`.
+  - **2.6.2**: no such phrase at all — just a bare `Prior Values / Current
+    Values` diff table straight into the confirmation prompt. Falls back to
+    `count = 1`, which is accurate, not a guess: pre-3.x `undo` only ever
+    reverts one transaction per invocation.
+  - **"nothing to undo" wording also differs**: 3.x says `"No operations to
+    undo."` / `"Could not undo: other operations have occurred."`; 2.6.2 says
+    `"There are no recorded transactions to undo."` — a genuinely different
+    phrase, matched by `_UNDO_EMPTY_RE` (case-insensitive, OR of all four
+    known phrasings). The original hardcoded-substring check missed the 2.6.2
+    wording entirely, so the GUI's undo-confirm dialog would have offered to
+    revert "1 operation" against an installed 2.6.2 with nothing to undo —
+    fixed; regression fixtures for all four shapes in `tests/test_taskwarrior.py`.
+  - Taskwarrior's exit code is **not** a usable signal here — both binaries
+    return `0` for a real preview and for "nothing to undo" alike (verified).
 
 ## Things Taskwarrior genuinely cannot do from plain `task` (documented, not gaps)
 

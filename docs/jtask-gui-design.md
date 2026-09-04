@@ -2821,3 +2821,44 @@ its own displayed value; marking the shown task done from elsewhere (Ctrl+D)
 and an undo affecting it both refresh the open panel without reopening it;
 switching selection to a different task still loads that task's own data, no
 cross-contamination. Suite **724 passed / 1 skipped**.
+
+## Full-suite triage against a real install — snapshot determinism + undo parsing (2026-09-05)
+
+Running the full suite against a real, installed environment (not just the
+dev box) surfaced two issues, both fixed here; a third (this file's own
+`MainWindow` size) is tracked separately below.
+
+**i18n snapshot false failure.** `test_i18n_snapshot.py` failed with 1 string
+added / 1 removed, both from `TimesheetView`'s note label — not a wording
+change. `_update_note()` branches live on `jtask.timew.available()`
+(`shutil.which("timew")`, a bare PATH probe with no caching) at widget
+construction time, so the snapshot's captured text depends on whether the
+*machine running the test* happens to have the `timew` binary on `PATH` —
+unrelated to the catalog wording the gate exists to protect. No source or
+catalog change caused this; regenerating the baseline on either kind of
+machine would just make it fail on the other. Fixed in the test harness: the
+`screens` fixture in `test_i18n_snapshot.py` now pins `timew.available()` to
+`True` (`monkeypatch`, same pattern as `tests/test_timew.py`) before building
+screens, matching the branch the committed baseline already reflects — no
+baseline regeneration needed, the wording itself was never wrong.
+
+**`undo_preview()` not version-robust.** Verified directly against two real
+binaries installed side by side (`/usr/local/bin/task` 3.5.0,
+`/usr/bin/task` 2.6.2 from `apt`) rather than assuming behaviour from reading
+the regex. The `count = 1` fallback for Taskwarrior's older bare-diff-table
+preview (no `"N operations would be reverted"` phrase) turned out to already
+be correct and already present — and actually accurate, not a guess: pre-3.x
+`undo` only ever reverts one transaction per call. The real bug was in the
+*other* branch: 2.6.2's "nothing to undo" message is `"There are no recorded
+transactions to undo."`, which matched none of the four hardcoded phrases —
+so a genuinely-empty undo on 2.6.2 was misreported as `count=1, empty=False`,
+and the GUI would have offered to revert an operation that didn't exist.
+Fixed with a single case-insensitive `_UNDO_EMPTY_RE` covering all four known
+phrasings (3.x's two, plus 2.6.2's); parsing extracted into a pure
+`_parse_undo_preview(out)` so both real output shapes are exercised directly
+in `tests/test_taskwarrior.py` without needing a matching binary installed.
+Full version-compatibility writeup in `docs/taskwarrior-compatibility.md`.
+
+Suite: **729 passed**, 0 skipped (this machine has both `timew` and a
+Taskwarrior ≥ 3.5.0 first on `PATH`, so no test here goes through the
+version-gated skip path in `test_environment.py`).

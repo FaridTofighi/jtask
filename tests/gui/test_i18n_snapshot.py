@@ -74,8 +74,16 @@ def _build_screens(qapp, qtbot, wait_for_done):
 
 
 @pytest.fixture
-def screens(qapp, qtbot, tw_env):
+def screens(qapp, qtbot, tw_env, monkeypatch):
+    from jtask import timew
     from jtask_gui.workers import wait_for_done
+
+    # TimesheetView's note wording branches live on whether the `timew`
+    # binary is on PATH (jtask.timew.available() is a bare shutil.which()
+    # call) — pin it so this wording gate tests catalog text, not which
+    # machine happens to have Timewarrior installed. The baseline was
+    # captured with it present; keep that branch deterministic here too.
+    monkeypatch.setattr(timew, "available", lambda: True)
 
     roots = _build_screens(qapp, qtbot, wait_for_done)
     yield roots

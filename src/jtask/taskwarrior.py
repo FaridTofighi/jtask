@@ -485,7 +485,27 @@ def duplicate(filter_args: list[str], mods: list[str] | None = None) -> dict:
 _UNDO_PROMPT_RE = re.compile(
     r"\n*The undo command is not reversible\..*$", re.DOTALL
 )
+# Taskwarrior 3.x's undo preview names the count explicitly ("The following 2
+# operations would be reverted:"). Older Taskwarrior (verified against the
+# real 2.6.2 binary — see docs/taskwarrior-compatibility.md) never says this;
+# it prints a bare Prior/Current Values diff table straight to the
+# confirmation prompt, with nothing to count — undo_preview() falls back to
+# count=1 for that shape (accurate too: pre-3.x `undo` only ever reverts one
+# transaction per invocation).
 _UNDO_COUNT_RE = re.compile(r"following (\d+) operations? would be reverted")
+# "Nothing pending" wording is not version-stable either. 3.x: "No operations
+# to undo." / "Could not undo: other operations have occurred." 2.6.2 (real
+# output): "There are no recorded transactions to undo." Matched
+# case-insensitively so small wording drift in some other in-between version
+# doesn't silently fall back to count=1 for an undo that would do nothing.
+_UNDO_EMPTY_RE = re.compile(
+    r"no operations to undo"
+    r"|no undo transactions"
+    r"|no recorded transactions"
+    r"|nothing to undo"
+    r"|could not undo",
+    re.IGNORECASE,
+)
 
 
 _PURGED_RE = re.compile(r"Purged (\d+) task")
@@ -502,6 +522,18 @@ def purge(filter_args: list[str]) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _parse_undo_preview(out: str) -> dict:
+    """Pure text-parsing half of :func:`undo_preview` — kept separate so both
+    known output shapes (current Taskwarrior's explicit count, and older
+    Taskwarrior's bare diff table) can be exercised directly in tests without
+    a matching binary installed."""
+    text = _UNDO_PROMPT_RE.sub("", out.strip()).strip()
+    m = _UNDO_COUNT_RE.search(text)
+    empty = not m and (not text or bool(_UNDO_EMPTY_RE.search(text)))
+    count = int(m.group(1)) if m else (0 if empty else 1)
+    return {"text": text, "count": count, "empty": empty}
+
+
 def undo_preview() -> dict:
     """What ``task undo`` would revert, *without* applying anything.
 
@@ -515,18 +547,7 @@ def undo_preview() -> dict:
         text=True,
         check=False,
     )
-    out = (proc.stdout or "").strip()
-    text = _UNDO_PROMPT_RE.sub("", out).strip()
-    m = _UNDO_COUNT_RE.search(text)
-    empty = not m and (
-        not text
-        or "No operations to undo" in text
-        or "No undo transactions" in text
-        or "Nothing to undo" in text
-        or "Could not undo" in text
-    )
-    count = int(m.group(1)) if m else (0 if empty else 1)
-    return {"text": text, "count": count, "empty": empty}
+    return _parse_undo_preview(proc.stdout or "")
 
 
 def information(spec: str) -> str:
