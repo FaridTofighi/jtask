@@ -546,7 +546,7 @@ CATALOG: dict[str, str] = {
     "sync.last_success": "آخرین همگام‌سازی موفق: {shown}",
     "sync.never": "تا کنون همگام‌سازی موفقی ثبت نشده است.",
     "sync.not_configured": "همگام‌سازی پیکربندی نشده است.",
-    "sync.not_configured.detail": "برای فعال‌سازی، تنظیمات «rc.sync.*» را در «مدیریت پیکربندی» (به‌زودی در M8) یا با فرمان «task config» تعیین کنید.",
+    "sync.not_configured.detail": "برای فعال‌سازی، تنظیمات «rc.sync.*» را در «مدیریت پیکربندی» یا با فرمان «task config» تعیین کنید.",
     "sync.ready": "همگام‌سازی آمادهٔ اجراست.",
     "sync.running": "در حال همگام‌سازی…",
     "sync.done": "همگام‌سازی کامل شد.",

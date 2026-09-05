@@ -2924,3 +2924,30 @@ scans `main_window.py` **and** every file under `mixins/`, so it keeps
 working regardless of which file a verb lives in next.
 
 Suite: **729 passed**, unchanged from before the split.
+
+## Bugfix: stale milestone reference leaking into user-facing text (2026-09-05)
+
+`sync.not_configured.detail` in `fa.py` read "...را در «مدیریت پیکربندی»
+(**به‌زودی در M8**) یا با فرمان..." — written while the Configuration
+Manager was still upcoming (M7-era); M8 shipped it and the parenthetical was
+never removed. `en.py`'s counterpart never had the leak (already read "in
+Manage Configuration", no milestone label). Fixed by dropping the
+parenthetical entirely — a shipped feature is referenced by name only, with
+no internal development-milestone label visible regardless of whether that
+milestone is done or pending.
+
+Swept every value in both `CATALOG` dicts for the same class of leak
+(`M[1-9]`, `d[1-7]`, `i[1-6]`, `n[1-3]`, `N-[A-E]`, `gtd-*`, `bc-*`, `bs-*`)
+— this was the only instance; the only other regex hits were in the module
+docstrings (dev-facing, e.g. "i1 rule: every value here must reproduce the
+exact string..."), not catalog values.
+
+`tests/gui/test_no_milestone_leaks.py` (new, +2): regex-scans every
+`CATALOG` value in `fa.py`/`en.py` for a milestone-code-like token,
+word-bounded so it doesn't fire on ordinary text ("i18n", "column1").
+Verified it actually catches this class of bug by reintroducing the exact
+original string and confirming the test fails, then restoring the fix.
+
+No snapshot update needed — `sync.not_configured.detail` is shown by
+`SyncManagerDialog`, which isn't among the screens `test_i18n_snapshot.py`
+renders. Suite: **731 passed**.
