@@ -52,11 +52,81 @@ def test_delete_project_removes_it_and_subtasks_only(tw_env):
     assert n == 3
     taskwarrior.refresh_lookups()
     assert _projects_of_open_tasks() == {"Workshop", "Home"}
-    # the deleted tasks are in the 'deleted' state, not purged
+    # the deleted tasks are in the 'deleted' state, not purged — but a
+    # project is just a shared string value, so it must not still be set on
+    # them (else the project would keep showing up, all-zero, forever)
     deleted = [t for t in taskwarrior.export(["status:deleted"])]
-    assert {t["project"] for t in deleted} == {"Work", "Work.Admin", "Work.Admin.Q3"}
+    assert len(deleted) == 3
+    assert all(not t.get("project") for t in deleted)
     # reversible
     assert taskwarrior.undo_preview()["empty"] is False
+
+
+def test_delete_project_also_clears_already_deleted_tasks(tw_env):
+    """Bug: a task individually deleted *before* "delete project" runs keeps
+    its project field forever (task delete refuses an already-deleted task),
+    so the project keeps appearing — with all-zero counts — even after
+    every visible (pending/completed) task is gone."""
+    _seed()
+    # target by uuid, not sequential id — completing/deleting a task shifts
+    # every later pending task's id, so a hardcoded id would silently drift
+    # onto the wrong task
+    admin = taskwarrior.export(["project.is:Work.Admin"])[0]["uuid"]
+    taskwarrior.command([admin], "delete")   # Work.Admin -> deleted, pre-existing
+    taskwarrior.command(
+        [taskwarrior.export(["project.is:Work"])[0]["uuid"]], "done"
+    )                                        # Work -> completed
+    taskwarrior.refresh_lookups()
+
+    n = taskwarrior.delete_project("Work")
+    assert n == 2  # the completed "Work" task + the still-pending "Work.Admin.Q3"
+
+    # nothing in *any* status still names Work or a Work.* sub-project
+    everything = (
+        taskwarrior.export(["status:pending"])
+        + taskwarrior.export(["status:completed"])
+        + taskwarrior.export(["status:deleted"])
+        + taskwarrior.export(["status:waiting"])
+    )
+    assert not any(
+        (t.get("project") or "") == "Work" or (t.get("project") or "").startswith("Work.")
+        for t in everything
+    )
+
+
+def test_delete_project_cleans_up_a_zombie_with_zero_visible_tasks(tw_env):
+    """The project has *only* an already-deleted task naming it (e.g. every
+    other task was individually deleted earlier, or a previous, buggy
+    "delete project" run already handled the visible ones) — nothing
+    pending/completed, so project_task_count is 0, but delete_project must
+    still clean it up rather than being a no-op."""
+    taskwarrior.add(["zombie task", "project:Ghost"])
+    taskwarrior.command(["1"], "delete")
+    taskwarrior.refresh_lookups()
+
+    assert taskwarrior.project_task_count("Ghost") == 0
+    assert taskwarrior.project_deleted_count("Ghost") == 1
+
+    n = taskwarrior.delete_project("Ghost")
+    assert n == 0  # nothing new was deleted — it already was
+    assert taskwarrior.project_deleted_count("Ghost") == 0
+    assert not taskwarrior.export(["status:deleted"])[0].get("project")
+
+
+def test_rename_project_also_moves_already_deleted_tasks(tw_env):
+    """Same class of leak as delete_project: rename must not leave a
+    deleted-status task behind still naming the *old* project."""
+    _seed()
+    taskwarrior.command(["2"], "delete")  # Work.Admin -> deleted, pre-existing
+    taskwarrior.refresh_lookups()
+
+    n = taskwarrior.rename_project("Work", "Client")
+    assert n == 3  # Work, the now-deleted Work.Admin, Work.Admin.Q3
+
+    deleted = taskwarrior.export(["status:deleted"])
+    assert len(deleted) == 1
+    assert deleted[0]["project"] == "Client.Admin"
+    assert taskwarrior.project_deleted_count("Work") == 0
 
 
 def test_delete_unknown_project_is_a_noop(tw_env):

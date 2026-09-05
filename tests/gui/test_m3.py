@@ -498,6 +498,68 @@ def test_main_window_project_management_flow(qtbot, tw_env, qapp, monkeypatch):
     assert open_projects == {"Workshop"}
 
 
+def test_deleted_project_fully_disappears_from_sidebar_and_reports(
+    qtbot, tw_env, qapp, monkeypatch
+):
+    """Bug: after "delete project", a task already in the 'deleted' status
+    kept its project field (task delete refuses an already-deleted task), so
+    the project kept showing up — all-zero counts — in the sidebar and every
+    project report until the field was cleared too. Covers pending +
+    completed + deleted tasks in the same project, per the bug report."""
+    from PyQt6.QtCore import QSettings
+
+    from jtask import reports
+    from jtask import taskwarrior as tw
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+    from jtask_gui.workers import wait_for_done
+
+    QSettings("jtask", "jtask-gui").clear()
+    name = "work.CompletionPhase03"
+    tw.add(["pending item", f"project:{name}"])
+    tw.add(["completed item", f"project:{name}"])
+    tw.add(["already deleted item", f"project:{name}"])
+    tw.command([tw.export(["description:completed item"])[0]["uuid"]], "done")
+    tw.command([tw.export(["description:already deleted item"])[0]["uuid"]], "delete")
+
+    win = MainWindow(Settings())
+    qtbot.addWidget(win)
+
+    def _drain():
+        for _ in range(8):
+            qapp.processEvents()
+            wait_for_done(4000)
+            qapp.processEvents()
+
+    _drain()
+    monkeypatch.setattr("jtask_gui.mixins.tags_projects.confirm", lambda *a, **k: True)
+
+    win._delete_project(name)
+    _drain()
+    tw.refresh_lookups()
+
+    # (a) no task in *any* status still carries the project, via a real
+    # Taskwarrior query covering every status
+    everything = (
+        tw.export(["status:pending"]) + tw.export(["status:completed"])
+        + tw.export(["status:deleted"]) + tw.export(["status:waiting"])
+    )
+    assert not any((t.get("project") or "") == name for t in everything)
+
+    # (b) gone from the sidebar, without a restart or manual refresh
+    sidebar_projects = {
+        win._sidebar._projects.child(i).text(0).split("  ·")[0]
+        for i in range(win._sidebar._projects.childCount())
+    }
+    assert name not in sidebar_projects
+
+    # (c) gone from the Projects report and the Projects Summary — both
+    # re-derive from a fresh export, same data source the GUI's reports view
+    # renders from
+    assert name not in {r["project"] for r in reports.report_projects()}
+    assert name not in {r["project"] for r in reports.report_summary()}
+
+
 def test_calendar_day_drop_emits_gregorian_date(qtbot, tw_env, qapp):
     from PyQt6.QtCore import QPointF, Qt
     from PyQt6.QtGui import QDropEvent

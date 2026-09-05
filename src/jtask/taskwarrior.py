@@ -44,6 +44,7 @@ __all__ = [
     "rename_tag",
     "remove_tag",
     "project_task_count",
+    "project_deleted_count",
     "delete_project",
     "rename_project",
     "project_colors",
@@ -367,6 +368,19 @@ def _project_filter(name: str) -> list[str]:
     return ["status.not:deleted", "(", f"project.is:{n}", "or", f"project:{n}.", ")"]
 
 
+def _project_filter_deleted(name: str) -> list[str]:
+    """Tasks *already* deleted that still carry *name* (+ sub-projects).
+
+    A project is just a shared string value on tasks, not a real object —
+    Taskwarrior (and this app's own project lists) keep listing a project as
+    long as *any* task in *any* status still names it. ``task delete``
+    refuses a task that is already deleted ("not deletable"), so these need
+    a plain ``modify`` instead of another delete.
+    """
+    n = name.strip().rstrip(".")
+    return ["status:deleted", "(", f"project.is:{n}", "or", f"project:{n}.", ")"]
+
+
 def project_task_count(name: str) -> int:
     """Non-deleted tasks in project *name* or any sub-project ``name.*``."""
     if not name.strip():
@@ -375,6 +389,18 @@ def project_task_count(name: str) -> int:
         if line.strip().isdigit():
             return int(line.strip())
     return 0
+
+
+def project_deleted_count(name: str) -> int:
+    """Already-deleted tasks in project *name* (+ sub-projects) that still
+    carry the project field — a "zombie" reference invisible to
+    :func:`project_task_count` but enough, by itself, to keep the project
+    showing up (with all-zero activity) in every project listing. Lets a
+    caller tell "genuinely empty" apart from "nothing pending/completed, but
+    still needs :func:`delete_project`'s cleanup"."""
+    if not name.strip():
+        return 0
+    return count(_project_filter_deleted(name))
 
 
 def count(filter_args: list[str]) -> int:
@@ -386,21 +412,39 @@ def count(filter_args: list[str]) -> int:
 
 
 def delete_project(name: str) -> int:
-    """Delete every non-deleted task in project *name* (+ sub-projects).
+    """Delete every non-deleted task in project *name* (+ sub-projects), and
+    clear the project field from any task *already* deleted that still
+    carries it.
 
-    A normal ``task delete`` — reversible with ``task undo``, not ``purge``.
-    Returns the number of tasks deleted.
+    A project is not a real Taskwarrior object — just a shared string value
+    on tasks — so it keeps appearing (with all-zero activity) in every
+    project listing as long as even one task, in *any* status, still names
+    it. ``task delete`` refuses a task that is already deleted ("not
+    deletable"), so those are cleaned up with ``modify project:`` instead —
+    a normal, reversible-with-``task undo`` operation, same as the delete.
+
+    Returns the number of (non-deleted) tasks actually deleted; clearing an
+    already-deleted task's project field doesn't count toward that number.
     """
-    if project_task_count(name) == 0:
-        return 0
-    out = command(_project_filter(name), "delete")
-    m = _DELETED_RE.search(out)
-    return int(m.group(1)) if m else 0
+    deleted = 0
+    if project_task_count(name) > 0:
+        out = command(_project_filter(name), "delete")
+        m = _DELETED_RE.search(out)
+        deleted = int(m.group(1)) if m else 0
+    if count(_project_filter_deleted(name)) > 0:
+        command(_project_filter_deleted(name), "modify", ["project:"])
+    return deleted
 
 
 def rename_project(old: str, new: str) -> int:
-    """Move every non-deleted task from project *old* (+ sub-projects) to *new*,
-    keeping the sub-structure: a task in ``old.Sub`` lands in ``new.Sub``.
+    """Move every task from project *old* (+ sub-projects) to *new*, keeping
+    the sub-structure (a task in ``old.Sub`` lands in ``new.Sub``) —
+    including tasks already in the ``deleted`` status, so no task in *any*
+    status is left naming *old* afterward (same reasoning as
+    :func:`delete_project`: a project is just a shared string value, and one
+    leftover task is enough to keep the old name showing up everywhere).
+    ``modify`` (unlike ``delete``) works fine on an already-deleted task.
+
     Returns the number of tasks moved.
     """
     old = old.strip().rstrip(".")
@@ -408,7 +452,8 @@ def rename_project(old: str, new: str) -> int:
     if not old or not new or old == new:
         return 0
     moved = 0
-    for task in export(_project_filter(old)):
+    tasks = export(_project_filter(old)) + export(_project_filter_deleted(old))
+    for task in tasks:
         proj = task.get("project") or ""
         uuid = task.get("uuid")
         if not uuid:

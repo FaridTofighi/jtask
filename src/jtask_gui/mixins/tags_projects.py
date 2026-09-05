@@ -112,12 +112,27 @@ class TagsProjectsMixin:
         submit(check, ask, self._error)
 
     def _delete_project(self, name: str) -> None:
-        def check() -> int:
-            return taskwarrior.project_task_count(name)
+        def check() -> tuple[int, int]:
+            return (
+                taskwarrior.project_task_count(name),
+                taskwarrior.project_deleted_count(name),
+            )
 
-        def ask(n: int) -> None:
+        def ask(counts: tuple[int, int]) -> None:
+            n, zombie = counts
             if n == 0:
-                self._toast.show_message(t("msg.project_empty", project=name))
+                if zombie == 0:
+                    self._toast.show_message(t("msg.project_empty", project=name))
+                    return
+                # nothing pending/completed left — just an already-deleted
+                # task still naming this project, keeping it listed with
+                # all-zero counts. Nothing user-visible is being destroyed,
+                # so clean it up directly rather than asking for a
+                # destructive confirm over 0 real tasks.
+                self._write(
+                    functools.partial(taskwarrior.delete_project, name),
+                    t("msg.project_deleted", project=name),
+                )
                 return
             if not confirm(
                 self,

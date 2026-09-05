@@ -2951,3 +2951,55 @@ original string and confirming the test fails, then restoring the fix.
 No snapshot update needed — `sync.not_configured.detail` is shown by
 `SyncManagerDialog`, which isn't among the screens `test_i18n_snapshot.py`
 renders. Suite: **731 passed**.
+
+## Bugfix: deleted project still listed, all-zero, after "delete project" (2026-09-05)
+
+Diagnosed both possibilities the ticket asked to check before touching
+anything, using real Taskwarrior commands (`task project:X all`,
+`task <filter> delete` / `modify` on an already-deleted task) rather than
+assuming:
+
+- **Not stale jtask-side caching.** `report_projects`/`report_summary`
+  (sidebar, Projects report, Projects Summary) call `reports._all()`, which
+  is never cached and explicitly scans pending + completed + deleted every
+  time; `refresh_lookups()` (first thing `refresh_all()` does) already
+  clears `list_projects()`'s cache. Every read path was already fresh.
+- **It was an incomplete delete.** `taskwarrior._project_filter()` — shared
+  by `delete_project()` and `rename_project()` — filters `status.not:deleted`.
+  A task already in the `deleted` status when "delete project" runs (deleted
+  individually earlier, unrelated to this action) was therefore never
+  touched, keeping its `project:` field forever. `shape_projects()` counts
+  *every* task with that project into `total` regardless of status, but only
+  increments `open`/`waiting`/`completed` for pending/waiting/completed — a
+  lone deleted-status leftover produces exactly the reported symptom: the
+  project row exists (`total=1`), every count is 0, `pct = 0/1*100 = 0.0`.
+  Confirmed directly: `task <filter> delete` on an already-deleted task says
+  *"not deletable"* (exit 1) — which is *why* the original code excluded
+  deleted tasks — but `task <filter> modify project:` **succeeds** on a
+  deleted task (exit 0, just an informational note). That is the fix:
+  `delete_project()` now also runs a `modify project:` pass over
+  already-deleted tasks naming the project — a normal, `task undo`-reversible
+  write, not another delete. `rename_project()` had the identical gap (a
+  deleted task would keep the *old* name forever) — fixed the same way,
+  moving already-deleted tasks' project field to the new name too.
+
+**A second, related gap found while fixing this**: the sidebar's "Delete
+Project" action gates on `project_task_count(name)` (non-deleted tasks) —
+for a project with *only* an already-deleted leftover (`project_task_count`
+== 0), the old code showed "project is empty" and returned **without ever
+calling `delete_project`**, meaning a zombie project could never be cleaned
+up through the UI at all, even after the core fix above. New
+`taskwarrior.project_deleted_count(name)` lets `mixins/tags_projects.py`'s
+`_delete_project` tell "genuinely empty" apart from "nothing visible, but
+still needs cleanup" — the latter now calls `delete_project` directly
+(no destructive-confirm dialog, since nothing pending/completed is actually
+being touched).
+
+`tests/test_project_ops.py` (+4): the exact repro (delete leaves an
+already-deleted task's project field intact — fixed the test's own outdated
+assertion, which had encoded the *bug* as expected behaviour), the
+zero-visible-tasks zombie-cleanup case, and the equivalent `rename_project`
+gap. `tests/gui/test_m3.py` (+1): pending + completed + deleted tasks in one
+project, delete via the real GUI action, assert no task in *any* status
+still carries it and it's gone from the sidebar tree, `report_projects()`,
+and `report_summary()` — all without a restart. Suite: **735 passed**.
