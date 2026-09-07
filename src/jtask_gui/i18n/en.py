@@ -630,6 +630,20 @@ CATALOG.update({
     "detail.anchor.modified": "Modified",
     "detail.anchor.end": "End",
 
+    # ---- status row: effective state + valid transitions --------
+    "detail.status.pending": "Pending",
+    "detail.status.active": "Active",
+    "detail.status.waiting": "Waiting",
+    "detail.status.completed": "Completed",
+    "detail.status.deleted": "Deleted",
+    "detail.status.recurring": "Recurring",
+    "detail.status.act.start": "Start",
+    "detail.status.act.stop": "Stop",
+    "detail.status.act.done": "Done",
+    "detail.status.act.delete": "Delete",
+    "detail.status.act.reopen": "Reopen",
+    "detail.status.act.unwait": "Clear wait",
+
     # ---- history view -------------------------
     "hist.attr.Priority": "Priority",
     "hist.attr.Project": "Project",

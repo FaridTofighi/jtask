@@ -604,6 +604,20 @@ CATALOG: dict[str, str] = {
     "detail.anchor.modified": "ویرایش",
     "detail.anchor.end": "پایان",
 
+    # ---- status row: effective state + valid transitions --------
+    "detail.status.pending": "در جریان",
+    "detail.status.active": "فعال",
+    "detail.status.waiting": "در انتظار",
+    "detail.status.completed": "انجام‌شده",
+    "detail.status.deleted": "حذف‌شده",
+    "detail.status.recurring": "تکرارشونده",
+    "detail.status.act.start": "شروع",
+    "detail.status.act.stop": "توقف",
+    "detail.status.act.done": "انجام‌شده",
+    "detail.status.act.delete": "حذف",
+    "detail.status.act.reopen": "بازگشایی",
+    "detail.status.act.unwait": "لغو انتظار",
+
     # ---- history view (widgets/history_view.py) ----------------
     "hist.attr.Priority": "اولویت",
     "hist.attr.Project": "پروژه",

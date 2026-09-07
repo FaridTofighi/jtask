@@ -64,6 +64,23 @@ unified fa = «بالا / متوسط / پایین», en = «High / Medium / Low�
 
 \* «انجام‌شده» and «تکمیل‌شده» both appear today; i5 → one (proposed «انجام‌شده» / "Completed").
 
+### Status-control actions (detail panel — `detail.status.act.*`)
+
+The detail panel's Status control shows the task's *effective* state and the
+transitions valid from it. «فعال» / "Active" (pending **with** a `start`
+timestamp) and «در انتظار» / "Waiting" (pending with a future `wait`) are
+displayed as distinct states here but are **not** settable statuses — they
+are the `+ACTIVE` / `+WAITING` conditions surfaced as state.
+
+| fa | en | effect |
+|---|---|---|
+| شروع | Start | `task start` |
+| توقف | Stop | `task stop` |
+| انجام‌شده | Done | `task done` |
+| حذف | Delete | `task delete` (confirmed; `#DangerButton`) |
+| بازگشایی | Reopen | `modify status:pending` (from completed / deleted) |
+| لغو انتظار | Clear wait | `modify wait:` (drop the wait date) |
+
 ### Virtual tags (filter builder picker — TW `+TAG`)
 
 | fa | en | TW |

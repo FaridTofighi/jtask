@@ -3046,3 +3046,63 @@ plain text (no regression), a changed selection emits a mod Taskwarrior
 accepts, a pre-existing off-list value stays selectable, `priority` absent
 from the section, and the filter builder using the same values + strict
 combo. Suite: **742 passed**.
+
+## Feature: unified Status control in the detail panel (2026-09-07)
+
+The Status form row was a bare label — changing state meant knowing a
+different mechanism per transition (a shortcut for start/stop, another for
+done, `Del` for delete, the `wait:` field for waiting, a raw command to
+reopen). Replaced with `widgets/status_control.py` `StatusControl`: a `#Badge`
+pill showing the effective state + a row of the actions valid *from* that
+state.
+
+**Effective-state model** (`reports.effective_status(task)`, framework-agnostic,
+sits next to `_is_overdue`): Taskwarrior stores only `pending` / `completed`
+/ `deleted` / `waiting`, and modern Taskwarrior (verified 2.6.2 and 3.5.0)
+reports a *waiting* task as `status:pending` + a future `wait` — so `active`
+(pending + `start`) and `waiting` (pending + future `wait`) are **derived**
+here, never treated as settable statuses. `waiting` wins over `active` for
+the badge (not actionable until the wait passes) but a started+waiting task
+still gets `stop`.
+
+| effective state | actions offered |
+|---|---|
+| pending (not started) | شروع · انجام‌شده · حذف |
+| active («فعال» — pending + start) | توقف · انجام‌شده · حذف |
+| waiting | لغو انتظار · شروع/توقف · انجام‌شده · حذف |
+| completed | بازگشایی |
+| deleted | بازگشایی |
+| recurring | — (display only) |
+
+Badge terminology follows `docs/i18n-glossary.md` (invariant #8): the
+started state reads «فعال» / "Active" (the glossary already assigns «در
+جریان» / "Pending" to plain pending and «فعال» to the +ACTIVE concept). The
+ticket's "در جریان (in progress)" names the *concept*; the glossary term is
+«فعال».
+
+**Presentation: a plain button row — not `SegmentedControl`, not a menu.**
+`SegmentedControl` is an exclusive *value* selector (one segment stays
+`checked`); status transitions are momentary *actions* with nothing to keep
+selected — semantically wrong, and it would leave a nonsensical checked
+state after every click. A dropdown menu just trades one hidden mechanism
+for another when discoverability (reopen especially) is the whole point. The
+inline row matches `TriageView`'s existing action-button vocabulary
+(`#DangerButton` for delete, per design-system §3); max 4 buttons (waiting)
+fits a ~400px form column.
+
+**No parallel write path.** `StatusControl` emits one `actionRequested(str)`;
+`DetailPanel._status_action` maps it to the app's existing routes —
+`startStopRequested` → `_start_stop`, `doneRequested` → `_bulk(…, "done")`,
+`deleteRequested` → `_delete` (keeps its confirm), and `reopen` / `unwait`
+are single `modify` mods (`status:pending`, `wait:`) that ride the normal
+`saveRequested` → `_save_task` → `_write` route. Everything stays undoable
+via the existing undo action. `reopen`'s `modify status:pending` is the same
+transition `boards.py` already uses for its "reopen" verb.
+
+`tests/gui/test_status_control.py` (+12): `effective_status` derivation
+(active / waiting / waiting-wins / past-wait), the exact action set per
+state (parametrised, incl. "never offers start/done on a completed/deleted
+task"), each action making the real transition and being `task undo`-able,
+delete confirming first, and clear-wait removing `wait:` with the badge
+updating to pending. i18n snapshot regenerated (+«شروع», +«انجام‌شده» as
+button labels — deliberate widget change). Suite: **754 passed**.

@@ -114,7 +114,7 @@ def test_write_from_elsewhere_refreshes_the_open_panel(win, qapp):
     # the default view no longer contains a completed task -> it can't stay
     # selected, but the still-open panel must not be left showing the old data
     assert win._detail.current_uuid() == uuid
-    assert win._detail._status.text() == "Completed"
+    assert win._detail._status.state == "completed"
 
 
 def test_undo_affecting_the_shown_task_refreshes_the_panel(win, qapp):

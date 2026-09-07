@@ -48,6 +48,7 @@ __all__ = [
     "report_burndown",
     "report_calendar",
     "run_custom_report",
+    "effective_status",
 ]
 
 PERIODS = ("daily", "weekly", "monthly")
@@ -92,6 +93,29 @@ def _now() -> datetime.datetime:
 def _is_overdue(task: dict) -> bool:
     due = _parse(task.get("due"))
     return bool(due and task.get("status") == "pending" and due < _now())
+
+
+def effective_status(task: dict) -> str:
+    """The task's *effective* state for display and action purposes — one of
+    ``pending`` / ``active`` / ``waiting`` / ``completed`` / ``deleted`` /
+    ``recurring``.
+
+    Taskwarrior stores only four real statuses; `active` (a pending task
+    with a `start` timestamp) and `waiting` (a pending task whose `wait`
+    date is still in the future — modern Taskwarrior reports it as
+    ``status:pending``, not ``status:waiting``) are *derived* here. When a
+    task is both waiting and started, `waiting` wins (it isn't actionable
+    until the wait passes).
+    """
+    st = (task.get("status") or "").strip()
+    if st and st != "pending":
+        return st
+    wait = _parse(task.get("wait"))
+    if wait and wait > _now():
+        return "waiting"
+    if task.get("start"):
+        return "active"
+    return "pending"
 
 
 def _period_key(jd: jdatetime.date, period: str) -> tuple[Any, str]:

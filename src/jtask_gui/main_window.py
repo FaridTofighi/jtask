@@ -479,6 +479,11 @@ class MainWindow(
         self._detail.closed.connect(self._after_triage_edit)
         self._detail.saveRequested.connect(self._save_task)
         self._detail.starToggled.connect(self._toggle_star)
+        self._detail.startStopRequested.connect(self._start_stop)
+        self._detail.doneRequested.connect(
+            lambda u: self._bulk([u], "done", t("msg.tasks_done"))
+        )
+        self._detail.deleteRequested.connect(lambda u: self._delete([u]))
         self._model.cellEdited.connect(self._inline_edit)
         self._model.starToggled.connect(self._toggle_star)
         self._board.boardDrop.connect(self._board_drop)

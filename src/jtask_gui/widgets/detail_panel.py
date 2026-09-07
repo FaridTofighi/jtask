@@ -27,6 +27,7 @@ from ..i18n import t
 from .chips import TagChipEditor
 from .jalali_date_picker import JalaliDatePicker
 from .recurrence_builder import RecurrenceBuilder
+from .status_control import StatusControl
 
 _PRIORITIES = [
     ("detail.priority.none", ""), ("detail.priority.h", "H"),
@@ -36,10 +37,6 @@ _PRIORITIES = [
 # `uda_definitions()` — but the panel has a dedicated priority control, so it
 # must not also appear in the dynamic UDA section.
 _UDA_HANDLED_ELSEWHERE = {"priority"}
-_STATUS_KEY = {
-    "pending": "status.pending", "completed": "status.completed", "waiting": "status.waiting",
-    "deleted": "status.deleted", "recurring": "status.recurring",
-}
 _DATE_FIELDS = [("due", "word.due", True), ("scheduled", "word.scheduled", True),
                 ("wait", "detail.date.wait", False), ("until", "word.until", False)]
 
@@ -47,6 +44,9 @@ _DATE_FIELDS = [("due", "word.due", True), ("scheduled", "word.scheduled", True)
 class DetailPanel(QScrollArea):
     saveRequested = pyqtSignal(str, list)      # uuid, modification tokens
     starToggled = pyqtSignal(str, bool)        # uuid, starred
+    startStopRequested = pyqtSignal(str, bool)  # uuid, start?  (matches TaskTable)
+    doneRequested = pyqtSignal(str)            # uuid
+    deleteRequested = pyqtSignal(str)          # uuid
     opened = pyqtSignal()
     closed = pyqtSignal()
 
@@ -112,7 +112,8 @@ class DetailPanel(QScrollArea):
             self._priority.addItem(t(label_key))
         form.addRow(t("word.priority"), self._priority)
 
-        self._status = QLabel("—")
+        self._status = StatusControl()
+        self._status.actionRequested.connect(self._status_action)
         form.addRow(t("word.status"), self._status)
 
         self._dates: dict[str, JalaliDatePicker] = {}
@@ -270,8 +271,7 @@ class DetailPanel(QScrollArea):
         self._priority.setCurrentIndex(
             next((i for i, (_, v) in enumerate(_PRIORITIES) if v == pri), 0)
         )
-        st = task.get("status", "")
-        self._status.setText(t(_STATUS_KEY[st]) if st in _STATUS_KEY else (st or "—"))
+        self._status.set_task(task)
         for key, picker in self._dates.items():
             picker.set_from_taskwarrior(task.get(f"{key}_gregorian") or task.get(key) or "")
         self._dirty_dates.clear()
@@ -361,6 +361,26 @@ class DetailPanel(QScrollArea):
             self._uda_form.addRow(spec.get("label", name), w)
 
     # --- editing actions -------------------------------------
+
+    def _status_action(self, action: str) -> None:
+        """Translate a StatusControl action into the app's *existing* write
+        paths — no new command logic. start/stop/done/delete each have a
+        dedicated MainWindow slot; reopen and clear-wait are single
+        `modify` mods, so they ride the normal saveRequested → _save_task →
+        _write route (and stay undoable) like any other field edit."""
+        if not self._task:
+            return
+        uuid = self._task["uuid"]
+        if action in ("start", "stop"):
+            self.startStopRequested.emit(uuid, action == "start")
+        elif action == "done":
+            self.doneRequested.emit(uuid)
+        elif action == "delete":
+            self.deleteRequested.emit(uuid)
+        elif action == "reopen":
+            self.saveRequested.emit(uuid, ["status:pending"])
+        elif action == "unwait":
+            self.saveRequested.emit(uuid, ["wait:"])
 
     def _pick_dependency(self) -> None:
         from ..workers import submit
