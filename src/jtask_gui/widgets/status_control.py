@@ -1,31 +1,35 @@
-"""The Status form-row's inline action control.
+"""The Status form-row's control — one cohesive segmented row.
 
-Shows the task's *effective* state (`reports.effective_status`) and only the
-transitions valid from it. These are momentary *actions* (fire once, the task
-changes, the control rebuilds), not a persisted selection — so it is a row
-of small buttons, not a `SegmentedControl` (which keeps one button `checked`
-to represent a value) and not a hidden menu (the whole point is
-discoverability — reopen especially had no direct in-panel action before).
-The delete button carries `#DangerButton` (design-system §3); the badge
-reuses the existing `#Badge` pill style.
+Left/leading: the task's *effective* state (`reports.effective_status`),
+rendered in the app's active-selection accent (`#StatusCurrent`, the same
+`primary_soft` / `primary` language as the selected sidebar item) so it
+reads as "this is where the task *is*", never as another button.
 
-The badge + buttons live in a **FlowLayout** — they wrap to a second line
-when the panel is narrow instead of forcing the whole detail panel wider
-(the recurring "detail panel clips its later sections" bug: the tag chips
-hit exactly this in M1 and were fixed the same way). See
-docs/jtask-gui-design.md.
+Right/trailing: only the transitions valid *from* that state, as compact
+icon `QToolButton`s (`#StatusAction`) with the full label on hover. Momentary
+actions — fire once, the task changes, the control rebuilds — so not a
+`SegmentedControl` (which keeps one segment `checked` to hold a value) and
+not a hidden menu (discoverability is the point; reopen had no in-panel
+action before). Delete tints red on hover (design-system §3).
+
+Everything is one horizontal row inside a bordered `#StatusControl` frame:
+the icon buttons keep it narrow enough to never wrap or widen the panel
+(the recurring "detail panel clips its later sections" bug). Element order
+and corner rounding mirror automatically with the layout direction — the
+row is a plain `QHBoxLayout`, the accent is a full fill (no leading-edge
+border to place by hand). See docs/jtask-gui-design.md.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLabel, QPushButton, QSizePolicy, QWidget
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QWidget
 
 from jtask import reports
 
+from .. import icons
 from .. import tokens as tok
 from ..i18n import t
-from .flow_layout import FlowLayout
 
 _STATE_LABEL = {
     "pending": "detail.status.pending",
@@ -34,6 +38,11 @@ _STATE_LABEL = {
     "completed": "detail.status.completed",
     "deleted": "detail.status.deleted",
     "recurring": "detail.status.recurring",
+}
+
+_ACTION_ICON = {
+    "start": "start", "stop": "stop", "done": "done",
+    "delete": "delete", "reopen": "reopen", "unwait": "unwait",
 }
 
 
@@ -46,7 +55,6 @@ def _actions_for(state: str, started: bool) -> list[tuple[str, str]]:
         return [("detail.status.act.reopen", "reopen")]
     if state == "recurring":
         return []
-    # pending / active / waiting all share the pending action set
     base = [
         (("detail.status.act.stop", "stop") if started
          else ("detail.status.act.start", "start")),
@@ -58,59 +66,60 @@ def _actions_for(state: str, started: bool) -> list[tuple[str, str]]:
     return base
 
 
-class StatusControl(QWidget):
+class StatusControl(QFrame):
     actionRequested = pyqtSignal(str)  # start|stop|done|delete|reopen|unwait
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("StatusControl")
-        # a wrapping layout — never forces its container wider than the panel
-        self._flow = FlowLayout(self, hspacing=tok.SP_6, vspacing=tok.SP_6)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        # hug the content — a fixed-size row that never dictates panel width
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
 
-        self._badge = QLabel("—")
-        self._badge.setObjectName("Badge")
-        self._flow.addWidget(self._badge)
+        self._row = QHBoxLayout(self)
+        self._row.setContentsMargins(tok.SP_2, tok.SP_2, tok.SP_2, tok.SP_2)
+        self._row.setSpacing(tok.SP_2)
+
+        self._current = QLabel("—")
+        self._current.setObjectName("StatusCurrent")
+        self._row.addWidget(self._current)
 
         self.state = ""
-
-    # QFormLayout asks the row how tall it needs to be at the given width —
-    # delegate so a wrapped second line of buttons is accounted for.
-    def hasHeightForWidth(self) -> bool:  # noqa: N802
-        return True
-
-    def heightForWidth(self, width: int) -> int:  # noqa: N802
-        return self._flow.heightForWidth(width)
 
     # --- API ---------------------------------------------------------
 
     def set_task(self, task: dict) -> None:
         self.state = reports.effective_status(task)
-        self._badge.setText(t(_STATE_LABEL.get(self.state, "detail.status.pending")))
+        self._current.setText(t(_STATE_LABEL.get(self.state, "detail.status.pending")))
 
-        # drop the old action buttons (keep the badge at index 0)
-        while self._flow.count() > 1:
-            item = self._flow.takeAt(self._flow.count() - 1)
-            w = item.widget()
+        while self._row.count() > 1:  # keep the current-state label at index 0
+            w = self._row.takeAt(self._row.count() - 1).widget()
             if w is not None:
                 w.setParent(None)
                 w.deleteLater()
 
         for label_key, action in _actions_for(self.state, bool(task.get("start"))):
-            btn = QPushButton(t(label_key))
+            btn = QToolButton()
+            btn.setObjectName("StatusAction")
             btn.setProperty("_action", action)
-            if action == "delete":
-                btn.setObjectName("DangerButton")
-            btn.clicked.connect(lambda _checked=False, a=action: self.actionRequested.emit(a))
-            self._flow.addWidget(btn)
+            btn.setProperty("act", action)  # QSS hook (delete → red hover)
+            btn.setIcon(icons.icon(
+                _ACTION_ICON[action], "overdue" if action == "delete" else "text_muted"
+            ))
+            btn.setIconSize(QSize(tok.FS_LG, tok.FS_LG))
+            btn.setToolTip(t(label_key))
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(
+                lambda _checked=False, a=action: self.actionRequested.emit(a)
+            )
+            self._row.addWidget(btn)
 
         self.updateGeometry()
 
     def badge_text(self) -> str:
-        return self._badge.text()
+        return self._current.text()
 
     def action_ids(self) -> list[str]:
         return [
-            self._flow.itemAt(i).widget().property("_action")
-            for i in range(1, self._flow.count())
+            self._row.itemAt(i).widget().property("_action")
+            for i in range(1, self._row.count())
         ]

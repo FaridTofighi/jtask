@@ -1,12 +1,14 @@
 """Feature: one contextual Status control in the detail panel — shows the
 task's effective state and only the transitions valid from it.
 
-Presentation decision: a plain row of buttons, not a SegmentedControl (that
-keeps one button `checked` to represent a *value*; status transitions are
-momentary *actions*) and not a hidden menu (discoverability is the point —
-reopen had no in-panel action before). All actions route through the app's
-existing write paths (`_start_stop` / `_bulk` "done" / `_delete` /
-`_save_task`), so they stay undoable with no parallel implementation.
+Presentation: one cohesive row — an accent state chip (`#StatusCurrent`, the
+selected-sidebar-item colour language) followed by compact icon
+`QToolButton`s for the valid transitions (full label on hover). Momentary
+*actions*, so not a `SegmentedControl` (keeps a segment `checked` to hold a
+value) and not a hidden menu (discoverability — reopen had no in-panel
+action before). All actions route through the app's existing write paths
+(`_start_stop` / `_bulk` "done" / `_delete` / `_save_task`), so they stay
+undoable with no parallel implementation.
 """
 
 from __future__ import annotations
@@ -172,3 +174,70 @@ def test_clear_wait_action_removes_the_wait_date_and_state_updates(win, qapp):
     _drain(qapp)
     assert not _fresh(u).get("wait")
     assert win._detail._status.state == "pending"
+
+
+# --- redesign: one cohesive row, current state visually distinct ----
+
+@pytest.mark.parametrize("state_task", [
+    {"status": "pending"},
+    {"status": "pending", "start": "20260101T000000Z"},
+    {"status": "pending", "wait": "20990101T000000Z"},   # 4 actions — worst case
+    {"status": "completed"},
+])
+def test_control_is_a_single_row(qapp, state_task):
+    from jtask_gui.widgets.status_control import StatusControl
+
+    sc = StatusControl()
+    sc.set_task(state_task)
+    sc.resize(sc.sizeHint())
+    # one row: total height ~= a single button's height, never a stacked 2-3x
+    tallest = max(
+        (sc._row.itemAt(i).widget().sizeHint().height()
+         for i in range(sc._row.count())),
+        default=0,
+    )
+    assert sc.sizeHint().height() <= tallest + 8, (
+        f"status control is {sc.sizeHint().height()}px tall — it has wrapped "
+        f"(a single row of {tallest}px items should be ~that tall)"
+    )
+
+
+def test_current_state_element_is_distinct_from_the_actions(qapp):
+    from PyQt6.QtWidgets import QLabel, QToolButton
+
+    from jtask_gui.widgets.status_control import StatusControl
+
+    sc = StatusControl()
+    sc.set_task({"status": "pending"})
+    current = sc._row.itemAt(0).widget()
+    actions = [sc._row.itemAt(i).widget() for i in range(1, sc._row.count())]
+    # current state: an accent label, not a pressable button
+    assert isinstance(current, QLabel)
+    assert current.objectName() == "StatusCurrent"
+    # actions: buttons with a different object name (own, non-active styling)
+    assert actions and all(isinstance(b, QToolButton) for b in actions)
+    assert all(b.objectName() == "StatusAction" for b in actions)
+    # every action button carries its full label as a tooltip
+    assert all(b.toolTip() for b in actions)
+
+
+def test_element_order_mirrors_with_layout_direction(qapp):
+    from PyQt6.QtCore import Qt
+
+    from jtask_gui.widgets.status_control import StatusControl
+
+    for direction in (Qt.LayoutDirection.RightToLeft, Qt.LayoutDirection.LeftToRight):
+        sc = StatusControl()
+        sc.setLayoutDirection(direction)
+        sc.set_task({"status": "pending"})
+        sc.resize(sc.sizeHint())
+        sc.show()
+        qapp.processEvents()
+        current = sc._row.itemAt(0).widget()
+        first_action = sc._row.itemAt(1).widget()
+        # the current-state chip sits at the leading (start) edge in both
+        # directions: right of the first action in RTL, left of it in LTR
+        if direction == Qt.LayoutDirection.RightToLeft:
+            assert current.x() > first_action.x()
+        else:
+            assert current.x() < first_action.x()

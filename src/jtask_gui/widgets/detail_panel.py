@@ -222,6 +222,8 @@ class DetailPanel(QScrollArea):
     def set_theme(self, name: str) -> None:
         self._dep_graph.set_theme(name)
         self._retint_star()
+        if self._task:
+            self._status.set_task(self._task)  # re-tint the action icons
         if self._task and getattr(self, "_all_tasks", None):
             self._dep_graph.show_task(self._task, self._all_tasks)
 

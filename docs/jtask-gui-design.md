@@ -3149,3 +3149,40 @@ checked directly across all six states. Verified the guard fails on the
 pre-fix `QHBoxLayout` version.
 
 Suite: **757 passed**.
+
+## Status control redesign — one cohesive row, current state distinct (2026-09-07)
+
+The FlowLayout fix above stopped the panel clipping but left the control
+reading as three disconnected pieces (a chip, then a button row, then a
+lone wrapped "delete") with every element in the same neutral button style —
+no visual answer to "which of these *is* the state vs. which *changes* it".
+
+**Redesign** (`StatusControl` is now a `QFrame` with a single `QHBoxLayout`):
+
+- **Current state** — `QLabel#StatusCurrent`, rendered in the app's
+  active-selection language (`primary_soft` fill + `primary` bold text, the
+  same as the selected sidebar item), so it reads as a state indicator, not
+  a button. A full-fill accent, not a leading-edge border — nothing to
+  place by hand per direction.
+- **Transitions** — compact icon `QToolButton#StatusAction` (play / stop /
+  check / trash / restore / timer-off), full label on hover, in the normal
+  muted style; delete tints `overdue` on hover (design-system §3). Icons
+  keep the whole control **170–200 px** across every state (waiting, the
+  4-action worst case, is 200), so it sits in one form-field column of the
+  **existing 400 px pane — no widening needed**, and never wraps.
+- One `QHBoxLayout` → element order and the frame's corner rounding mirror
+  automatically with `layoutDirection`: the state chip is at the leading
+  (start) edge in both — right of the actions in RTL, left in LTR.
+- QSS entirely `@token@`-based (`test_qss_uses_tokens.py` green); no new
+  colour/spacing literals. `DetailPanel.set_theme` now re-runs
+  `_status.set_task` so the action icons re-tint on a theme toggle.
+
+Valid-actions-per-state logic and the `_status_action` → existing
+write/undo routing are unchanged. `tests/gui/test_status_control.py` +6
+(single-row height check per state incl. 4-action; current element is a
+`#StatusCurrent` `QLabel` distinct from the `#StatusAction` `QToolButton`s
+which all carry a tooltip; element order mirrors per direction).
+`test_detail_panel_layout.py` now parametrised fa + en and its
+`StatusControl` min-width bound tightened. i18n snapshot unchanged (the
+action labels moved from button text to tooltips — both are captured, same
+strings). Suite: **765 passed**.

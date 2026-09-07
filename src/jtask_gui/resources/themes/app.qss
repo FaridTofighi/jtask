@@ -43,6 +43,25 @@ QLabel#Badge {
     border-radius: @r_pill@; padding: @sp_4@ @sp_12@; font-weight: 700; font-size: @fs_xs@;
 }
 
+/* ---- detail-panel status control: current state + valid transitions ---- */
+QFrame#StatusControl {
+    border: 1px solid @border@; border-radius: @r_md@; background-color: @field@;
+}
+QLabel#StatusCurrent {
+    background-color: @primary_soft@; color: @primary@;
+    font-weight: 700; font-size: @fs_xs@;
+    border-radius: @r_sm@; padding: @sp_4@ @sp_10@;
+}
+QToolButton#StatusAction {
+    background: transparent; border: none; border-radius: @r_sm@;
+    padding: @sp_4@ @sp_6@; color: @text_muted@;
+}
+QToolButton#StatusAction:hover { background-color: @hover@; }
+QToolButton#StatusAction:pressed { background-color: @selection@; }
+QToolButton#StatusAction[act="delete"]:hover {
+    background-color: @overdue@; color: @on_danger@;
+}
+
 /* ============================ dialogs (raised) ================ */
 QDialog { background-color: @elevated@; }
 QDialog > QWidget, QDialog QFrame, QDialog QScrollArea,

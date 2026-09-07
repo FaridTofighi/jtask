@@ -70,6 +70,10 @@ _MAP = {
     "start": "mdi.play-circle-outline",
     "stop": "mdi.stop-circle-outline",
     "delete": "mdi.trash-can-outline",
+    # status-control transitions
+    "done": "mdi.check-circle-outline",
+    "reopen": "mdi.backup-restore",
+    "unwait": "mdi.timer-off-outline",
 }
 
 _MIRRORED = {"undo"}  # glyphs whose direction must flip for RTL
