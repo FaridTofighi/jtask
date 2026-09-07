@@ -148,9 +148,9 @@ class DetailPanel(QScrollArea):
         self._uda_form = QFormLayout()
         self._uda_widgets: dict[str, QWidget] = {}
         outer.addWidget(QLabel(t("detail.udas")))
-        uda_wrap = QWidget()
-        uda_wrap.setLayout(self._uda_form)
-        outer.addWidget(uda_wrap)
+        self._uda_wrap = QWidget()
+        self._uda_wrap.setLayout(self._uda_form)
+        outer.addWidget(self._uda_wrap)
 
         # dependency graph
         from .dep_graph import DependencyGraph

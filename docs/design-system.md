@@ -292,6 +292,7 @@ scrolling text block:
 | QSS uses spacing/type/radius tokens; no dupe selector; no hex literal | `test_qss_uses_tokens.py` |
 | palette parity + WCAG AA | `test_theme.py` |
 | dialogs size to content; no premature validation; first-run form layout | `test_d3_dialog_form_standards.py` |
+| detail panel: no child forces horizontal overflow; every section reachable | `test_detail_panel_layout.py` |
 | toolbar grouped; every control tooltipped; flat overflow | `test_d4_toolbar.py` |
 | priority wording; bidi-safe paths; dep-graph elision | `test_d5_terminology_widgets.py` |
 | toast non-blocking; destructive keeps confirm; empty states styled | `test_d6_toast_empty_states.py` |

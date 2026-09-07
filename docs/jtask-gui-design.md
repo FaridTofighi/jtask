@@ -3106,3 +3106,46 @@ task"), each action making the real transition and being `task undo`-able,
 delete confirming first, and clear-wait removing `wait:` with the badge
 updating to pending. i18n snapshot regenerated (+«شروع», +«انجام‌شده» as
 button labels — deliberate widget change). Suite: **754 passed**.
+
+## Regression + systemic guard: detail panel clipped its later sections (2026-09-07)
+
+The unified Status control's action row was a `QHBoxLayout` — the badge + up
+to 4 non-shrinkable buttons gave it a **391 px minimum width**. In the
+~360–400 px detail pane that forced `DetailPanel.widget()` (the scroll body)
+wider than the viewport; the horizontal scrollbar is `ScrollBarAlwaysOff`,
+so the overflow was simply unreachable — the UDA fields and the dependency
+graph rendered but sat past the right edge / below where the squished layout
+left room for them.
+
+**This is the third time a layout change has hidden the panel's later
+sections** — M1 (a hidden second splitter pane), M3 (the dep-graph empty
+state painting oversized), now this. Every time the root cause is the same:
+*a child widget whose minimum size the panel can't honour.* The panel's own
+foundation is fine (`setWidgetResizable(True)`, a `QVBoxLayout` body, no
+fixed/manual sizing anywhere) — the fragility is that nothing stopped a new
+child from dictating the width.
+
+**Fix.** `StatusControl` now lays its badge + buttons out in a `FlowLayout`
+(the same wrapping layout the tag-chip editor uses — and for the same
+reason: chips hit this exact bug in M1). Buttons wrap to a second line when
+the pane is narrow; the control's minimum width drops to ~80 px (one
+button), so it can never widen the body. `hasHeightForWidth` is wired
+through to the flow so a wrapped second row is accounted for by the
+`QFormLayout`.
+
+**Systemic guard** — `tests/gui/test_detail_panel_layout.py` (+3), extending
+mission-d's `test_dialog_height_tracks_content` discipline to this panel
+specifically (now the app's most failure-prone surface for this bug class).
+Loads a task with data in *every* section (annotations, two UDAs, a
+dependency, `wait:` set → the worst-case 4-button status state) into a
+deliberately narrow (360 px) panel and asserts: the scroll body's
+`minimumSizeHint().width()` never exceeds the pane (no child forces
+horizontal overflow); the h-scrollbar range stays 0; every section
+container (`_ann_summary`, `_uda_wrap`, `_dep_graph`) has non-zero height
+and its bottom is within the body; the UDA section actually rendered fields
+(not just its label); and scrolling to the bottom fully reveals the
+dependency graph. `StatusControl.minimumSizeHint().width() <= 200` is
+checked directly across all six states. Verified the guard fails on the
+pre-fix `QHBoxLayout` version.
+
+Suite: **757 passed**.

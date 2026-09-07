@@ -152,6 +152,7 @@ whether you violated a rule before "fixing" the test:
 | calendar system / 4 combos | `tests/gui/test_i4_calendar_system.py`, `test_i6_four_combinations.py` | — |
 | English catalog coverage + terminology | `tests/gui/test_i5_english_catalog.py` | — |
 | design-system rules (d3–d6) | `tests/gui/test_d{3,4,5,6}_*.py` | — |
+| detail panel stays fully scrollable (no child forces h-overflow) | `tests/gui/test_detail_panel_layout.py` | — |
 
 GUI test fixtures that touch global state (`i18n.set_language`,
 `set_digit_mode`, `calendar_system.set_calendar`, `QSettings`) **must
