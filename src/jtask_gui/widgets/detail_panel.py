@@ -32,6 +32,10 @@ _PRIORITIES = [
     ("detail.priority.none", ""), ("detail.priority.h", "H"),
     ("detail.priority.m", "M"), ("detail.priority.l", "L"),
 ]
+# Taskwarrior models `priority` internally as a UDA, so it comes back from
+# `uda_definitions()` — but the panel has a dedicated priority control, so it
+# must not also appear in the dynamic UDA section.
+_UDA_HANDLED_ELSEWHERE = {"priority"}
 _STATUS_KEY = {
     "pending": "status.pending", "completed": "status.completed", "waiting": "status.waiting",
     "deleted": "status.deleted", "recurring": "status.recurring",
@@ -320,7 +324,10 @@ class DetailPanel(QScrollArea):
             self._uda_form.removeRow(0)
         self._uda_widgets.clear()
         for name, spec in taskwarrior.uda_definitions().items():
+            if name in _UDA_HANDLED_ELSEWHERE:
+                continue
             utype = spec.get("type", "string")
+            values = taskwarrior.uda_values(name) if utype == "string" else []
             if utype == "date":
                 w: QWidget = JalaliDatePicker()
                 w.set_from_taskwarrior(task.get(f"{name}_gregorian") or task.get(name) or "")
@@ -331,6 +338,23 @@ class DetailPanel(QScrollArea):
                 w.setRange(-1e9, 1e9)
                 if task.get(name) not in (None, ""):
                     w.setValue(float(task[name]))
+            elif values:
+                # string UDA with a configured `uda.<name>.values` list.
+                # Strict, non-editable picker: Taskwarrior *enforces* that
+                # list (a value outside it fails `task add`/`modify` with
+                # exit 2 — verified on 2.6.2 and 3.5.0), so a free-typed
+                # value would only ever error on save. Blank is allowed (it
+                # clears the attribute). Options are in the order Taskwarrior
+                # reports them (the order they appear in the config). A
+                # pre-existing value not in the current list is kept as an
+                # extra option so it still round-trips.
+                w = QComboBox()
+                w.addItem("")
+                w.addItems(values)
+                cur = str(task.get(name, ""))
+                if cur and cur not in values:
+                    w.addItem(cur)
+                w.setCurrentText(cur)
             else:
                 w = QLineEdit(str(task.get(name, "")))
             self._uda_widgets[name] = w
@@ -415,6 +439,8 @@ class DetailPanel(QScrollArea):
     def _uda_value(w: QWidget) -> str:
         if isinstance(w, JalaliDatePicker):
             return w.gregorian_string()
+        if isinstance(w, QComboBox):        # string UDA with a values list
+            return w.currentText().strip()
         if isinstance(w, QLineEdit):
             return w.text()
         from PyQt6.QtWidgets import QDoubleSpinBox

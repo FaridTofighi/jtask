@@ -115,7 +115,7 @@ class FilterBuilder(QDialog):
             udas = {}
         for name, spec in sorted(udas.items()):
             utype = spec.get("type", "string")
-            values = [v for v in (spec.get("values") or "").split(",") if v]
+            values = taskwarrior.uda_values(name)
             op: QComboBox | None = None
             if utype == "date":
                 editor: QWidget = JalaliDatePicker()

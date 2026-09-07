@@ -3003,3 +3003,46 @@ gap. `tests/gui/test_m3.py` (+1): pending + completed + deleted tasks in one
 project, delete via the real GUI action, assert no task in *any* status
 still carries it and it's gone from the sidebar tree, `report_projects()`,
 and `report_summary()` — all without a restart. Suite: **735 passed**.
+
+## Feature: string UDA with a `values` list renders as a dropdown (2026-09-07)
+
+The M4/M8 UDA Manager spec mapped UDA → widget by base type only (string →
+text, numeric → spinbox, date → picker); it never covered a `string` UDA
+that *also* has `uda.<name>.values` configured, so one (e.g. `assignee` with
+`values=فرید,سارا,آرش,علی`) rendered as a free-text field.
+
+**Strict, non-editable dropdown — decision made against the real binaries,
+not the ticket's assumption.** The ticket suggested an *editable* combo on
+the premise that Taskwarrior treats `values` as advisory. It does not:
+tested against both 2.6.2 and 3.5.0, `task add`/`modify` with an off-list
+value **fails with exit 2** (*"The 'assignee' attribute does not allow a
+value of 'x'."*). A free-typed value would only ever error on save, so the
+picker is locked to the list — plus a leading blank (clearing the attribute
+*is* allowed), plus any pre-existing off-list value kept as an extra option
+so it still round-trips. Options are in **config order** (the order
+`task _show` reports them), matching what `filter_builder.py` already did.
+Documented in `docs/taskwarrior-compatibility.md`.
+
+- `jtask.taskwarrior.uda_values(name)` — new shared helper: parses
+  `uda.<name>.values` off the existing `uda_definitions()` discovery (no
+  second lookup path), split on `,` + trimmed. `filter_builder.py` switched
+  to it too (was doing its own inline split); it was already using a strict
+  `QComboBox`, so no behaviour change there.
+- `detail_panel.py` `_load_udas`: `string` + non-empty `uda_values` →
+  strict `QComboBox`; `string` + no values → `QLineEdit` unchanged;
+  `_uda_value` reads `currentText()` for the combo. `priority` — which
+  Taskwarrior reports as a UDA (`uda.priority.values=H,M,L,`) — is now
+  filtered out of this section (`_UDA_HANDLED_ELSEWHERE`); the panel has a
+  dedicated priority control, so it was rendering a stray "Priority" text
+  field before (pre-existing, surfaced by this work).
+- **Add Task dialog / inline edit**: `task_form.py` doesn't render UDA
+  inputs at all, and there's no inline UDA editor — the detail panel is the
+  only place a UDA value is entered, so "apply consistently everywhere" =
+  detail panel + the filter builder (filter side), both covered.
+
+`tests/gui/test_uda_fields.py` (+7): the values-parser (order/trim/empty),
+strict combo with exactly the configured options in order, no-values →
+plain text (no regression), a changed selection emits a mod Taskwarrior
+accepts, a pre-existing off-list value stays selectable, `priority` absent
+from the section, and the filter builder using the same values + strict
+combo. Suite: **742 passed**.

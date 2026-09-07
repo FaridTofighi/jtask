@@ -69,6 +69,7 @@ __all__ = [
     "command_reference",
     "passthrough",
     "date_uda_names",
+    "uda_values",
 ]
 
 # rc overrides applied to every non-interactive call.  Hooks stay ON so the
@@ -701,6 +702,24 @@ def uda_definitions() -> dict[str, dict[str, str]]:
 def date_uda_names() -> frozenset[str]:
     """Names of user-defined attributes whose type is ``date``."""
     return frozenset(n for n, s in uda_definitions().items() if s.get("type") == "date")
+
+
+def uda_values(name: str) -> list[str]:
+    """The configured allowed-values list for UDA *name* (``uda.<name>.values``),
+    split on ``,`` and trimmed, in the order Taskwarrior reports them (the
+    order they appear in the config). Empty list if unset or *name* is not a
+    UDA.
+
+    Taskwarrior **enforces** this list as a hard constraint — verified against
+    both the real 2.6.2 and 3.5.0 binaries: ``task add`` / ``task modify``
+    with a value outside the list fails with *"The '<name>' attribute does
+    not allow a value of '<x>'."* (exit 2). Clearing the attribute
+    (empty value) is still allowed. A UI rendering these should therefore be
+    a **strict** picker, not a free-text field — see
+    ``docs/taskwarrior-compatibility.md``.
+    """
+    raw = uda_definitions().get(name, {}).get("values", "") or ""
+    return [v.strip() for v in raw.split(",") if v.strip()]
 
 
 @lru_cache(maxsize=1)

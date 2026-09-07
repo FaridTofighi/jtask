@@ -85,6 +85,18 @@ Rules (from the mission's cross-cutting requirements):
     fixed; regression fixtures for all four shapes in `tests/test_taskwarrior.py`.
   - Taskwarrior's exit code is **not** a usable signal here — both binaries
     return `0` for a real preview and for "nothing to undo" alike (verified).
+- **`uda.<name>.values` is a hard constraint, not advisory** — verified against
+  both real binaries (2.6.2 and 3.5.0). `task add` / `task modify` with a value
+  outside the configured list fails with exit 2:
+  *"The '&lt;name&gt;' attribute does not allow a value of '&lt;x&gt;'."*
+  Clearing the attribute (empty value) is still allowed. Consequence for the
+  GUI: a `string` UDA that has a `values` list renders as a **strict,
+  non-editable** picker (`taskwarrior.uda_values(name)` → `QComboBox`, blank +
+  the list in config order; a pre-existing off-list value is kept as an extra
+  option so it round-trips). A free-text / editable combo would let the user
+  enter something the write always rejects. `priority` is itself a UDA in
+  `task _show` output (`uda.priority.values=H,M,L,`) — filtered out of the
+  detail panel's dynamic UDA section, which has a dedicated priority control.
 
 ## Things Taskwarrior genuinely cannot do from plain `task` (documented, not gaps)
 
