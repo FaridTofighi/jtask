@@ -78,6 +78,21 @@ QFrame#ContextPill[active="true"] QLabel#ContextName {
 }
 QFrame#ContextPill[active="true"] QLabel#ContextDot { color: @primary@; }
 
+/* ---- compressed sidebar: project search + tag chips ---- */
+QLineEdit#SidebarSearch {
+    background-color: @field@; border: 1px solid @border@;
+    border-radius: @r_md@; padding: @sp_4@ @sp_8@; color: @text@;
+}
+QLineEdit#SidebarSearch:focus { border-color: @focus@; }
+QScrollArea#SidebarChips { background: transparent; border: none; }
+QToolButton#TagChip {
+    background-color: @bg_alt@; border: 1px solid @border_soft@;
+    border-radius: @r_pill@; padding: @sp_2@ @sp_8@;
+    font-size: @fs_xs@; color: @text_muted@;
+}
+QToolButton#TagChip:hover { background-color: @hover@; color: @text@; }
+QToolButton#TagChip:pressed { background-color: @primary_soft@; color: @primary@; }
+
 /* ============================ dialogs (raised) ================ */
 QDialog { background-color: @elevated@; }
 QDialog > QWidget, QDialog QFrame, QDialog QScrollArea,

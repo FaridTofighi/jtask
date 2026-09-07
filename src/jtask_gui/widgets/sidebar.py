@@ -1,4 +1,10 @@
-"""Navigation sidebar: quick views, projects, tags, contexts, reports."""
+"""Navigation sidebar: quick views, boards, projects, tags.
+
+Reports & Charts, saved filters and contexts live in the toolbar (sidebar IA
+redesign). Projects and Tags stay here but compress — a search field + a
+capped list for projects, a wrapped chip flow for tags — so the sidebar
+stays short however many accumulate.
+"""
 
 from __future__ import annotations
 
@@ -6,13 +12,20 @@ import datetime
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import (
+    QLineEdit,
+    QScrollArea,
+    QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+)
 
-from .. import icons
+from .. import fmt, icons
 from ..calendar_system import active
 from ..i18n import t
 from ..theme import palette
 from ..tw_color import to_hex
+from .flow_layout import FlowWidget
 
 _SPEC_ROLE = Qt.ItemDataRole.UserRole
 _ICON_ROLE = Qt.ItemDataRole.UserRole + 5
@@ -20,6 +33,45 @@ _SECTION_ROLE = Qt.ItemDataRole.UserRole + 6
 _COLOUR_ROLE = Qt.ItemDataRole.UserRole + 7
 _STUCK_ROLE = Qt.ItemDataRole.UserRole + 8
 UUID_MIME = "application/x-jtask-uuids"
+
+_PROJ_CAP = 5      # projects shown before "show all"
+_TAG_CAP_ROWS = 3  # chip rows shown before "show all"
+
+
+class _TagChip(QToolButton):
+    """A tag pill in the compressed Tags section — clickable to filter,
+    right-click for rename/remove, and a drop target for tasks (add the
+    tag), keeping the vertical-list behaviour it replaced."""
+
+    activateRequested = pyqtSignal()
+    menuRequested = pyqtSignal(object)   # global QPoint
+    tasksDropped = pyqtSignal(list)      # uuids
+
+    def __init__(self, text: str, parent=None) -> None:
+        super().__init__(parent)
+        self.setObjectName("TagChip")
+        self.setText(text)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAcceptDrops(True)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(
+            lambda pos: self.menuRequested.emit(self.mapToGlobal(pos))
+        )
+        self.clicked.connect(self.activateRequested)
+
+    def dragEnterEvent(self, event):  # noqa: N802
+        if event.mimeData().hasFormat(UUID_MIME):
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):  # noqa: N802
+        if event.mimeData().hasFormat(UUID_MIME):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):  # noqa: N802
+        uuids = bytes(event.mimeData().data(UUID_MIME)).decode().split()
+        if uuids:
+            self.tasksDropped.emit(uuids)
+            event.acceptProposedAction()
 
 
 def _colour_dot(hex_colour: str, size: int = 10) -> QIcon:
@@ -112,7 +164,7 @@ class Sidebar(QTreeWidget):
         self.setHeaderHidden(True)
         self.setIndentation(10)
         self.setColumnCount(1)
-        self.setUniformRowHeights(True)
+        self.setUniformRowHeights(False)  # the tag chip-flow row is taller
         self.setRootIsDecorated(False)
         self.setExpandsOnDoubleClick(False)
         self.setAcceptDrops(True)
@@ -135,11 +187,56 @@ class Sidebar(QTreeWidget):
         # with the data: quick views, boards, projects, tags.
         self._boards = self._section(t("sidebar.section.boards"))
         self._saved = self._section(t("sidebar.section.saved"))
+
         self._projects = self._section(t("sidebar.section.projects"))
+        self._project_items: list[QTreeWidgetItem] = []
+        self._projects_expanded = False
+        self._build_project_scaffold()
+
         self._tags = self._section(t("sidebar.section.tags"))
+        self._tag_specs: list[tuple[str, dict]] = []
+        self._tags_expanded = False
+        self._build_tag_scaffold()
 
         self.expandAll()
         self.retint()
+
+    # --- projects / tags scaffolding (persist across populate) -----
+
+    def _build_project_scaffold(self) -> None:
+        row = QTreeWidgetItem([""])
+        row.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        self._projects.addChild(row)
+        self._proj_search = QLineEdit()
+        self._proj_search.setObjectName("SidebarSearch")
+        self._proj_search.setPlaceholderText(t("sidebar.search.projects"))
+        self._proj_search.setClearButtonEnabled(True)
+        self._proj_search.textChanged.connect(self._apply_project_filter)
+        self.setItemWidget(row, 0, self._proj_search)
+
+        self._proj_more = QTreeWidgetItem([""])
+        self._proj_more.setData(0, _SPEC_ROLE, {"kind": "expander", "target": "projects"})
+        self._projects.addChild(self._proj_more)
+        self._proj_more.setHidden(True)
+
+    def _build_tag_scaffold(self) -> None:
+        row = QTreeWidgetItem([""])
+        row.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        self._tags.addChild(row)
+        self._tag_flow = FlowWidget(hspacing=4, vspacing=4)
+        self._tag_scroll = QScrollArea()
+        self._tag_scroll.setObjectName("SidebarChips")
+        self._tag_scroll.setWidgetResizable(True)
+        self._tag_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self._tag_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._tag_scroll.setWidget(self._tag_flow)
+        self._tag_row = row
+        self.setItemWidget(row, 0, self._tag_scroll)
+
+        self._tag_more = QTreeWidgetItem([""])
+        self._tag_more.setData(0, _SPEC_ROLE, {"kind": "expander", "target": "tags"})
+        self._tags.addChild(self._tag_more)
+        self._tag_more.setHidden(True)
 
     # --- build helpers ------------------------------------------
 
@@ -200,9 +297,14 @@ class Sidebar(QTreeWidget):
             spec = item.data(0, _SPEC_ROLE)
             if not isinstance(spec, dict) or item.data(0, _SECTION_ROLE):
                 continue
+            if spec.get("kind") == "expander":
+                continue
             parent = item.parent()
             section = parent.text(0) if parent is not None else ""
             out.append((item.text(0).split("  ·")[0].strip(), section, spec))
+        # tag chips are not tree items — surface them for the palette too
+        for label, spec in getattr(self, "_tag_specs", []):
+            out.append((label, self._tags.text(0), dict(spec)))
         return out
 
     # --- dynamic population ------------------------------------
@@ -211,17 +313,22 @@ class Sidebar(QTreeWidget):
         self, rows: list[dict], colors: dict[str, str] | None = None
     ) -> None:
         colors = colors or {}
-        self._projects.takeChildren()
+        for it in self._project_items:  # drop only the leaves, keep search + "more"
+            self._projects.removeChild(it)
+        self._project_items = []
+        insert_at = 1  # child(0) is the search row
         for row in rows:
             name = row["project"]
-            label = f"{name}  ·  {row['open']}"
+            label = f"{name}  ·  {fmt.num(row['open'])}"
             spec = {
                 "kind": "filter",
                 "drop": "project",
                 "title": name,
                 "filter": [f"project:{name}", "status:pending"],
             }
-            item = self._leaf(self._projects, label, spec, "project")
+            item = QTreeWidgetItem([label])
+            item.setData(0, _SPEC_ROLE, spec)
+            item.setData(0, _ICON_ROLE, "project")
             tw = colors.get(name, "")
             if tw:
                 item.setData(0, _COLOUR_ROLE, tw)
@@ -229,24 +336,97 @@ class Sidebar(QTreeWidget):
             if row.get("stuck"):
                 item.setData(0, _STUCK_ROLE, True)
                 item.setToolTip(0, t("sidebar.project_stuck.tip"))
+            self._projects.insertChild(insert_at, item)
+            insert_at += 1
+            self._project_items.append(item)
+        # keep the "show all / less" row last
+        self._projects.removeChild(self._proj_more)
+        self._projects.addChild(self._proj_more)
+        self._apply_project_filter(self._proj_search.text())
         self.retint()
 
-    def populate_tags(self, rows: list[dict]) -> None:
-        self._tags.takeChildren()
-        for row in rows:
-            self._leaf(
-                self._tags,
-                f"#{row['tag']}  ·  {row['count']}",
-                {
-                    "kind": "filter",
-                    "drop": "tag",
-                    "tag": row["tag"],
-                    "title": f"#{row['tag']}",
-                    "filter": [f"+{row['tag']}", "status:pending"],
-                },
-                "tag",
+    def _apply_project_filter(self, text: str) -> None:
+        q = text.strip().lower()
+        matches = [it for it in self._project_items if q in it.text(0).lower()]
+        over_cap = len(self._project_items) > _PROJ_CAP and not q
+        for it in self._project_items:
+            if it not in matches:
+                it.setHidden(True)
+            elif over_cap and not self._projects_expanded:
+                it.setHidden(matches.index(it) >= _PROJ_CAP)
+            else:
+                it.setHidden(False)
+        if over_cap:
+            self._proj_more.setHidden(False)
+            hidden = max(0, len(matches) - _PROJ_CAP)
+            self._proj_more.setText(
+                0,
+                t("sidebar.show_less") if self._projects_expanded
+                else t("sidebar.show_all", n=fmt.num(hidden)),
             )
+        else:
+            self._proj_more.setHidden(True)
+
+    def populate_tags(self, rows: list[dict]) -> None:
+        while self._tag_flow.flow.count():
+            w = self._tag_flow.flow.takeAt(0).widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        self._tag_specs = []
+        for row in rows:
+            tag = row["tag"]
+            spec = {
+                "kind": "filter",
+                "drop": "tag",
+                "tag": tag,
+                "title": f"#{tag}",
+                "filter": [f"+{tag}", "status:pending"],
+            }
+            chip = _TagChip(f"#{tag}  ·  {fmt.num(row['count'])}")
+            chip.setToolTip(f"#{tag}")
+            chip.activateRequested.connect(lambda s=dict(spec): self.activate_spec(s))
+            chip.menuRequested.connect(lambda gp, tg=tag: self._show_tag_menu(tg, gp))
+            chip.tasksDropped.connect(
+                lambda uuids, tg=tag: self.tasksDroppedOnTag.emit(uuids, tg)
+            )
+            self._tag_flow.flow.addWidget(chip)
+            self._tag_specs.append((f"#{tag}", spec))
+        self._apply_tag_cap()
         self.retint()
+
+    def _apply_tag_cap(self) -> None:
+        import math
+
+        n = len(self._tag_specs)
+        row_h = 26  # ~ one chip row including spacing
+        cap_px = _TAG_CAP_ROWS * row_h
+        vw = max(self._tag_scroll.viewport().width(), 160)
+        # deterministic row estimate — the exact flow height isn't known until
+        # the chips are polished, but the *decision* to cap only needs a guess
+        per_row = max(1, vw // 92)
+        rows = math.ceil(n / per_row) if n else 0
+        over = rows > _TAG_CAP_ROWS
+        if self._tags_expanded or not over:
+            self._tag_scroll.setMinimumHeight(0)
+            self._tag_scroll.setMaximumHeight(16_777_215)
+            height = max(row_h, self._tag_flow.flow.heightForWidth(vw), rows * row_h)
+        else:
+            height = cap_px
+        self._tag_scroll.setFixedHeight(int(height))
+        self._tag_row.setSizeHint(0, QSize(1, int(height) + 6))
+        self._tag_more.setHidden(not over)
+        if over:
+            self._tag_more.setText(
+                0,
+                t("sidebar.show_less") if self._tags_expanded
+                else t("sidebar.show_all", n=fmt.num(n)),
+            )
+
+    def resizeEvent(self, event):  # noqa: N802 - re-measure the wrapping chips
+        super().resizeEvent(event)
+        if getattr(self, "_tag_specs", None) is not None:
+            self._apply_tag_cap()
 
     def populate_boards(self, names: list[str]) -> None:
         self._boards.takeChildren()
@@ -391,24 +571,6 @@ class Sidebar(QTreeWidget):
                 self.projectDeleteRequested.emit(name)
             return
 
-        if spec.get("drop") == "tag":
-            tag = spec["tag"]
-            menu = QMenu(self)
-            act_rename = menu.addAction(t("sidebar.menu.tag_rename"))
-            act_remove = menu.addAction(t("sidebar.menu.tag_remove"))
-            chosen = menu.exec(self.viewport().mapToGlobal(pos))
-            if chosen == act_rename:
-                new, ok = QInputDialog.getText(
-                    self, t("sidebar.tag_rename.title"),
-                    t("sidebar.tag_rename.label", tag=tag), text=tag,
-                )
-                new = new.strip().lstrip("#+")
-                if ok and new and new != tag:
-                    self.tagRenameRequested.emit(tag, new)
-            elif chosen == act_remove:
-                self.tagRemoveRequested.emit(tag)
-            return
-
         if spec.get("kind") != "saved":
             return
         name = spec["name"]
@@ -432,12 +594,42 @@ class Sidebar(QTreeWidget):
             if confirm == QMessageBox.StandardButton.Yes:
                 self.savedFilterDeleteRequested.emit(name)
 
+    def _show_tag_menu(self, tag: str, global_pos) -> None:
+        from PyQt6.QtWidgets import QInputDialog, QMenu
+
+        menu = QMenu(self)
+        act_rename = menu.addAction(t("sidebar.menu.tag_rename"))
+        act_remove = menu.addAction(t("sidebar.menu.tag_remove"))
+        chosen = menu.exec(global_pos)
+        if chosen == act_rename:
+            new, ok = QInputDialog.getText(
+                self, t("sidebar.tag_rename.title"),
+                t("sidebar.tag_rename.label", tag=tag), text=tag,
+            )
+            new = new.strip().lstrip("#+")
+            if ok and new and new != tag:
+                self.tagRenameRequested.emit(tag, new)
+        elif chosen == act_remove:
+            self.tagRemoveRequested.emit(tag)
+
     # --- events -----------------------------------------------
 
     def _on_click(self, item: QTreeWidgetItem, _column: int) -> None:
         spec = item.data(0, _SPEC_ROLE)
-        if spec:
-            self.activate_spec(spec)
+        if not spec:
+            return
+        if spec.get("kind") == "expander":
+            self._toggle_expander(spec["target"])
+            return
+        self.activate_spec(spec)
+
+    def _toggle_expander(self, target: str) -> None:
+        if target == "projects":
+            self._projects_expanded = not self._projects_expanded
+            self._apply_project_filter(self._proj_search.text())
+        elif target == "tags":
+            self._tags_expanded = not self._tags_expanded
+            self._apply_tag_cap()
 
     def activate_spec(self, spec: dict) -> None:
         """Route a sidebar spec to the right signal — shared by clicks and the

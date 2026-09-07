@@ -202,7 +202,7 @@ def test_sidebar_project_drop_emits_reassign(qtbot):
     got = []
     sb.tasksDroppedOnProject.connect(lambda u, p: got.append((u, p)))
 
-    proj_item = sb._projects.child(0)
+    proj_item = sb._project_items[0]
     rect = sb.visualItemRect(proj_item)
     mime = QMimeData()
     mime.setData(UUID_MIME, b"u1 u2")
@@ -215,10 +215,7 @@ def test_sidebar_project_drop_emits_reassign(qtbot):
 
 
 def test_sidebar_tag_drop_emits_add_tag(qtbot):
-    from PyQt6.QtCore import QMimeData, QPointF, Qt
-    from PyQt6.QtGui import QDropEvent
-
-    from jtask_gui.widgets.sidebar import UUID_MIME, Sidebar
+    from jtask_gui.widgets.sidebar import Sidebar
 
     sb = Sidebar()
     qtbot.addWidget(sb)
@@ -226,12 +223,9 @@ def test_sidebar_tag_drop_emits_add_tag(qtbot):
     got = []
     sb.tasksDroppedOnTag.connect(lambda u, tag: got.append((u, tag)))
 
-    rect = sb.visualItemRect(sb._tags.child(0))
-    mime = QMimeData()
-    mime.setData(UUID_MIME, b"a b c")
-    ev = QDropEvent(QPointF(rect.center()), Qt.DropAction.MoveAction, mime,
-                    Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
-    sb.dropEvent(ev)
+    # tags render as chips now — the chip is the drop target
+    chip = sb._tag_flow.flow.itemAt(0).widget()
+    chip.tasksDropped.emit(["a", "b", "c"])
     assert got == [(["a", "b", "c"], "مهم")]
 
 
@@ -254,15 +248,15 @@ def test_sidebar_tag_context_menu_signals(qtbot, monkeypatch):
     monkeypatch.setattr(
         W.QInputDialog, "getText", staticmethod(lambda *a, **k: ("#urgent", True))
     )
-    pos = sb.visualItemRect(sb._tags.child(0)).center()
+    from PyQt6.QtCore import QPoint
 
     monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[0])   # first = rename
-    sb._context_menu(pos)
+    sb._show_tag_menu("کار", QPoint(0, 0))
     assert renamed == [("کار", "urgent")]  # '#' stripped
 
     made.clear()
     monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[1])   # second = remove
-    sb._context_menu(pos)
+    sb._show_tag_menu("کار", QPoint(0, 0))
     assert removed == ["کار"]
 
 
@@ -333,7 +327,7 @@ def test_sidebar_project_context_menu_signals(qtbot, monkeypatch):
     monkeypatch.setattr(
         W.QInputDialog, "getText", staticmethod(lambda *a, **k: ("Client.", True))
     )
-    pos = sb.visualItemRect(sb._projects.child(0)).center()
+    pos = sb.visualItemRect(sb._project_items[0]).center()
 
     monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[0])   # rename
     sb._context_menu(pos)
@@ -357,7 +351,7 @@ def test_sidebar_project_colour_menu_and_dot(qtbot, monkeypatch):
     qtbot.addWidget(sb)
     # a project that already has a colour → the row shows a dot, not the glyph
     sb.populate_projects([{"project": "Work", "open": 3}], {"Work": "bright blue"})
-    item = sb._projects.child(0)
+    item = sb._project_items[0]
     assert item.data(0, _COLOUR_ROLE) == "bright blue"
     assert not item.icon(0).isNull()
 

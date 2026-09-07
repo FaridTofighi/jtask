@@ -57,7 +57,7 @@ def test_add_next_action_menu_emits_the_project(qtbot, monkeypatch):
     monkeypatch.setattr(W.QMenu, "addSeparator", lambda self: None)
     # "Add a next action…" is made[3] (after rename / colour / clear)
     monkeypatch.setattr(W.QMenu, "exec", lambda self, *a: made[3])
-    sb._context_menu(sb.visualItemRect(sb._projects.child(0)).center())
+    sb._context_menu(sb.visualItemRect(sb._project_items[0]).center())
     assert got == ["Wedged"]
 
 
