@@ -133,9 +133,8 @@ def test_main_window_resyncs_after_a_console_context_define(qapp, qtbot, tw_env)
         qapp.processEvents()
 
     assert "home" in tw.list_contexts()
-    rows = [w._sidebar._contexts.child(i).text(0)
-            for i in range(w._sidebar._contexts.childCount())]
-    assert any("home" in r for r in rows)          # sidebar updated on the fly
+    # the toolbar context pill's menu picks up the new context on the fly
+    assert "home" in w._context_pill._names
 
 
 def test_one_shortcut_toggles_the_console_open_and_shut(qapp, qtbot, tw_env):

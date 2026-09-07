@@ -62,6 +62,22 @@ QToolButton#StatusAction[act="delete"]:hover {
     background-color: @overdue@; color: @on_danger@;
 }
 
+/* ---- toolbar context pill: global-mode indicator ---- */
+QFrame#ContextPill {
+    border: 1px solid @border@; border-radius: @r_pill@;
+    background-color: @field@; padding: 1px @sp_4@;
+}
+QFrame#ContextPill:hover { border-color: @primary@; }
+QFrame#ContextPill[active="true"] {
+    background-color: @primary_soft@; border-color: @primary@;
+}
+QLabel#ContextName { color: @text_muted@; font-size: @fs_xs@; }
+QLabel#ContextDot { color: @text_muted@; font-size: @fs_xs@; }
+QFrame#ContextPill[active="true"] QLabel#ContextName {
+    color: @primary@; font-weight: 700;
+}
+QFrame#ContextPill[active="true"] QLabel#ContextDot { color: @primary@; }
+
 /* ============================ dialogs (raised) ================ */
 QDialog { background-color: @elevated@; }
 QDialog > QWidget, QDialog QFrame, QDialog QScrollArea,

@@ -60,3 +60,31 @@ def test_reports_moved_to_a_toolbar_action(win, qapp):
     assert win._reports_action.isEnabled() and win._reports_action.text().strip()
     cmds = win._collect_commands()
     assert any("chart" in c.label.lower() for c in cmds)
+
+
+# --- chunk 2: Contexts -> toolbar pill ----------------------------
+
+def test_contexts_moved_to_a_toolbar_pill(win, qapp):
+    from jtask import taskwarrior as tw
+
+    assert not hasattr(win._sidebar, "_contexts")
+    pill = win._context_pill
+    assert pill in win._toolbars[0].findChildren(type(pill))
+    assert pill.toolTip().strip()
+
+    # neutral by default
+    assert pill.is_active() is False
+    assert pill.property("active") in (False, None)
+
+    tw.run(["context", "define", "work", "project:Alpha"])
+    win._change_context("work")
+    _drain(qapp)
+    assert win._context_pill.is_active() is True
+    assert win._context_pill.property("active") is True
+    assert "work" in win._context_pill.name_text()  # bidi-isolated but contains it
+    assert tw.current_context() == "work"
+
+    win._change_context("")
+    _drain(qapp)
+    assert win._context_pill.is_active() is False
+    assert tw.current_context() is None

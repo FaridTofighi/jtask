@@ -207,6 +207,14 @@ class MainWindow(
         row1.setIconSize(QSize(18, 18))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, row1)
 
+        # the active-context indicator leads row one — a global mode, visually
+        # separate from row two's navigation clusters (sidebar IA redesign)
+        from .widgets.context_pill import ContextPill
+
+        self._context_pill = ContextPill()
+        row1.addWidget(self._context_pill)
+        row1.addSeparator()
+
         self._quick_add = QuickAddBar()
         self._quick_add.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         row1.addWidget(self._quick_add)
@@ -445,7 +453,7 @@ class MainWindow(
 
     def _wire(self) -> None:
         self._sidebar.activated.connect(self._on_view_selected)
-        self._sidebar.contextChangeRequested.connect(self._change_context)
+        self._context_pill.contextChangeRequested.connect(self._change_context)
         self._quick_add.taskRequested.connect(self._add_task)
         self._filter_bar.filterChanged.connect(self._on_filter_changed)
         self._table.taskActivated.connect(self._show_detail)
@@ -556,7 +564,7 @@ class MainWindow(
         submit(reports.report_tags, self._sidebar.populate_tags, self._error)
         submit(
             lambda: (taskwarrior.list_contexts(), taskwarrior.current_context()),
-            lambda r: self._sidebar.populate_contexts(*r),
+            lambda r: self._context_pill.set_state(r[1], r[0]),
             self._error,
         )
         submit(

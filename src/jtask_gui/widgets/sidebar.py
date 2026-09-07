@@ -91,7 +91,6 @@ class Sidebar(QTreeWidget):
     """Emits ``activated(dict)`` describing the view the user picked."""
 
     activated = pyqtSignal(dict)
-    contextChangeRequested = pyqtSignal(str)  # "" clears the context
     tasksDroppedOnProject = pyqtSignal(list, str)  # (uuids, project)
     tasksDroppedOnTag = pyqtSignal(list, str)  # (uuids, tag) — add the tag
     tagRenameRequested = pyqtSignal(str, str)  # (old, new) — across all tasks
@@ -138,7 +137,6 @@ class Sidebar(QTreeWidget):
         self._saved = self._section(t("sidebar.section.saved"))
         self._projects = self._section(t("sidebar.section.projects"))
         self._tags = self._section(t("sidebar.section.tags"))
-        self._contexts = self._section(t("sidebar.section.contexts"))
 
         self.expandAll()
         self.retint()
@@ -248,20 +246,6 @@ class Sidebar(QTreeWidget):
                 },
                 "tag",
             )
-        self.retint()
-
-    def populate_contexts(self, names: list[str], active: str | None) -> None:
-        self._contexts.takeChildren()
-        none_item = QTreeWidgetItem([t("sidebar.no_context") + ("  ●" if not active else "")])
-        none_item.setData(0, _SPEC_ROLE, {"kind": "context", "name": ""})
-        none_item.setData(0, _ICON_ROLE, "context")
-        self._contexts.addChild(none_item)
-        for name in names:
-            mark = "  ●" if name == active else ""
-            item = QTreeWidgetItem([name + mark])
-            item.setData(0, _SPEC_ROLE, {"kind": "context", "name": name})
-            item.setData(0, _ICON_ROLE, "context")
-            self._contexts.addChild(item)
         self.retint()
 
     def populate_boards(self, names: list[str]) -> None:
@@ -458,9 +442,6 @@ class Sidebar(QTreeWidget):
     def activate_spec(self, spec: dict) -> None:
         """Route a sidebar spec to the right signal — shared by clicks and the
         command palette."""
-        if spec.get("kind") == "context":
-            self.contextChangeRequested.emit(spec["name"])
-            return
         if spec.get("kind") == "saved":
             self.savedFilterActivated.emit(spec["raw"])
             return
