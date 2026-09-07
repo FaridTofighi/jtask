@@ -300,7 +300,16 @@ class MainWindow(
 
         row2.addSeparator()
 
-        # -- view cluster: theme + console toggle (both stateful, stay visible)
+        # -- view cluster: reports destination + theme/console toggles
+        self._reports_action = QAction(
+            icons.icon("reports"), t("status.reports").replace("&", "&&"), self
+        )
+        self._reports_action.setToolTip(t("action.reports.tip"))
+        self._reports_action.triggered.connect(
+            lambda: self._on_view_selected({"kind": "reports", "title": t("status.reports")})
+        )
+        row2.addAction(self._reports_action)
+
         self._theme_action = QAction(self)
         self._theme_action.triggered.connect(self._toggle_theme)
         self._sync_theme_action()

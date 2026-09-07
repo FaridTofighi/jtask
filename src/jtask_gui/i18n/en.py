@@ -145,6 +145,7 @@ CATALOG.update({
     "action.undo.tip": "Undo the last operation (Ctrl+Z)",
     "action.data": "Data",
     "action.data.tip": "Export / import / sync",
+    "action.reports.tip": "Burndown, history, project summary and calendar",
     "action.export": "Export…",
     "action.import": "Import from file…",
     "action.sync": "Sync…",

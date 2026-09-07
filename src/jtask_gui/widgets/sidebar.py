@@ -131,20 +131,9 @@ class Sidebar(QTreeWidget):
         gap.setSizeHint(0, QSize(1, 10))
         self.addTopLevelItem(gap)
 
-        self._reports = self._leaf(
-            None, t("sidebar.reports_and_charts"), {"kind": "reports"}, "reports"
-        )
-        f = self._reports.font(0)
-        f.setBold(True)
-        f.setPointSizeF(f.pointSizeF() + 0.5)
-        self._reports.setFont(0, f)
-        self.addTopLevelItem(self._reports)
-
-        gap2 = QTreeWidgetItem([""])
-        gap2.setFlags(Qt.ItemFlag.NoItemFlags)
-        gap2.setSizeHint(0, QSize(1, 6))
-        self.addTopLevelItem(gap2)
-
+        # Reports & Charts, saved filters and contexts moved to the toolbar
+        # (sidebar IA redesign) — the sidebar keeps only navigation that grows
+        # with the data: quick views, boards, projects, tags.
         self._boards = self._section(t("sidebar.section.boards"))
         self._saved = self._section(t("sidebar.section.saved"))
         self._projects = self._section(t("sidebar.section.projects"))

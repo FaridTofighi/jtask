@@ -137,6 +137,7 @@ CATALOG: dict[str, str] = {
     "action.undo.tip": "واگرد آخرین عملیات (Ctrl+Z)",
     "action.data": "داده",
     "action.data.tip": "خروجی / ورود / همگام‌سازی",
+    "action.reports.tip": "نمودار سوختن، تاریخچه، خلاصهٔ پروژه‌ها و تقویم",
     "action.export": "خروجی گرفتن…",
     "action.import": "ورود از فایل…",
     "action.sync": "همگام‌سازی…",
