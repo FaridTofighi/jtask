@@ -3247,3 +3247,56 @@ button tooltips + the project search placeholder). Tests: new
 `test_sidebar_ia.py` (18); migrated the sidebar-structure reads in
 `test_m3.py`, `test_starred_smartlists.py`, `test_stuck_project_indicator.py`,
 `test_command_console.py`. Suite: **776 passed**.
+
+## Toolbar declutter + Settings reorganization (2026-09-08)
+
+Builds on the sidebar IA redesign. Pure reorganization — no capability
+removed; `test_toolbar_declutter.py` carries the "nothing was lost" guards.
+
+**1. Filter cluster.** `FilterBar` gets `objectName("FilterCluster")` +
+`WA_StyledBackground`; spacing drops to `SP_2`; QSS frames the group and
+flattens the inner field + buttons so they read as one control.
+
+**2. Merged «نمایش».** The group-by `QComboBox` and the Settings-only
+"reset columns" button fold into `self._view_btn` — a `QToolButton` +
+`QMenu`: an exclusive grouping `QActionGroup` (same 5 keys →
+`self._table.set_group_key`) + one checkable action per `column_spec.COLUMNS`
+entry (`description` locked on). `_toggle_column` writes
+`settings.save_columns`; `MainWindow.__init__` now *reads*
+`settings.columns()` at startup (it was only ever written, on close).
+`mixins/boards.py` disables `_view_btn` in board mode (was the combo).
+
+**3. Weekly Review → GTD board header.** `boards.is_review_capable(board)`
+(GTD builtin only — review steps are one global list). `BoardView` grows a
+header `QHBoxLayout` (`#H2` + stretch + `QPushButton#BoardReviewButton`) and
+a `reviewRequested` signal; visibility toggled in `reload()`. `_review_action`
+stays a window `QAction` (Ctrl+R + palette); it's just off `row2`.
+
+**4. Theme off the toolbar.** `_theme_action` → `self.addAction` (no icon on
+`row2`); reachable from the `⋯` menu quick-toggle and `SettingsDialog._theme`
+(Interface tab) — both mutate `settings.theme`.
+
+**5. Slim `⋯`.** New menu = console toggle · theme quick-toggle ·
+`_shortcuts_action` (opens `ShortcutSheet`). `_console_action` +
+`_theme_action` moved to `self.addAction`.
+
+**6. Settings dialog = two tabs.** `SettingsDialog` is now a `QTabWidget`:
+- **Interface** — the whole former body (language / calendar / theme / digits
+  / density / notifications / TW paths / shortcut sheet), unchanged, still a
+  `QScrollArea` with the button box outside it.
+- **Taskwarrior** — `QListWidget#SettingsNav` (bold non-selectable «مدیریت» /
+  «ابزارها» headers + rows) + `QStackedWidget` hosting the five manager
+  widgets and the three tool panels (`DiagnosticsTab` / `HelpTab` / `CalcTab`,
+  promoted from private classes in `tools_dialog.py`). Panels load lazily on
+  reveal (`showEvent` + nav change, guarded by `isVisible()`) so an unshown
+  dialog does zero `task` work. `SettingsDialog` re-emits `changed`
+  (manager writes → `refresh_all`) and `sendToConsole`.
+
+`widgets/manager_dialog.py` and `ToolsDialog` are **deleted**; the gear opens
+Settings directly (it already did). i18n: `settings.section.ui`,
+`settings.group.manage/tools`, `toolbar.view`(+tip), `view.menu.columns`,
+`action.shortcuts`(+tip) added fa+en; `action.manage`/`action.tools`(+tips),
+`manage.title`, `tools.title` removed. `_i18n_util` now also scans
+`QListWidget` items + `QMenu` action tooltips; snapshot regenerated. Tests:
+`test_m8`/`test_m9`/`test_i18n_snapshot`/`test_i3` retargeted to the new
+home; new `test_toolbar_declutter.py`. Suite: **786 passed**.

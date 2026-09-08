@@ -330,10 +330,12 @@ class MainWindow(
         self._saved_filter_menu = None
         self._saved_counts: dict = {}
 
+        # theme toggle: no permanent toolbar icon — reachable from the "…"
+        # overflow menu (quick-toggle) and the Settings › Interface section
         self._theme_action = QAction(self)
         self._theme_action.triggered.connect(self._toggle_theme)
         self._sync_theme_action()
-        row2.addAction(self._theme_action)
+        self.addAction(self._theme_action)
 
         self._console_action = QAction(icons.icon("console"), t("action.console"), self)
         self._console_action.setToolTip(t("action.console.tip"))
@@ -343,7 +345,14 @@ class MainWindow(
         )
         self._console_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
         self._console_action.toggled.connect(self._toggle_console)
-        row2.addAction(self._console_action)
+        self.addAction(self._console_action)
+
+        self._shortcuts_action = QAction(
+            icons.icon("keyboard"), t("action.shortcuts"), self
+        )
+        self._shortcuts_action.setToolTip(t("action.shortcuts.tip"))
+        self._shortcuts_action.triggered.connect(self._open_shortcuts_sheet)
+        self.addAction(self._shortcuts_action)
 
         # the weekly-review pass lives in the GTD board's own header (it only
         # applies there); the action stays window-level for Ctrl+R + the palette
@@ -363,27 +372,21 @@ class MainWindow(
 
         row2.addSeparator()
 
-        # -- config cluster: settings + a flat "more" menu for the rarely-used
-        #    Manage / Diagnostics entry points (one extra click, no submenu)
+        # -- config cluster: the gear opens Settings directly (Interface +
+        #    Taskwarrior sections); the "…" menu holds only the odds and ends
         self._settings_action = QAction(icons.icon("settings"), t("action.settings"), self)
         self._settings_action.setToolTip(t("action.settings.tip"))
         self._settings_action.triggered.connect(self._open_settings)
         row2.addAction(self._settings_action)
-
-        self._manage_action = QAction(icons.icon("manage"), t("action.manage"), self)
-        self._manage_action.setToolTip(t("action.manage.tip"))
-        self._manage_action.triggered.connect(self._open_manager)
-        self._tools_action = QAction(icons.icon("tools"), t("action.tools"), self)
-        self._tools_action.setToolTip(t("action.tools.tip"))
-        self._tools_action.triggered.connect(self._open_tools)
 
         self._more_btn = QToolButton()
         self._more_btn.setIcon(icons.icon("more"))
         self._more_btn.setToolTip(t("toolbar.more.tip"))
         self._more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         more_menu = QMenu(self._more_btn)
-        more_menu.addAction(self._manage_action)
-        more_menu.addAction(self._tools_action)
+        more_menu.addAction(self._console_action)
+        more_menu.addAction(self._theme_action)
+        more_menu.addAction(self._shortcuts_action)
         self._more_btn.setMenu(more_menu)
         row2.addWidget(self._more_btn)
 

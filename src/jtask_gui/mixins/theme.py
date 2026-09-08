@@ -46,8 +46,6 @@ class ThemeMixin:
         self._console_action.setIcon(icons.icon("console"))
         self._add_full_action.setIcon(icons.icon("add", "primary_fg"))
         self._log_action.setIcon(icons.icon("completed"))
-        self._manage_action.setIcon(icons.icon("manage"))
-        self._tools_action.setIcon(icons.icon("tools"))
         self._data_btn.setIcon(icons.icon("data"))
         self._export_action.setIcon(icons.icon("export"))
         self._import_action.setIcon(icons.icon("import"))

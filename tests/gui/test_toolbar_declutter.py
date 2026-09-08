@@ -119,3 +119,56 @@ def test_board_review_button_opens_the_review_pass(win, qapp):
     _drain(qapp)
     assert win._review_active is True
     win._exit_review()
+
+
+# --- chunk 3: Settings reorg + theme off the toolbar -----------
+
+def test_theme_is_off_the_toolbar_but_in_two_places(win, qapp):
+    from jtask_gui.settings_dialog import SettingsDialog
+
+    assert win._theme_action not in win._toolbars[1].actions()
+    # (a) the overflow quick-toggle
+    before = win.settings.theme
+    win._theme_action.trigger()
+    _drain(qapp)
+    assert win.settings.theme != before
+    # (b) the Settings › Interface control — same setting
+    dlg = SettingsDialog(win.settings, win)
+    assert dlg._theme.currentData() == win.settings.theme
+    idx = dlg._theme.findData(before)
+    dlg._theme.setCurrentIndex(idx)
+    dlg._accept()
+    assert win.settings.theme == before
+
+
+def test_settings_has_two_sections_with_every_relocated_tool(win, qapp):
+    from jtask_gui.settings_dialog import SettingsDialog
+
+    dlg = SettingsDialog(win.settings, win)
+    dlg.show()
+    for i in range(dlg._tw_stack.count()):
+        dlg._load_tw_panel(i)
+    _drain(qapp)
+
+    assert dlg._tabs.count() == 2
+    # 5 managers + 3 tools = 8 panels, one click each
+    assert dlg._tw_stack.count() == 8
+    assert len(dlg._tw_managers) == 5
+    # the tool panels exist and populate
+    assert "task" in dlg._diag._text.toPlainText().lower()
+    assert dlg._help._table.rowCount() > 0
+    dlg._calc._in.setText("2 + 2")
+    dlg._calc._go()
+    _drain(qapp)
+    assert "4" in dlg._calc._out.text()
+
+
+def test_manage_and_tools_dialogs_are_gone(win):
+    assert not hasattr(win, "_manage_action")
+    assert not hasattr(win, "_tools_action")
+    assert not hasattr(win, "_open_manager")
+    assert not hasattr(win, "_open_tools")
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("jtask_gui.widgets.manager_dialog")

@@ -54,47 +54,50 @@ def test_taskwarrior_calc(tw_env):
 # ---------------------------------------------------------------------------
 
 
-def test_tools_dialog_populates(qapp, tw_env):
-    from jtask_gui.widgets.tools_dialog import ToolsDialog
+def test_tools_panels_populate(qapp, tw_env):
+    from jtask_gui.widgets.tools_dialog import DiagnosticsTab, HelpTab
 
-    d = ToolsDialog()
+    diag = DiagnosticsTab()
+    diag.load()
+    help_ = HelpTab()
+    help_.load()
     _drain(qapp)
-    assert "task" in d.diagnostics._text.toPlainText().lower()
-    assert d.help._table.rowCount() > 10
+    assert "task" in diag._text.toPlainText().lower()
+    assert help_._table.rowCount() > 10
 
-    d.help._search.setText("annotate")
-    assert d.help._table.rowCount() >= 1
+    help_._search.setText("annotate")
+    assert help_._table.rowCount() >= 1
     assert all(
-        "annotate" in d.help._table.item(r, 0).text().lower()
-        or "annotate" in d.help._table.item(r, 1).text().lower()
-        for r in range(d.help._table.rowCount())
+        "annotate" in help_._table.item(r, 0).text().lower()
+        or "annotate" in help_._table.item(r, 1).text().lower()
+        for r in range(help_._table.rowCount())
     )
 
 
 def test_calc_tab_computes_and_shows_jalali_for_dates(qapp, tw_env):
-    from jtask_gui.widgets.tools_dialog import ToolsDialog
+    from jtask_gui.widgets.tools_dialog import CalcTab
 
-    d = ToolsDialog()
-    d.calc._in.setText("40 + 2")
-    d.calc._go()
+    d = CalcTab()
+    d._in.setText("40 + 2")
+    d._go()
     _drain(qapp)
-    assert "= 42" in d.calc._out.text()
+    assert "= 42" in d._out.text()
 
-    d.calc._in.setText("now + 1d")
-    d.calc._go()
+    d._in.setText("now + 1d")
+    d._go()
     _drain(qapp)
     # ISO result annotated with a Jalali rendering (Persian digits)
-    assert "۱۴" in d.calc._out.text()
+    assert "۱۴" in d._out.text()
 
 
 def test_calc_tab_reports_errors(qapp, tw_env):
-    from jtask_gui.widgets.tools_dialog import ToolsDialog
+    from jtask_gui.widgets.tools_dialog import CalcTab
 
-    d = ToolsDialog()
-    d.calc._in.setText("(( nonsense")
-    d.calc._go()
+    d = CalcTab()
+    d._in.setText("(( nonsense")
+    d._go()
     _drain(qapp)
-    assert "خطا" in d.calc._out.text()
+    assert "خطا" in d._out.text()
 
 
 # ---------------------------------------------------------------------------
@@ -160,39 +163,20 @@ def test_filter_builder_still_emits_gregorian_dates(qapp, tw_env):
 # ---------------------------------------------------------------------------
 
 
-def test_main_window_shows_version_and_opens_tools(win, qapp, monkeypatch):
+def test_main_window_shows_version(win):
     assert win._status_binary.text().startswith("Taskwarrior")
-
-    calls = []
-
-    class _FakeTools:
-        sendToConsole = _NoSignal()
-
-        def exec(self):
-            calls.append(1)
-
-    monkeypatch.setattr(
-        "jtask_gui.widgets.tools_dialog.ToolsDialog", lambda *a, **k: _FakeTools()
-    )
-    win._open_tools()
-    assert calls == [1]
-
-
-class _NoSignal:
-    def connect(self, *_a):
-        pass
 
 
 def test_help_send_to_console_reveals_and_prefills(win, qapp, qtbot):
-    from jtask_gui.widgets.tools_dialog import ToolsDialog
+    from jtask_gui.settings_dialog import SettingsDialog
 
-    dlg = ToolsDialog(win)
-    dlg.help._set([("task add <mods>", "Add a new task")])
-    dlg.help._table.selectRow(0)
+    dlg = SettingsDialog(win.settings, win)
     dlg.sendToConsole.connect(win._send_to_console)
+    dlg._help._set([("task add <mods>", "Add a new task")])
+    dlg._help._table.selectRow(0)
 
     with qtbot.waitSignal(dlg.sendToConsole, timeout=1000):
-        dlg.help._emit_to_console()
+        dlg._help._emit_to_console()
 
     assert not win._console_dock.isHidden()
     assert win._console_action.isChecked()

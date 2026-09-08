@@ -61,6 +61,9 @@ CATALOG: dict[str, str] = {
 
     # ---- settings dialog (settings_dialog.py) ---------------------
     "settings.title": "تنظیمات",
+    "settings.section.ui": "رابط کاربری",
+    "settings.group.manage": "مدیریت",
+    "settings.group.tools": "ابزارها",
     "settings.theme": "پوسته",
     "settings.language": "زبان",
     "settings.language.fa": "فارسی",
@@ -144,11 +147,11 @@ CATALOG: dict[str, str] = {
     "action.export": "خروجی گرفتن…",
     "action.import": "ورود از فایل…",
     "action.sync": "همگام‌سازی…",
-    "action.manage": "مدیریت Taskwarrior…",
-    "action.manage.tip": "پیکربندی · زمینه‌ها · ویژگی‌های سفارشی · گزارش‌ها",
     "action.settings": "تنظیمات",
-    "action.settings.tip": "ظاهر · زبان · تقویم · اعلان‌ها",
-    "toolbar.more.tip": "ابزارهای بیشتر — مدیریت Taskwarrior · تشخیص و ابزارها",
+    "action.settings.tip": "رابط کاربری · Taskwarrior · اعلان‌ها",
+    "action.shortcuts": "کلیدهای میان‌بر",
+    "action.shortcuts.tip": "فهرست کلیدهای میان‌بر صفحه‌کلید",
+    "toolbar.more.tip": "ابزارهای دیگر — کنسول · پوسته · کلیدهای میان‌بر",
     "action.console": "کنسول فرمان",
     "action.command_palette": "پنل فرمان",
     "action.command_palette.tip": "پرش به هر کنش، نما یا فیلتر ذخیره‌شده (Ctrl+K)",
@@ -252,8 +255,6 @@ CATALOG: dict[str, str] = {
     "settings.shortcuts": "کلیدهای میان‌بر",
     "settings.shortcuts.hint": "این کلیدها در این نسخه ثابت هستند.",
     "action.console.tip": "کنسول فرمان خام — task … (Ctrl+` یا F12)",
-    "action.tools": "تشخیص و ابزارها…",
-    "action.tools.tip": "تشخیص · راهنمای فرمان‌ها · ماشین‌حساب",
     "dock.navigation": "پیمایش",
     "dock.console": "کنسول فرمان",
     "dock.review": "مرور هفتگی",
@@ -370,8 +371,7 @@ CATALOG: dict[str, str] = {
     "theme.switch_label": "پوستهٔ {name}",
     "theme.switch_tip": "تغییر پوسته به «{name}»",
 
-    # ---- manager dialog (widgets/manager_dialog.py) --------------
-    "manage.title": "مدیریت Taskwarrior",
+    # ---- Taskwarrior managers (settings dialog, "Taskwarrior" section) --
     "manage.tab.config": "پیکربندی",
     "manage.tab.contexts": "زمینه‌ها",
     "manage.tab.udas": "ویژگی‌های سفارشی",
@@ -569,7 +569,6 @@ CATALOG: dict[str, str] = {
     "tools.calc.placeholder": "مثال: 3 * (4 + 2)  یا  now + 3d",
     "tools.calc.run": "محاسبه",
     "tools.calc.error": "خطا: {err}",
-    "tools.title": "تشخیص و ابزارها",
     "tools.tab.diagnostics": "تشخیص",
     "tools.tab.help": "راهنمای فرمان‌ها",
     "tools.tab.calc": "ماشین‌حساب",

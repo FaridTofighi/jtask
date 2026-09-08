@@ -69,20 +69,6 @@ class DataSafetyMixin:
         dlg.synced.connect(self.refresh_all)
         dlg.exec()
 
-    def _open_manager(self) -> None:
-        from ..widgets.manager_dialog import ManagerDialog
-
-        dlg = ManagerDialog(self)
-        dlg.changed.connect(self.refresh_all)
-        dlg.exec()
-
-    def _open_tools(self) -> None:
-        from ..widgets.tools_dialog import ToolsDialog
-
-        dlg = ToolsDialog(self)
-        dlg.sendToConsole.connect(self._send_to_console)
-        dlg.exec()
-
     def _send_to_console(self, text: str) -> None:
         self._reveal_console()
         self._console.prefill(text)

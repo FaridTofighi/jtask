@@ -184,16 +184,18 @@ def test_report_manager_edits_custom_report(qapp, tw_env, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_manager_dialog_has_all_tabs_and_bubbles_changed(qapp, tw_env):
-    from jtask_gui.widgets.manager_dialog import ManagerDialog
+def test_settings_taskwarrior_section_has_all_managers(qapp, tw_env):
+    from jtask_gui.settings import Settings
+    from jtask_gui.settings_dialog import SettingsDialog
 
-    d = ManagerDialog()
+    d = SettingsDialog(Settings())
     _drain(qapp)
-    assert d._tabs.count() == 5  # config · contexts · udas · reports · hooks
+    # config · contexts · udas · reports · hooks
+    assert len(d._tw_managers) == 5
     fired = []
     d.changed.connect(lambda: fired.append(1))
-    d.config.changed.emit()
-    d.hooks.changed.emit()
+    d._cfg.changed.emit()
+    d._hooks.changed.emit()
     assert fired == [1, 1]
 
 
@@ -231,7 +233,7 @@ def test_hook_manager_empty_state(qapp, tw_env):
     assert not m._empty.isHidden()
 
 
-def test_main_window_opens_manager(win, qapp, monkeypatch):
+def test_gear_opens_settings_directly(win, qapp, monkeypatch):
     calls = []
 
     class _Sig:
@@ -240,6 +242,7 @@ def test_main_window_opens_manager(win, qapp, monkeypatch):
 
     class FakeDialog:
         changed = _Sig()
+        sendToConsole = _Sig()
 
         def __init__(self, *a, **k):
             calls.append(1)
@@ -247,10 +250,8 @@ def test_main_window_opens_manager(win, qapp, monkeypatch):
         def exec(self):
             return 0
 
-    monkeypatch.setattr(
-        "jtask_gui.widgets.manager_dialog.ManagerDialog", FakeDialog
-    )
-    win._open_manager()
+    monkeypatch.setattr("jtask_gui.settings_dialog.SettingsDialog", FakeDialog)
+    win._settings_action.trigger()
     assert calls == [1]
 
 

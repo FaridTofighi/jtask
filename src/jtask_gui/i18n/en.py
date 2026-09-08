@@ -67,6 +67,9 @@ CATALOG.update({
 
     # ---- settings dialog -------------------------------------
     "settings.title": "Settings",
+    "settings.section.ui": "Interface",
+    "settings.group.manage": "Management",
+    "settings.group.tools": "Tools",
     "settings.theme": "Theme",
     "settings.language": "Language",
     "settings.language.fa": "فارسی",
@@ -152,11 +155,11 @@ CATALOG.update({
     "action.export": "Export…",
     "action.import": "Import from file…",
     "action.sync": "Sync…",
-    "action.manage": "Manage Taskwarrior…",
-    "action.manage.tip": "Configuration · contexts · UDAs · reports",
     "action.settings": "Settings",
-    "action.settings.tip": "Appearance · language · calendar · notifications",
-    "toolbar.more.tip": "More tools — Manage Taskwarrior · Diagnostics & tools",
+    "action.settings.tip": "Interface · Taskwarrior · notifications",
+    "action.shortcuts": "Keyboard shortcuts",
+    "action.shortcuts.tip": "The keyboard shortcut reference",
+    "toolbar.more.tip": "More — console · theme · shortcuts",
     "action.console": "Command Console",
     "action.console.tip": "Raw command console — task … (Ctrl+` or F12)",
     "action.command_palette": "Command palette",
@@ -260,8 +263,6 @@ CATALOG.update({
     "sc.close_panel": "Close the edit panel / dialog",
     "settings.shortcuts": "Keyboard shortcuts",
     "settings.shortcuts.hint": "These bindings are fixed in this version.",
-    "action.tools": "Diagnostics & tools…",
-    "action.tools.tip": "Diagnostics · command reference · calculator",
     "dock.navigation": "Navigation",
     "dock.console": "Command Console",
     "dock.review": "Weekly Review",
@@ -383,8 +384,7 @@ CATALOG.update({
     "theme.switch_label": "{name} theme",
     "theme.switch_tip": "Switch theme to “{name}”",
 
-    # ---- manager dialog ----------------------------------
-    "manage.title": "Manage Taskwarrior",
+    # ---- Taskwarrior managers (settings dialog, "Taskwarrior" section) --
     "manage.tab.config": "Configuration",
     "manage.tab.contexts": "Contexts",
     "manage.tab.udas": "UDAs",
@@ -595,7 +595,6 @@ CATALOG.update({
     "tools.calc.placeholder": "e.g. 3 * (4 + 2)  or  now + 3d",
     "tools.calc.run": "Calculate",
     "tools.calc.error": "Error: {err}",
-    "tools.title": "Diagnostics & tools",
     "tools.tab.diagnostics": "Diagnostics",
     "tools.tab.help": "Command reference",
     "tools.tab.calc": "Calculator",

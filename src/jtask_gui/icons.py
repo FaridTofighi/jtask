@@ -41,6 +41,7 @@ _MAP = {
     "undo": "mdi.undo-variant",
     "settings": "mdi.cog-outline",
     "console": "mdi.console-line",
+    "keyboard": "mdi.keyboard-outline",
     "data": "mdi.database-outline",
     "manage": "mdi.tune-variant",
     "tools": "mdi.wrench-outline",

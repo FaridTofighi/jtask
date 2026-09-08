@@ -1,7 +1,17 @@
-"""Settings dialog: appearance + language + notifications."""
+"""Settings dialog — two tabbed sections.
+
+* Interface: language, calendar, theme, digits, density, due-soon threshold,
+  notifications, the Taskwarrior binary/data/rc paths and the keyboard-shortcut
+  sheet.
+* Taskwarrior: the config / context / UDA / report / hook managers and the
+  read-only diagnostics / command-reference / calculator tools, in a grouped
+  left-nav + stacked panel. These used to live in two separate toolbar dialogs
+  (ManagerDialog, ToolsDialog); this is their single home.
+"""
 
 from __future__ import annotations
 
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,9 +22,12 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -38,42 +51,76 @@ _CALENDARS = [
 
 
 class SettingsDialog(QDialog):
+    changed = pyqtSignal()          # a Taskwarrior manager wrote something
+    sendToConsole = pyqtSignal(str)  # the command-reference "to console" action
+
     def __init__(self, settings: Settings, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(t("settings.title"))
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(720)
         self._settings = settings
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
+
+        from PyQt6.QtWidgets import QTabWidget
+
+        self._tabs = QTabWidget()
+        outer.addWidget(self._tabs, 1)
+        self._tabs.addTab(self._build_ui_tab(), t("settings.section.ui"))
+        self._tabs.addTab(self._build_tw_tab(), t("settings.taskwarrior"))
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(t("btn.confirm"))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(t("btn.cancel"))
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        bwrap = QVBoxLayout()
+        bwrap.setContentsMargins(*tok.INSET_DIALOG)
+        bwrap.addWidget(buttons)
+        outer.addLayout(bwrap)
+
+        # fit the screen: never taller than 85% of the available height
+        from PyQt6.QtWidgets import QApplication
+
+        screen = QApplication.primaryScreen()
+        cap = int(screen.availableGeometry().height() * 0.85) if screen else 720
+        hint = self._tabs.sizeHint().height() + buttons.sizeHint().height() + 2 * tok.SP_16
+        self.resize(760, min(hint, cap))
+
+    # --- section 1: interface ---------------------------------
+
+    def _build_ui_tab(self) -> QWidget:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        _content = QWidget()
-        scroll.setWidget(_content)
-        outer.addWidget(scroll, 1)
+        content = QWidget()
+        scroll.setWidget(content)
 
-        root = QVBoxLayout(_content)
+        root = QVBoxLayout(content)
         root.setContentsMargins(*tok.INSET_DIALOG)
         form = QFormLayout()
         root.addLayout(form)
 
+        settings = self._settings
+
         self._language = QComboBox()
         for key, code in _LANGUAGES:
             self._language.addItem(t(key), code)
+        codes = [c for _, c in _LANGUAGES]
         self._language.setCurrentIndex(
-            max(0, [c for _, c in _LANGUAGES].index(settings.language))
-            if settings.language in [c for _, c in _LANGUAGES]
-            else 0
+            codes.index(settings.language) if settings.language in codes else 0
         )
         form.addRow(t("settings.language"), self._language)
 
         self._calendar = QComboBox()
         for key, code in _CALENDARS:
             self._calendar.addItem(t(key), code)
-        codes = [c for _, c in _CALENDARS]
+        cal_codes = [c for _, c in _CALENDARS]
         self._calendar.setCurrentIndex(
-            codes.index(settings.calendar) if settings.calendar in codes else 0
+            cal_codes.index(settings.calendar) if settings.calendar in cal_codes else 0
         )
         form.addRow(t("settings.calendar"), self._calendar)
 
@@ -81,8 +128,7 @@ class SettingsDialog(QDialog):
         for key in THEMES:
             self._theme.addItem(t(f"theme.{key}"), key)
         self._theme.setCurrentIndex(
-            max(0, list(THEMES).index(settings.theme))
-            if settings.theme in THEMES else 0
+            max(0, list(THEMES).index(settings.theme)) if settings.theme in THEMES else 0
         )
         form.addRow(t("settings.theme"), self._theme)
 
@@ -99,9 +145,7 @@ class SettingsDialog(QDialog):
         self._density = QComboBox()
         for key in ("comfortable", "compact"):
             self._density.addItem(t(f"settings.density.{key}"), key)
-        self._density.setCurrentIndex(
-            max(0, self._density.findData(settings.density))
-        )
+        self._density.setCurrentIndex(max(0, self._density.findData(settings.density)))
         form.addRow(t("settings.density"), self._density)
 
         sec = QLabel(t("settings.notifications"))
@@ -186,26 +230,107 @@ class SettingsDialog(QDialog):
         root.addWidget(self._show_shortcuts)
 
         root.addStretch(1)
+        return scroll
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(t("btn.confirm"))
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(t("btn.cancel"))
-        buttons.accepted.connect(self._accept)
-        buttons.rejected.connect(self.reject)
-        bwrap = QVBoxLayout()
-        bwrap.setContentsMargins(*tok.INSET_DIALOG)
-        bwrap.addWidget(buttons)
-        outer.addLayout(bwrap)
+    # --- section 2: Taskwarrior ------------------------------
 
-        # fit the screen: never taller than 85% of the available height
-        from PyQt6.QtWidgets import QApplication
+    def _build_tw_tab(self) -> QWidget:
+        from .widgets.config_manager import ConfigManager
+        from .widgets.context_manager import ContextManager
+        from .widgets.hook_manager import HookManager
+        from .widgets.report_manager import ReportManager
+        from .widgets.tools_dialog import CalcTab, DiagnosticsTab, HelpTab
+        from .widgets.uda_manager import UdaManager
 
-        screen = QApplication.primaryScreen()
-        cap = int(screen.availableGeometry().height() * 0.85) if screen else 720
-        hint = _content.sizeHint().height() + buttons.sizeHint().height() + 2 * tok.SP_16
-        self.resize(480, min(hint, cap))
+        page = QWidget()
+        lay = QHBoxLayout(page)
+        lay.setContentsMargins(*tok.INSET_DIALOG)
+        lay.setSpacing(tok.SP_12)
+
+        nav = QListWidget()
+        nav.setObjectName("SettingsNav")
+        nav.setMaximumWidth(220)
+        stack = QStackedWidget()
+
+        def add_group(label: str) -> None:
+            it = QListWidgetItem(label)
+            it.setFlags(Qt.ItemFlag.NoItemFlags)
+            f = it.font()
+            f.setBold(True)
+            it.setFont(f)
+            nav.addItem(it)
+
+        def add_panel(label: str, widget: QWidget) -> None:
+            idx = stack.addWidget(widget)
+            it = QListWidgetItem(label)
+            it.setData(Qt.ItemDataRole.UserRole, idx)
+            nav.addItem(it)
+
+        add_group(t("settings.group.manage"))
+        self._cfg = ConfigManager()
+        add_panel(t("manage.tab.config"), self._cfg)
+        self._ctx = ContextManager()
+        add_panel(t("manage.tab.contexts"), self._ctx)
+        self._uda = UdaManager()
+        add_panel(t("manage.tab.udas"), self._uda)
+        self._rep = ReportManager()
+        add_panel(t("manage.tab.reports"), self._rep)
+        self._hooks = HookManager()
+        add_panel(t("manage.tab.hooks"), self._hooks)
+
+        add_group(t("settings.group.tools"))
+        self._diag = DiagnosticsTab()
+        add_panel(t("tools.tab.diagnostics"), self._diag)
+        self._help = HelpTab()
+        add_panel(t("tools.tab.help"), self._help)
+        self._calc = CalcTab()
+        add_panel(t("tools.tab.calc"), self._calc)
+
+        self._tw_managers = [self._cfg, self._ctx, self._uda, self._rep, self._hooks]
+        for m in self._tw_managers:
+            m.changed.connect(self.changed)
+        self._help.sendToConsole.connect(self._forward_to_console)
+
+        def _on_nav(cur: QListWidgetItem | None, _prev: object) -> None:
+            if cur is None:
+                return
+            idx = cur.data(Qt.ItemDataRole.UserRole)
+            if idx is not None:
+                stack.setCurrentIndex(idx)
+                if self.isVisible():
+                    self._load_tw_panel(idx)
+
+        lay.addWidget(nav, 0)
+        lay.addWidget(stack, 1)
+
+        # panels fetch their data lazily — only once the dialog is actually
+        # shown and the panel is the visible one. A SettingsDialog built in a
+        # unit test and never shown does zero `task` subprocess work.
+        self._tw_stack = stack
+        self._tw_loaded: set[int] = set()
+        nav.currentItemChanged.connect(_on_nav)
+        nav.setCurrentRow(1)  # first real panel (row 0 is the "Management" header)
+        return page
+
+    def _load_tw_panel(self, idx: int) -> None:
+        if idx < 0 or idx in self._tw_loaded:
+            return
+        widget = self._tw_stack.widget(idx)
+        fn = getattr(widget, "reload", None) or getattr(widget, "load", None)
+        if fn is None:
+            return
+        self._tw_loaded.add(idx)
+        fn()
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        self._load_tw_panel(self._tw_stack.currentIndex())
+
+    def _forward_to_console(self, text: str) -> None:
+        self.sendToConsole.emit(text)
+        self.accept()
+
+    # --- shared ----------------------------------------------
 
     def _accept(self) -> None:
         s = self._settings

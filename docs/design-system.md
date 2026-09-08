@@ -140,10 +140,20 @@ Chart "no data" is the equivalent centred text on the matplotlib canvas.
 ## 7. Toolbar
 
 Row two is grouped into clusters separated by `QToolBar` separators:
-`filter · group · create (add-full, log) · undo · data ▾ · view (theme,
-console) · config (settings, ⋯)`. The rarely-used dialog entry points
-(**Manage Taskwarrior**, **Diagnostics & tools**) sit behind a single flat
-`⋯` `QToolButton` menu — one level, one extra click, no submenu (Resolution 3).
+`filter cluster · نمایش · board · create (add-full, log) · undo · data ▾ ·
+reports · saved-filters (+ pins) · triage · settings · ⋯`. The **filter
+cluster** (`FilterBar`, `#FilterCluster`) renders the field flush to its
+builder / apply / save-★ / clear buttons inside one frame. **نمایش**
+(`_view_btn`) is a single menu folding the grouping choice and per-column
+show/hide toggles (`description` stays on). The `⋯` menu holds only odds and
+ends — the command-console toggle, a theme quick-toggle, and the
+keyboard-shortcut sheet — one level, no submenu (`test_d4_toolbar.py`
+`test_overflow_menu_is_flat_and_miscellaneous`).
+
+Not on the toolbar: the **theme switch** lives in the `⋯` menu and in
+Settings › Interface; the **Weekly Review** button renders in the GTD board's
+own header (`boards.is_review_capable`), never globally.
+
 **Every** toolbar control has a descriptive tooltip that is not merely its
 label (`test_d4_toolbar.py`). Icons are `qtawesome` `mdi.*`, outline style.
 

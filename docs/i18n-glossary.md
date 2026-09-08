@@ -228,10 +228,15 @@ project (assign one via inline edit / the detail panel).
 | نام | Name |
 | از … تا | From … to |
 | تنظیمات | Settings |
+| رابط کاربری | Interface (Settings section) |
+| مدیریت | Management (Settings › Taskwarrior) |
+| ابزارها | Tools (Settings › Taskwarrior) |
+| نمایش | View (toolbar: grouping + columns) |
 | زبان | Language |
 | پوسته | Theme |
 | ارقام فارسی | Persian digits |
 | اعلان‌ها | Notifications |
+| کلیدهای میان‌بر | Keyboard shortcuts |
 
 ---
 

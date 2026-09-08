@@ -1,12 +1,14 @@
-"""Diagnostics · Command reference · Calculator — read-only Taskwarrior tools (§ M9)."""
+"""Diagnostics · Command reference · Calculator — read-only Taskwarrior tools.
+
+Three self-contained panels; they live in the Settings dialog's "Taskwarrior"
+section (they used to be the three tabs of a standalone ``ToolsDialog``).
+"""
 
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
-    QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -16,7 +18,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -29,7 +30,7 @@ from ..i18n import t
 from ..workers import submit
 
 
-class _DiagnosticsTab(QWidget):
+class DiagnosticsTab(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         lay = QVBoxLayout(self)
@@ -70,7 +71,7 @@ class _DiagnosticsTab(QWidget):
                 fh.write(self._text.toPlainText() + "\n")
 
 
-class _HelpTab(QWidget):
+class HelpTab(QWidget):
     sendToConsole = pyqtSignal(str)
 
     def __init__(self, parent=None) -> None:
@@ -135,7 +136,7 @@ class _HelpTab(QWidget):
         self._table.resizeColumnToContents(0)
 
 
-class _CalcTab(QWidget):
+class CalcTab(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         lay = QVBoxLayout(self)
@@ -179,40 +180,3 @@ class _CalcTab(QWidget):
 
     def _err(self, err: object) -> None:
         self._out.setText(t("tools.calc.error", err=err))
-
-
-class ToolsDialog(QDialog):
-    sendToConsole = pyqtSignal(str)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setObjectName("ToolsDialog")
-        self.setWindowTitle(t("tools.title"))
-        self.resize(720, 540)
-
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(*tok.INSET_PANEL)
-        lay.setSpacing(tok.SP_10)
-        tabs = QTabWidget()
-        self.diagnostics = _DiagnosticsTab()
-        self.help = _HelpTab()
-        self.calc = _CalcTab()
-        tabs.addTab(self.diagnostics, t("tools.tab.diagnostics"))
-        tabs.addTab(self.help, t("tools.tab.help"))
-        tabs.addTab(self.calc, t("tools.tab.calc"))
-        lay.addWidget(tabs, 1)
-
-        btns = QDialogButtonBox()
-        btns.addButton(t("btn.close"), QDialogButtonBox.ButtonRole.AcceptRole).clicked.connect(
-            self.accept
-        )
-        lay.addWidget(btns)
-
-        self.help.sendToConsole.connect(self._forward_to_console)
-
-        self.diagnostics.load()
-        self.help.load()
-
-    def _forward_to_console(self, text: str) -> None:
-        self.sendToConsole.emit(text)
-        self.accept()

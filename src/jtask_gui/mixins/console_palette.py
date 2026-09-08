@@ -132,10 +132,19 @@ class ConsolePaletteMixin:
                 self._sidebar.activate_spec(dict(spec, title=t(label_key)))
                 return
 
+    def _open_shortcuts_sheet(self) -> None:
+        from ..widgets.shortcut_sheet import ShortcutSheet
+
+        ShortcutSheet(self).exec()
+
     def _open_settings(self) -> None:
         from ..settings_dialog import SettingsDialog
 
         dlg = SettingsDialog(self.settings, self)
+        # the Taskwarrior-section managers apply writes immediately (context
+        # activation, config edits …) — refresh the view while the dialog is open
+        dlg.changed.connect(self.refresh_all)
+        dlg.sendToConsole.connect(self._send_to_console)
         if dlg.exec():
             set_digit_mode(self.settings.persian_digits)
             self._model.set_persian_digits(self.settings.persian_digits)

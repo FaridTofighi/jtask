@@ -56,29 +56,35 @@ def test_every_toolbar_control_has_a_tooltip(win):
 
 
 def test_descriptive_tooltips_are_not_just_the_label(win):
-    """The frequently-confused ones (Settings, Manage, Tools) must say what they
-    do, not repeat their name."""
-    for name in ("_settings_action", "_manage_action", "_tools_action"):
-        act = getattr(win, name)
-        assert act.toolTip().strip() and act.toolTip().strip() != act.text().strip(), name
+    """The gear + the merged view control must say what they do, not repeat
+    their name."""
+    assert win._settings_action.toolTip().strip()
+    assert win._settings_action.toolTip().strip() != win._settings_action.text().strip()
+    assert win._view_btn.toolTip().strip()
+    assert win._view_btn.toolTip().strip() != win._view_btn.text().strip()
 
 
-def test_overflow_menu_is_flat(win):
-    """Resolution 3: the 'more' menu is one level — no nested submenus."""
+def test_overflow_menu_is_flat_and_miscellaneous(win):
+    """The 'more' menu is one level and holds only odds and ends — the console
+    toggle, the theme quick-toggle and the shortcut sheet."""
     menu = win._more_btn.menu()
     assert menu is not None
     for act in menu.actions():
         assert not isinstance(act.menu(), QMenu), f"{act.text()} opens a submenu"
-    # and it holds exactly the rarely-used entry points
     labels = {a.text() for a in menu.actions() if not a.isSeparator()}
-    assert labels == {win._manage_action.text(), win._tools_action.text()}
+    assert labels == {
+        win._console_action.text(),
+        win._theme_action.text(),
+        win._shortcuts_action.text(),
+    }
 
 
 def test_overflow_actions_still_wired(win):
-    """Relocating an action into the menu must not drop its callback (checked
-    without firing the modal dialogs)."""
-    for act in (win._manage_action, win._tools_action):
-        assert act.receivers(act.triggered) >= 1, f"{act.text()} has no handler"
+    """Relocating an action into the menu must not drop its callback."""
+    assert win._console_action.receivers(win._console_action.toggled) >= 1
+    assert win._theme_action.receivers(win._theme_action.triggered) >= 1
+    assert win._shortcuts_action.receivers(win._shortcuts_action.triggered) >= 1
+    for act in (win._console_action, win._theme_action, win._shortcuts_action):
         assert act.isEnabled()
 
 

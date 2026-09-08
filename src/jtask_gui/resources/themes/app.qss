@@ -38,6 +38,18 @@ QLabel#Section {
 }
 QLabel#Muted { color: @text_muted@; font-size: @fs_xs@; }
 QLabel#FieldLabel { color: @text_muted@; font-weight: 700; }
+
+/* Settings › Taskwarrior — grouped left nav */
+QListWidget#SettingsNav {
+    background-color: @bg_alt@;
+    border: 1px solid @border@;
+    border-radius: @r_md@;
+    padding: @sp_4@;
+}
+QListWidget#SettingsNav::item { padding: @sp_6@ @sp_8@; border-radius: @r_sm@; }
+QListWidget#SettingsNav::item:selected {
+    background-color: @primary_soft@; color: @text@;
+}
 QLabel#Badge {
     color: @primary_fg@; background-color: @primary@;
     border-radius: @r_pill@; padding: @sp_4@ @sp_12@; font-weight: 700; font-size: @fs_xs@;

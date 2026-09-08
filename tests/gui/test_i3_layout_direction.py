@@ -138,10 +138,11 @@ def test_closeevent_saves_state_under_the_built_language(in_language, qapp, qtbo
 
 @pytest.mark.parametrize("in_language", ["fa", "en"], indirect=True)
 def test_dialogs_inherit_app_direction(in_language, qapp, qtbot, tw_env):
+    from jtask_gui.settings import Settings
+    from jtask_gui.settings_dialog import SettingsDialog
     from jtask_gui.widgets.bulk_edit import BulkEditDialog
     from jtask_gui.widgets.error_dialog import ErrorDialog
     from jtask_gui.widgets.export_dialog import ExportDialog
-    from jtask_gui.widgets.manager_dialog import ManagerDialog
     from jtask_gui.widgets.task_form import TaskFormDialog
 
     want = qapp.layoutDirection()
@@ -150,7 +151,7 @@ def test_dialogs_inherit_app_direction(in_language, qapp, qtbot, tw_env):
         BulkEditDialog(2),
         ExportDialog([]),
         ErrorDialog("x"),
-        ManagerDialog(),
+        SettingsDialog(Settings()),
     ):
         qtbot.addWidget(dlg)
         assert dlg.layoutDirection() == want, type(dlg).__name__

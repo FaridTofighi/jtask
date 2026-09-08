@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMenu,
     QPlainTextEdit,
     QTableWidget,
@@ -81,6 +82,8 @@ def visible_strings(root: QWidget) -> list[str]:
             out.append(w.placeholderText())
         if isinstance(w, QComboBox):
             out.extend(w.itemText(i) for i in range(w.count()))
+        if isinstance(w, QListWidget):
+            out.extend(w.item(i).text() for i in range(w.count()))
         if isinstance(w, QTabWidget):
             out.extend(w.tabText(i) for i in range(w.count()))
         if isinstance(w, QTableWidget):
@@ -103,6 +106,8 @@ def visible_strings(root: QWidget) -> list[str]:
         for a in m.actions():
             if a.text():
                 out.append(a.text())
+            if a.toolTip() and a.toolTip() != a.text():
+                out.append(a.toolTip())
 
     return out
 

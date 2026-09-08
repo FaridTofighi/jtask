@@ -54,17 +54,19 @@ def _build_screens(qapp, qtbot, wait_for_done):
     from jtask_gui.settings_dialog import SettingsDialog
     from jtask_gui.widgets.bulk_edit import BulkEditDialog
     from jtask_gui.widgets.export_dialog import ExportDialog
-    from jtask_gui.widgets.manager_dialog import ManagerDialog
     from jtask_gui.widgets.task_form import TaskFormDialog
-    from jtask_gui.widgets.tools_dialog import ToolsDialog
 
-    roots.append(SettingsDialog(Settings()))
+    # SettingsDialog now hosts the Taskwarrior managers + tools that used to
+    # live in the standalone ManagerDialog / ToolsDialog. Force every panel to
+    # load so their populated wording is captured (they load lazily on reveal).
+    sd = SettingsDialog(Settings())
+    sd.show()
+    for _i in range(sd._tw_stack.count()):
+        sd._load_tw_panel(_i)
+    roots.append(sd)
     roots.append(TaskFormDialog("add", ["آزمون"], ["مهم"]))
     roots.append(BulkEditDialog(3, ["آزمون"], ["مهم"]))
     roots.append(ExportDialog(["project:آزمون"]))
-    md = ManagerDialog()
-    roots.append(md)
-    roots.append(ToolsDialog())
     for _ in range(6):
         qapp.processEvents()
         wait_for_done(4000)
