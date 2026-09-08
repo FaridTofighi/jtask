@@ -8,7 +8,6 @@ import logging
 from PyQt6.QtCore import QEasingCurve, QSize, Qt, QVariantAnimation
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (
-    QComboBox,
     QDockWidget,
     QLabel,
     QMainWindow,
@@ -106,6 +105,11 @@ class MainWindow(
         )
         self._table = TaskTable(self._model)
         self._table.set_density(self.settings.density)
+        # restore a persisted column layout (written on close) — the merged
+        # "نمایش" toolbar control is the only editor of column visibility
+        _col_order, _col_hidden, _ = self.settings.columns()
+        if _col_order:
+            self._model.set_columns([k for k in _col_order if k not in _col_hidden])
         self._detail = DetailPanel()
         self._history_view = TaskHistoryView()
         self._raw_view = RawDataView()
@@ -114,6 +118,7 @@ class MainWindow(
         from .widgets.board_view import BoardView
         self._board = BoardView(self.settings.theme)
         self._board_mode = False
+        self._group_key = "none"
 
         self._really_quit = False
         self._build_central()
@@ -235,19 +240,17 @@ class MainWindow(
 
         row2.addSeparator()
 
-        self._group_combo = QComboBox()
-        for label, key in [
-            (t("group.none"), "none"), (t("group.project"), "project"),
-            (t("group.priority"), "priority"), (t("group.due_week"), "due"),
-            (t("group.status"), "status"),
-        ]:
-            self._group_combo.addItem(label, key)
-        self._group_combo.setToolTip(t("toolbar.group.tip"))
-        self._group_combo.setMinimumWidth(120)
-        self._group_combo.currentIndexChanged.connect(
-            lambda: self._table.set_group_key(self._group_combo.currentData())
-        )
-        row2.addWidget(self._group_combo)
+        from PyQt6.QtWidgets import QMenu, QToolButton
+
+        # one control folding "group by" + column show/hide (was two toolbar
+        # widgets: the group combo + a Settings-only column reset)
+        self._view_btn = QToolButton()
+        self._view_btn.setIcon(icons.icon("view"))
+        self._view_btn.setText(t("toolbar.view"))
+        self._view_btn.setToolTip(t("toolbar.view.tip"))
+        self._view_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._view_btn.setMenu(self._build_view_menu())
+        row2.addWidget(self._view_btn)
 
         self._board_action = QAction(icons.icon("board"), t("action.board"), self)
         self._board_action.setCheckable(True)
@@ -283,8 +286,6 @@ class MainWindow(
         row2.addAction(self._undo_action)
 
         row2.addSeparator()
-
-        from PyQt6.QtWidgets import QMenu, QToolButton
 
         self._data_btn = QToolButton()
         self._data_btn.setIcon(icons.icon("data"))
@@ -396,6 +397,76 @@ class MainWindow(
         self._palette_action.setToolTip(t("action.command_palette.tip"))
         self._palette_action.triggered.connect(self._open_command_palette)
         self.addAction(self._palette_action)
+
+    # --- the merged "نمایش" control: grouping + column visibility ----
+
+    def _build_view_menu(self):
+        from PyQt6.QtGui import QActionGroup
+        from PyQt6.QtWidgets import QMenu
+
+        from .models.column_spec import COLUMNS
+
+        menu = QMenu(self)
+
+        head = menu.addAction(t("toolbar.group_by"))
+        head.setEnabled(False)
+        grp = QActionGroup(menu)
+        grp.setExclusive(True)
+        self._group_actions: dict[str, QAction] = {}
+        for label, key in [
+            (t("group.none"), "none"), (t("group.project"), "project"),
+            (t("group.priority"), "priority"), (t("group.due_week"), "due"),
+            (t("group.status"), "status"),
+        ]:
+            act = menu.addAction(label)
+            act.setCheckable(True)
+            act.setChecked(key == self._group_key)
+            act.triggered.connect(lambda _c=False, k=key: self._set_group_key(k))
+            grp.addAction(act)
+            self._group_actions[key] = act
+
+        menu.addSeparator()
+        col_head = menu.addAction(t("view.menu.columns"))
+        col_head.setEnabled(False)
+        visible = set(self._model.visible_columns())
+        self._col_actions: dict[str, QAction] = {}
+        for col in COLUMNS:
+            if not col.header:  # the marker columns (⭐ / indicators) always stay
+                continue
+            act = menu.addAction(col.header)
+            act.setCheckable(True)
+            act.setChecked(col.key in visible)
+            if col.key == "description":
+                act.setEnabled(False)  # the stretch column is not hideable
+            act.toggled.connect(lambda _c=False, k=col.key: self._toggle_column(k))
+            self._col_actions[col.key] = act
+
+        menu.aboutToShow.connect(self._sync_view_menu)
+        return menu
+
+    def _set_group_key(self, key: str) -> None:
+        self._group_key = key
+        self._table.set_group_key(key)
+
+    def _toggle_column(self, _key: str) -> None:
+        from .models.column_spec import COLUMNS
+
+        checked = {
+            k for k, act in self._col_actions.items() if act.isChecked()
+        }
+        checked.add("description")
+        keys = [c.key for c in COLUMNS if not c.header or c.key in checked]
+        self._model.set_columns(keys)
+        self.settings.save_columns(keys, [], {})
+
+    def _sync_view_menu(self) -> None:
+        for key, act in self._group_actions.items():
+            act.setChecked(key == self._group_key)
+        visible = set(self._model.visible_columns())
+        for key, act in self._col_actions.items():
+            act.blockSignals(True)
+            act.setChecked(key in visible)
+            act.blockSignals(False)
 
     def _build_sidebar(self) -> None:
         self._sidebar = Sidebar()

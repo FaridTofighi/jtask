@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shlex
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QInputDialog, QLineEdit, QToolButton, QWidget
 
 from jtask import rewrite, taskwarrior
@@ -37,9 +37,14 @@ class FilterBar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        # one contiguous control: field flush to its adjacent icon buttons, a
+        # single frame around the group (QSS #FilterCluster) — same visual
+        # language as the saved-filters dropdown trigger.
+        self.setObjectName("FilterCluster")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(tok.SP_6)
+        row.setSpacing(tok.SP_2)
 
         self._builder_btn = QToolButton()
         self._builder_btn.setToolTip(t("filterbar.builder_tip"))

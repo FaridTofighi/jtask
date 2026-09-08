@@ -51,6 +51,7 @@ _MAP = {
     "theme_dark": "mdi.weather-night",
     "theme_light": "mdi.white-balance-sunny",
     "group": "mdi.format-list-group",
+    "view": "mdi.view-agenda-outline",
     "filter": "mdi.filter-variant",
     "search": "mdi.magnify",
     "star": "mdi.star",

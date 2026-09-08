@@ -50,7 +50,7 @@ class BoardsMixin:
 
     def _toggle_board(self, on: bool) -> None:
         self._board_mode = on
-        self._group_combo.setEnabled(not on)
+        self._view_btn.setEnabled(not on)
         if on and self._board.current_board() is None:
             from ..boards import builtin_board
             self._board.set_board(builtin_board("gtd"))
@@ -62,7 +62,7 @@ class BoardsMixin:
             return
         self._board.set_board(board)
         self._board_mode = True
-        self._group_combo.setEnabled(False)
+        self._view_btn.setEnabled(False)
         self._board_action.setChecked(True)
         self._load_current_view()
 

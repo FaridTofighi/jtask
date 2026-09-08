@@ -188,6 +188,24 @@ QLineEdit#QuickAdd {
 }
 QLineEdit#FilterEdit { font-family: "Vazirmatn"; }
 
+/* the filter controls read as one contiguous control: a single frame around
+   the field + its builder / apply / save / clear buttons */
+QWidget#FilterCluster {
+    background-color: @field@;
+    border: 1px solid @border@;
+    border-radius: @r_md@;
+    padding: @sp_2@;
+}
+QWidget#FilterCluster QLineEdit#FilterEdit,
+QWidget#FilterCluster QLineEdit#FilterEdit:focus {
+    background: transparent; border: none; border-radius: 0;
+}
+QWidget#FilterCluster QToolButton {
+    border: none; background: transparent; border-radius: @r_sm@;
+}
+QWidget#FilterCluster QToolButton:hover { background-color: @hover@; }
+QWidget#FilterCluster QToolButton:pressed { background-color: @selection@; }
+
 QComboBox::drop-down { border: none; width: 22px; }
 QTimeEdit[compact="true"] { padding: @sp_6@ @sp_6@; }
 QComboBox QAbstractItemView {
