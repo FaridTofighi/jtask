@@ -83,3 +83,39 @@ def test_view_menu_toggles_columns_and_persists(win, qapp, qtbot):
 
 def test_description_column_cannot_be_hidden(win):
     assert win._col_actions["description"].isEnabled() is False
+
+
+# --- chunk 2: weekly review -> GTD board header -----------------
+
+def test_review_button_is_off_the_global_toolbar(win):
+    assert win._review_action not in win._toolbars[1].actions()
+    # still a live window action -> Ctrl+R + command palette keep working
+    assert win._review_action.shortcut().toString() == "Ctrl+R"
+    assert win._review_action in win.findChildren(type(win._review_action))
+
+
+def test_review_button_shows_only_on_the_gtd_board(win, qapp):
+    from jtask_gui.boards import Board, builtin_board
+
+    win._board.set_board(builtin_board("gtd"))
+    _drain(qapp)
+    assert not win._board._review_btn.isHidden()
+
+    win._board.set_board(Board("Mine", builtin_board("gtd").columns, builtin=False))
+    _drain(qapp)
+    assert win._board._review_btn.isHidden()
+
+    win._board.set_board(builtin_board("status"))
+    _drain(qapp)
+    assert win._board._review_btn.isHidden()
+
+
+def test_board_review_button_opens_the_review_pass(win, qapp):
+    from jtask_gui.boards import builtin_board
+
+    win._board.set_board(builtin_board("gtd"))
+    _drain(qapp)
+    win._board._review_btn.click()
+    _drain(qapp)
+    assert win._review_active is True
+    win._exit_review()

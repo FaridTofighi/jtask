@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMenu,
+    QPushButton,
     QScrollArea,
     QToolButton,
     QVBoxLayout,
@@ -33,6 +34,7 @@ from ..boards import (
     SORT_ORDERS,
     Board,
     drop_label,
+    is_review_capable,
     normalize_sort,
     sort_rows,
 )
@@ -177,6 +179,7 @@ class BoardView(QWidget):
     starToggled = pyqtSignal(str, bool)
     triageRequested = pyqtSignal(int)    # column index
     columnSortChanged = pyqtSignal(int, str)  # column index, sort order
+    reviewRequested = pyqtSignal()       # GTD board header — open the review pass
 
     def __init__(self, theme_name: str = "dark", parent=None) -> None:
         super().__init__(parent)
@@ -191,9 +194,18 @@ class BoardView(QWidget):
         root.setContentsMargins(*tok.INSET_PANEL)
         root.setSpacing(tok.SP_10)
 
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
         self._heading = QLabel("")
         self._heading.setObjectName("H2")
-        root.addWidget(self._heading)
+        header.addWidget(self._heading, 1)
+        self._review_btn = QPushButton(t("action.review"))
+        self._review_btn.setObjectName("BoardReviewButton")
+        self._review_btn.setToolTip(t("action.review.tip"))
+        self._review_btn.clicked.connect(self.reviewRequested)
+        self._review_btn.hide()
+        header.addWidget(self._review_btn, 0)
+        root.addLayout(header)
 
         self._hscroll = QScrollArea()
         self._hscroll.setWidgetResizable(True)
@@ -237,6 +249,10 @@ class BoardView(QWidget):
         self._columns = []
         while self._cols_lay.count():
             self._cols_lay.takeAt(0)
+        review = is_review_capable(board)
+        self._review_btn.setVisible(review)
+        if review:
+            self._review_btn.setIcon(icons.icon("review"))
         if board is None or not board.columns:
             self._empty.setVisible(True)
             self._hscroll.setVisible(False)

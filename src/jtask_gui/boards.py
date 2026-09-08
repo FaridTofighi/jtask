@@ -262,3 +262,11 @@ def builtin_board(key: str) -> Board | None:
 
 def all_builtins() -> list[Board]:
     return [builtin_board(k) for k in BUILTIN_BOARDS]
+
+
+def is_review_capable(board: Board | None) -> bool:
+    """Whether *board* offers the GTD weekly-review pass. Review steps are a
+    single global list (:data:`jtask.gtd.REVIEW_STEPS`) with no per-board
+    configuration, so only the built-in GTD preset qualifies."""
+    gtd = builtin_board("gtd")
+    return bool(board and board.builtin and gtd is not None and board.name == gtd.name)

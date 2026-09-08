@@ -345,12 +345,14 @@ class MainWindow(
         self._console_action.toggled.connect(self._toggle_console)
         row2.addAction(self._console_action)
 
+        # the weekly-review pass lives in the GTD board's own header (it only
+        # applies there); the action stays window-level for Ctrl+R + the palette
         self._review_action = QAction(icons.icon("review"), t("action.review"), self)
         self._review_action.setToolTip(t("action.review.tip"))
         self._review_action.setShortcut(QKeySequence("Ctrl+R"))
         self._review_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
         self._review_action.triggered.connect(self._open_review)
-        row2.addAction(self._review_action)
+        self.addAction(self._review_action)
 
         self._triage_action = QAction(icons.icon("triage"), t("action.triage"), self)
         self._triage_action.setToolTip(t("action.triage.tip"))
@@ -587,6 +589,7 @@ class MainWindow(
         self._board.taskActivated.connect(self._open_card)
         self._board.triageRequested.connect(self._start_triage)
         self._board.columnSortChanged.connect(self._persist_column_sort)
+        self._board.reviewRequested.connect(self._open_review)
 
         self._triage.decision.connect(self._triage_decision)
         self._triage.projectAssigned.connect(self._triage_project)
