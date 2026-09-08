@@ -135,6 +135,7 @@ class MainWindow(
         self.refresh_all()
         if self.settings.notifications_enabled:
             self._notify.reconfigure()
+        self._autosync.reconfigure()
 
     def _ensure_styled(self) -> None:
         """Apply the theme stylesheet if the app was created without one."""
@@ -534,6 +535,12 @@ class MainWindow(
         self._status_busy = self._op_status  # back-compat alias
         sb.addWidget(self._op_status)
 
+        from .auto_sync import AutoSyncManager
+
+        self._autosync = AutoSyncManager(self.settings, self)
+        self._autosync.syncSucceeded.connect(self._on_autosync_done)
+        self._autosync.syncFailed.connect(self._on_autosync_failed)
+
         from .widgets.toast import Toast
 
         self._toast = Toast(self)
@@ -859,6 +866,7 @@ class MainWindow(
             )
             return
         self._notify.stop()
+        self._autosync.stop()
         super().closeEvent(event)
 
 

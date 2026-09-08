@@ -225,6 +225,11 @@ class Settings:
         self._s.setValue("console/visible", bool(value))
 
     # --- sync ---
+    #: floor for the auto-sync interval — a shorter period would hammer the
+    #: sync server (and Taskwarrior's own `sync` is not cheap). 60s is well
+    #: below any realistic use but keeps a runaway config from spinning.
+    AUTOSYNC_FLOOR_SEC = 60
+
     @property
     def last_sync(self) -> str:
         """ISO-8601 local timestamp of the last successful sync, or ''."""
@@ -233,6 +238,29 @@ class Settings:
     @last_sync.setter
     def last_sync(self, value: str) -> None:
         self._s.setValue("sync/last", str(value))
+        self._s.sync()
+
+    @property
+    def autosync_enabled(self) -> bool:
+        return self._s.value("sync/auto_enabled", False, bool)
+
+    @autosync_enabled.setter
+    def autosync_enabled(self, value: bool) -> None:
+        self._s.setValue("sync/auto_enabled", bool(value))
+        self._s.sync()
+
+    @property
+    def autosync_interval_sec(self) -> int:
+        """Seconds between automatic syncs — never below ``AUTOSYNC_FLOOR_SEC``
+        even if the stored value was hand-edited."""
+        raw = int(self._s.value("sync/auto_interval_sec", 600, int))
+        return max(self.AUTOSYNC_FLOOR_SEC, raw)
+
+    @autosync_interval_sec.setter
+    def autosync_interval_sec(self, value: int) -> None:
+        self._s.setValue(
+            "sync/auto_interval_sec", max(self.AUTOSYNC_FLOOR_SEC, int(value))
+        )
         self._s.sync()
 
     # --- notifications ---

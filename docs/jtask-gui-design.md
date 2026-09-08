@@ -3300,3 +3300,33 @@ Settings directly (it already did). i18n: `settings.section.ui`,
 `QListWidget` items + `QMenu` action tooltips; snapshot regenerated. Tests:
 `test_m8`/`test_m9`/`test_i18n_snapshot`/`test_i3` retargeted to the new
 home; new `test_toolbar_declutter.py`. Suite: **786 passed**.
+
+## Auto-sync — configurable interval + status-bar notification (2026-09-08)
+
+`src/jtask_gui/auto_sync.py` — `AutoSyncManager(QObject)`, modelled on
+`NotificationManager`: a `QTimer` + `start`/`stop`/`reconfigure` driven by two
+new `Settings` keys (`sync/auto_enabled` default off, `sync/auto_interval_sec`
+default 600, floored at `Settings.AUTOSYNC_FLOOR_SEC = 60`). It owns the
+**single** concurrency guard (`_running`): both the manual Sync button and the
+interval tick call `run(source)`, which returns `False` and does nothing if an
+attempt is already in flight. A tick that lands on a busy manager is *dropped*,
+not queued.
+
+- `SyncManagerDialog` gets an "همگام‌سازی خودکار" checkbox + a seconds
+  `FaSpinBox` (60–86400) + a floor hint. `_run` now delegates to the manager
+  (`_open_sync` passes the app-wide `self._autosync`; a standalone dialog makes
+  a throwaway). Toggling / editing the interval calls `manager.reconfigure()`
+  immediately.
+- `widgets/op_status.py` — `OperationStatus` gains an optional `action`
+  callback on `failed(...)`: a pointing-hand cursor and a click handler, so a
+  background failure is *reachable* (opens the Sync Manager with the real
+  error) without a blocking popup. Non-failed states clear the action.
+- `MainWindow` builds `self._autosync` in `_build_statusbar`, `reconfigure()`s
+  it after the first `refresh_all`, `stop()`s it in `closeEvent`. Auto results
+  only: `_on_autosync_done` refreshes then leaves a fading
+  `_op_status.success` note; `_on_autosync_failed` leaves a sticky, clickable
+  `_op_status.failed`. Manual results still report in the dialog only.
+
+i18n: `sync.auto.enabled` / `.interval` / `.seconds` / `.hint` /
+`.status.ok` / `.status.failed` (fa+en). New `tests/gui/test_auto_sync.py`
+(12). Suite: **798 passed**.

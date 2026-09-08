@@ -65,9 +65,41 @@ class DataSafetyMixin:
     def _open_sync(self) -> None:
         from ..widgets.sync_dialog import SyncManagerDialog
 
-        dlg = SyncManagerDialog(self.settings, self)
+        dlg = SyncManagerDialog(self.settings, self, manager=self._autosync)
         dlg.synced.connect(self.refresh_all)
         dlg.exec()
+
+    def _on_autosync_done(self, source: str, iso: str) -> None:
+        # the manual button reports in its own dialog; only the unattended
+        # interval run needs a status-bar note
+        if source != "auto":
+            return
+        import datetime as _dt
+
+        from ..calendar_system import active
+
+        try:
+            d = _dt.datetime.fromisoformat(iso)
+            shown = active().format_local(d.strftime("%Y-%m-%d %H:%M:%S"), "long")
+        except ValueError:
+            shown = iso
+        # a successful sync changed the store — refresh first (it flips the
+        # status indicator to "loading"), then leave the confirmation on top
+        # (the async reload won't clobber a non-"running" state)
+        self.refresh_all()
+        self._op_status.success(
+            t("sync.auto.status.ok", shown=bidi_isolate(shown))
+        )
+
+    def _on_autosync_failed(self, source: str, _err: object) -> None:
+        if source != "auto":
+            return
+        # a background failure must not pop a blocking dialog — a quiet,
+        # clickable status-bar message that opens the Sync Manager (full error
+        # detail) instead
+        self._op_status.failed(
+            t("sync.auto.status.failed"), action=self._open_sync
+        )
 
     def _send_to_console(self, text: str) -> None:
         self._reveal_console()

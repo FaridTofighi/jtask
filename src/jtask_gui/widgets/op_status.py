@@ -8,7 +8,9 @@ operation so the user is not left wondering.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QTimer
+from collections.abc import Callable
+
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QLabel, QWidget
 
 _GLYPH = {
@@ -30,6 +32,7 @@ class OperationStatus(QLabel):
         super().__init__(parent)
         self.setObjectName("Muted")
         self.state = "idle"
+        self._action: Callable[[], None] | None = None
         self._fade = QTimer(self)
         self._fade.setSingleShot(True)
         self._fade.timeout.connect(self.idle)
@@ -37,11 +40,17 @@ class OperationStatus(QLabel):
     def _set(self, state: str, message: str, fade_ms: int = 0) -> None:
         self._fade.stop()
         self.state = state
+        if state != "failed":
+            self._action = None
         if state == "idle" or not message:
             self.setText("")
         else:
             self.setText(f"{_GLYPH.get(state, '')} {message}".strip())
         self.setObjectName(_ROLE.get(state, "Muted"))
+        self.setCursor(
+            Qt.CursorShape.PointingHandCursor
+            if self._action else Qt.CursorShape.ArrowCursor
+        )
         self.style().unpolish(self)
         self.style().polish(self)
         if fade_ms:
@@ -56,8 +65,17 @@ class OperationStatus(QLabel):
     def success(self, message: str) -> None:
         self._set("success", message, fade_ms=2500)
 
-    def failed(self, message: str) -> None:
+    def failed(self, message: str, *, action: Callable[[], None] | None = None) -> None:
+        """*action*, when given, makes the message clickable (e.g. a background
+        failure that should open its detail view rather than a blocking dialog)."""
+        self._action = action
         self._set("failed", message)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        if self._action is not None:
+            self._action()
+        else:
+            super().mousePressEvent(event)
 
     def cancelled(self, message: str | None = None) -> None:
         if message is None:

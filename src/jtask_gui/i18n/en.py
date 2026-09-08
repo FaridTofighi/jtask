@@ -580,6 +580,12 @@ CATALOG.update({
     "sync.running": "Syncing…",
     "sync.done": "Sync complete.",
     "sync.failed": "Sync failed: {err}",
+    "sync.auto.enabled": "Auto-sync",
+    "sync.auto.interval": "Interval",
+    "sync.auto.seconds": " seconds",
+    "sync.auto.hint": "Minimum {n} seconds — to avoid hammering the sync server.",
+    "sync.auto.status.ok": "Auto-sync done — {shown}",
+    "sync.auto.status.failed": "Auto-sync failed — click for details",
 
     # ---- tools dialog --------------------------
     "tools.save_to_file": "Save to file…",

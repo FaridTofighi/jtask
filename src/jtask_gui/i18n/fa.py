@@ -555,6 +555,12 @@ CATALOG: dict[str, str] = {
     "sync.running": "در حال همگام‌سازی…",
     "sync.done": "همگام‌سازی کامل شد.",
     "sync.failed": "همگام‌سازی ناموفق بود: {err}",
+    "sync.auto.enabled": "همگام‌سازی خودکار",
+    "sync.auto.interval": "فاصلهٔ زمانی",
+    "sync.auto.seconds": " ثانیه",
+    "sync.auto.hint": "کمینه {n} ثانیه — برای پرهیز از فشار بر کارساز همگام‌سازی.",
+    "sync.auto.status.ok": "همگام‌سازی خودکار انجام شد — {shown}",
+    "sync.auto.status.failed": "همگام‌سازی خودکار ناموفق بود — برای جزئیات کلیک کنید",
 
     # ---- tools dialog (widgets/tools_dialog.py) --------------
     "tools.save_to_file": "ذخیره در فایل…",
