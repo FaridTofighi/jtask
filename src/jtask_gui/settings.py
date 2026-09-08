@@ -283,27 +283,61 @@ class Settings:
         self._s.sync()
 
     # --- saved filters (name -> raw filter string) ---
+    # "filters/saved"  dict  name -> raw
+    # "filters/order"  list  display order (names not listed sort after, A-Z)
+    # "filters/pinned" list  names shown as one-click toolbar chips
     def saved_filters(self) -> dict[str, str]:
         raw = self._s.value("filters/saved", {}, dict) or {}
         return {str(k): str(v) for k, v in raw.items()}
+
+    def filter_order(self) -> list[str]:
+        known = set(self.saved_filters())
+        raw = [str(x) for x in (self._s.value("filters/order", [], list) or [])]
+        ordered = [n for n in raw if n in known]
+        return ordered + sorted(known - set(ordered))
+
+    def set_filter_order(self, order: list[str]) -> None:
+        self._s.setValue("filters/order", [str(x) for x in order])
+        self._s.sync()
+
+    def pinned_filters(self) -> list[str]:
+        known = set(self.saved_filters())
+        return [str(x) for x in (self._s.value("filters/pinned", [], list) or [])
+                if str(x) in known]
+
+    def set_pinned_filters(self, names: list[str]) -> None:
+        self._s.setValue("filters/pinned", [str(x) for x in names])
+        self._s.sync()
 
     def save_filter(self, name: str, raw: str) -> None:
         current = self.saved_filters()
         current[name] = raw
         self._s.setValue("filters/saved", current)
+        order = self.filter_order()
+        if name not in order:
+            order.append(name)
+            self._s.setValue("filters/order", order)
         self._s.sync()
 
     def delete_filter(self, name: str) -> None:
+        order = [n for n in self.filter_order() if n != name]
+        pinned = [n for n in self.pinned_filters() if n != name]
         current = self.saved_filters()
         current.pop(name, None)
         self._s.setValue("filters/saved", current)
+        self._s.setValue("filters/order", order)
+        self._s.setValue("filters/pinned", pinned)
         self._s.sync()
 
     def rename_filter(self, old: str, new: str) -> None:
         current = self.saved_filters()
         if old in current and new and new != old:
+            order = [new if n == old else n for n in self.filter_order()]
+            pinned = [new if n == old else n for n in self.pinned_filters()]
             current[new] = current.pop(old)
             self._s.setValue("filters/saved", current)
+            self._s.setValue("filters/order", order)
+            self._s.setValue("filters/pinned", pinned)
             self._s.sync()
 
     # --- task templates (reusable one-off task shapes; GUI concept, like

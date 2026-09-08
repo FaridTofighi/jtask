@@ -3186,3 +3186,64 @@ which all carry a tooltip; element order mirrors per direction).
 `StatusControl` min-width bound tightened. i18n snapshot unchanged (the
 action labels moved from button text to tooltips — both are captured, same
 strings). Suite: **765 passed**.
+
+## Sidebar information-architecture redesign (2026-09-08)
+
+The sidebar (`widgets/sidebar.py`, a `QTreeWidget#Sidebar`) had grown to
+seven stacked sections. Three moved to the toolbar, two compressed in place;
+`Sidebar` stays a `QTreeWidget`. Landed as four commits (Reports →
+Contexts → Projects/Tags → Saved filters). **Nothing was removed** —
+`tests/gui/test_sidebar_ia.py::test_every_relocated_capability_still_reachable`
+is the explicit guard.
+
+**1. Reports & Charts → `self._reports_action`** in row two's view cluster,
+wired to the same `_on_view_selected({"kind":"reports"})` call. Auto-listed
+in Ctrl+K.
+
+**2. Contexts → `widgets/context_pill.py` `ContextPill`** leading row one.
+An active context takes the app accent (`primary_soft` fill + `primary`
+bold + filled dot, `[active="true"]`), unmistakable vs. its neutral state
+and vs. any toolbar icon — it's a global mode, not a nav target, so it sits
+a full toolbar row above row two's clusters. Click → a menu of
+`(No context)` + every defined context. Fed by `refresh_all`'s existing
+`(list_contexts, current_context)` submit.
+
+**3. Projects & Tags compress in the tree.** Projects: a
+`QLineEdit#SidebarSearch` row filters leaves live; the list caps at
+`_PROJ_CAP` (5) behind a "Show all (N)" / "Show less" expander row. The
+search + expander persist across `populate_projects` (only leaves rebuild).
+Tags: wrapped `QToolButton#TagChip` pills (a `FlowWidget` in a capped
+scroll area) — click filters, right-click renames/removes, and (new
+`_TagChip` subclass) they're drop targets, so nothing was lost. Same
+expander past ~3 rows. `navigation_targets()` yields the tag chips so tags
+stay in Ctrl+K. `setUniformRowHeights(False)` + a `resizeEvent` re-measure.
+
+**4. Saved filters → toolbar dropdown + pinned chips + manager.**
+- `settings.py`: `pinned_filters()` / `filter_order()` (+ setters), mirroring
+  `boards/order`; `save_/delete_/rename_filter` maintain both.
+- `widgets/saved_filter_menu.py` `SavedFilterMenu` (`Qt.Popup` under
+  `self._filters_btn`): live search, `folder/name` nesting (same rule the
+  sidebar used), per-filter count from the reused `_view_counts` job —
+  **tinted `overdue`** when the raw contains `+BLOCKED|+OVERDUE|+WAITING`
+  (the §2.3 "danger tone" heuristic — there's no stuck-filter concept in the
+  data model). Right-click: rename / delete (confirm) / edit (→ filter bar +
+  focus + toast) / pin. Footer → the manager.
+- Pinned filters render as `QToolButton#PinChip` inserted before
+  `self._pin_anchor` in row two; `_rebuild_pin_chips()` on every change; they
+  persist (fresh `MainWindow` re-reads `filters/pinned`).
+- `widgets/filter_manager.py` `FilterManagerDialog` mirrors
+  `BoardManagerDialog` — working copy, `changed`, `_persist()` reconcile;
+  rename (type `Folder/Name` to move), ↑/↓ reorder, pin toggle,
+  multi-select delete.
+- `sidebar.py`: the `_saved` section, `populate_saved_filters`,
+  `set_view_counts`'s saved half, the `_context_menu` saved branch and the
+  three `savedFilter*` signals are gone.
+
+QSS: `#ContextPill`, `#SidebarSearch`/`#TagChip`, `#SavedFilterMenu`/
+`#PinChip` — all `@token@` only. i18n: ~18 new keys, fa+en. Snapshot
+regenerated once per chunk (removed the three section captions +
+"Reports & charts" leaf + the "(save one with ★)" hint; added the pill /
+button tooltips + the project search placeholder). Tests: new
+`test_sidebar_ia.py` (18); migrated the sidebar-structure reads in
+`test_m3.py`, `test_starred_smartlists.py`, `test_stuck_project_indicator.py`,
+`test_command_console.py`. Suite: **776 passed**.

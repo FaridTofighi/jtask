@@ -142,3 +142,142 @@ def test_tags_render_as_chips_and_activate(qapp, qtbot, tw_env):
     # tags still reachable from the command palette
     labels = [lbl for lbl, _s, _spec in sb.navigation_targets()]
     assert "#alpha" in labels and "#beta" in labels
+
+
+# --- chunk 4: saved filters -> toolbar dropdown + pins + manager --
+
+def test_saved_filters_moved_off_the_sidebar(win):
+    assert not hasattr(win._sidebar, "_saved")
+    assert win._filters_btn in win._toolbars[1].findChildren(type(win._filters_btn))
+    assert win._filters_btn.toolTip().strip()
+
+
+def test_saved_filter_menu_search_filters_by_name(win, qapp):
+
+    win.settings.save_filter("Overdue work", "+OVERDUE")
+    win.settings.save_filter("Someday", "+someday")
+    win._refresh_saved_filters()
+    win._open_saved_filter_menu()
+    qapp.processEvents()
+    m = win._saved_filter_menu
+
+    m._search.setText("over")
+    qapp.processEvents()
+    visible = [
+        m._tree.topLevelItem(i).text(0)
+        for i in range(m._tree.topLevelItemCount())
+        if not m._tree.topLevelItem(i).isHidden()
+    ]
+    assert any("Overdue work" in v for v in visible)
+    assert not any("Someday" in v for v in visible)
+    m.close()
+
+
+def test_pinned_filter_persists_across_a_reload(win, qapp, qtbot):
+    from jtask_gui.main_window import MainWindow
+    from jtask_gui.settings import Settings
+
+    win.settings.save_filter("Daily", "+today")
+    win._toggle_pin_filter("Daily")
+    assert "Daily" in win.settings.pinned_filters()
+    assert any(c.text() == "Daily" for c in win._pin_chips)
+
+    # a fresh window (same QSettings store) still has the pinned chip
+    fresh = MainWindow(Settings())
+    qtbot.addWidget(fresh)
+    _drain(qapp)
+    assert any(c.text() == "Daily" for c in fresh._pin_chips)
+
+
+def test_stuck_style_filter_count_is_tinted(qtbot):
+    from jtask_gui.theme import palette
+    from jtask_gui.widgets.saved_filter_menu import SavedFilterMenu
+
+    m = SavedFilterMenu()
+    qtbot.addWidget(m)
+    m.set_data(
+        {"Blocked": "+BLOCKED", "Normal": "project:x"},
+        {"Blocked": 4, "Normal": 2},
+        [],
+        theme="dark",
+    )
+    pal = palette("dark")
+    by_name = {m._tree.topLevelItem(i).text(0).split("  ·")[0]:
+               m._tree.topLevelItem(i) for i in range(m._tree.topLevelItemCount())}
+    assert by_name["Blocked"].foreground(0).color().name() == pal["overdue"].lower()
+    assert by_name["Normal"].foreground(0).color().name() == pal["text_muted"].lower()
+
+
+def test_filter_manager_roundtrips_through_settings(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    from PyQt6.QtCore import QSettings
+
+    QSettings("jtask", "jtask-gui").clear()
+    from jtask_gui.settings import Settings
+    from jtask_gui.widgets.filter_manager import FilterManagerDialog
+
+    s = Settings()
+    s.save_filter("A", "+a")
+    s.save_filter("B", "+b")
+
+    dlg = FilterManagerDialog(s)
+    qtbot.addWidget(dlg)
+    dlg._list.setCurrentRow(0)  # A
+    dlg._move(1)                # A <-> B
+    assert Settings().filter_order()[:2] == ["B", "A"]
+    dlg._list.setCurrentRow(0)  # B
+    dlg._toggle_pin()
+    assert "B" in Settings().pinned_filters()
+    dlg._list.setCurrentRow(1)  # A
+    monkeypatch.setattr(
+        "PyQt6.QtWidgets.QMessageBox.question",
+        lambda *a, **k: __import__("PyQt6.QtWidgets", fromlist=["QMessageBox"]).QMessageBox.StandardButton.Yes,
+    )
+    dlg._delete()
+    assert "A" not in Settings().saved_filters()
+
+
+# --- §6.1: the explicit "nothing was lost" regression -------------
+
+def test_every_relocated_capability_still_reachable(win, qapp):
+    from jtask import taskwarrior as tw
+
+    # 1. view a report
+    win._reports_action.trigger()
+    _drain(qapp)
+    assert win._content.currentIndex() == 1
+
+    # 2. apply / rename / delete / edit a saved filter
+    win.settings.save_filter("Q", "+urgent")
+    win._refresh_saved_filters()
+    win._open_saved_filter_menu()
+    qapp.processEvents()
+    m = win._saved_filter_menu
+    m.filterActivated.emit("+urgent")
+    _drain(qapp)
+    assert "urgent" in win._filter_bar.raw_text()
+    m.renameRequested.emit("Q", "Q2")
+    assert "Q2" in win.settings.saved_filters()
+    m.editRequested.emit("+urgent")
+    _drain(qapp)
+    assert win._filter_bar._edit.hasFocus() or "urgent" in win._filter_bar.raw_text()
+    m.deleteRequested.emit("Q2")
+    assert "Q2" not in win.settings.saved_filters()
+    m.close()
+
+    # 3. browse all projects  (search field + "show all")
+    assert win._sidebar._proj_search is not None
+    # 4. browse all tags  (chip flow + "show all")
+    assert hasattr(win._sidebar, "_tag_flow")
+
+    # 5. switch / clear a context
+    tw.run(["context", "define", "c1", "project:Alpha"])
+    win._context_pill.contextChangeRequested.emit("c1")
+    _drain(qapp)
+    assert tw.current_context() == "c1"
+    win._context_pill.contextChangeRequested.emit("")
+    _drain(qapp)
+    assert tw.current_context() is None
+
+    # 6. manage boards  (unchanged — still wired from the sidebar)
+    assert win._sidebar.receivers(win._sidebar.boardManageRequested) >= 1

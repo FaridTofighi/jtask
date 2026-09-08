@@ -308,7 +308,7 @@ class MainWindow(
 
         row2.addSeparator()
 
-        # -- view cluster: reports destination + theme/console toggles
+        # -- view cluster: reports + saved filters + theme/console toggles
         self._reports_action = QAction(
             icons.icon("reports"), t("status.reports").replace("&", "&&"), self
         )
@@ -317,6 +317,17 @@ class MainWindow(
             lambda: self._on_view_selected({"kind": "reports", "title": t("status.reports")})
         )
         row2.addAction(self._reports_action)
+
+        self._filters_btn = QToolButton()
+        self._filters_btn.setIcon(icons.icon("star_outline"))
+        self._filters_btn.setToolTip(t("action.filters.tip"))
+        self._filters_btn.clicked.connect(self._open_saved_filter_menu)
+        row2.addWidget(self._filters_btn)
+        # pinned-filter chips are inserted just before this anchor
+        self._pin_anchor = row2.addSeparator()
+        self._pin_chips: list = []
+        self._saved_filter_menu = None
+        self._saved_counts: dict = {}
 
         self._theme_action = QAction(self)
         self._theme_action.triggered.connect(self._toggle_theme)
@@ -486,11 +497,8 @@ class MainWindow(
         self._sidebar.addNextActionRequested.connect(
             lambda proj: self._open_task_form("add", project=proj)
         )
-        self._sidebar.savedFilterActivated.connect(self._apply_saved_filter)
         self._sidebar.boardActivated.connect(self._show_board)
         self._sidebar.boardManageRequested.connect(self._open_board_manager)
-        self._sidebar.savedFilterRenameRequested.connect(self._rename_filter)
-        self._sidebar.savedFilterDeleteRequested.connect(self._delete_filter)
         self._filter_bar.saveRequested.connect(self._save_filter)
         self._detail.closed.connect(self._hide_detail)
         self._detail.closed.connect(self._after_triage_edit)
@@ -574,8 +582,8 @@ class MainWindow(
         )
         submit(taskwarrior.list_tags, self._detail.set_tag_completions, self._error)
         self._sidebar.populate_boards(self._board_names())
-        self._sidebar.populate_saved_filters(self.settings.saved_filters())
-        submit(self._view_counts, self._sidebar.set_view_counts, lambda _e: None)
+        self._rebuild_pin_chips()
+        submit(self._view_counts, self._on_view_counts, lambda _e: None)
         self._reports.discover_custom_reports()
         submit(
             lambda: taskwarrior.export(["+ACTIVE"]),

@@ -74,6 +74,8 @@ _MAP = {
     "done": "mdi.check-circle-outline",
     "reopen": "mdi.backup-restore",
     "unwait": "mdi.timer-off-outline",
+    "pin": "mdi.pin",
+    "pin_off": "mdi.pin-off-outline",
 }
 
 _MIRRORED = {"undo"}  # glyphs whose direction must flip for RTL

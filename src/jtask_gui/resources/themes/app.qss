@@ -93,6 +93,21 @@ QToolButton#TagChip {
 QToolButton#TagChip:hover { background-color: @hover@; color: @text@; }
 QToolButton#TagChip:pressed { background-color: @primary_soft@; color: @primary@; }
 
+/* ---- toolbar saved-filters: dropdown + pinned chips ---- */
+QWidget#SavedFilterMenu {
+    background-color: @elevated@; border: 1px solid @border@;
+    border-radius: @r_md@;
+}
+QTreeWidget#SavedFilterTree { background: transparent; border: none; }
+QTreeWidget#SavedFilterTree::item { padding: @sp_4@ @sp_6@; border-radius: @r_sm@; }
+QTreeWidget#SavedFilterTree::item:hover { background-color: @hover@; }
+QToolButton#PinChip {
+    background-color: @primary_soft@; color: @primary@;
+    border: none; border-radius: @r_pill@;
+    padding: @sp_2@ @sp_8@; font-size: @fs_xs@; font-weight: 700;
+}
+QToolButton#PinChip:hover { background-color: @primary@; color: @primary_fg@; }
+
 /* ============================ dialogs (raised) ================ */
 QDialog { background-color: @elevated@; }
 QDialog > QWidget, QDialog QFrame, QDialog QScrollArea,

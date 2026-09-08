@@ -163,21 +163,98 @@ class TagsProjectsMixin:
             t("msg.project_color_cleared", project=name),
         )
 
+    # --- saved filters: toolbar dropdown + pinned chips + manager ----
+
     def _save_filter(self, name: str, raw: str) -> None:
         self.settings.save_filter(name, raw)
-        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._refresh_saved_filters()
         self._toast.show_message(t("msg.filter_saved", name=name))
 
     def _rename_filter(self, old: str, new: str) -> None:
         self.settings.rename_filter(old, new)
-        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._refresh_saved_filters()
         self._toast.show_message(t("msg.filter_renamed", name=new))
 
     def _delete_filter(self, name: str) -> None:
         self.settings.delete_filter(name)
-        self._sidebar.populate_saved_filters(self.settings.saved_filters())
+        self._refresh_saved_filters()
 
     def _apply_saved_filter(self, raw: str) -> None:
         self._filter_bar.set_text(raw)
         self._filter_bar._apply()
+
+    def _edit_saved_filter(self, raw: str) -> None:
+        self._apply_saved_filter(raw)
+        self._filter_bar._edit.setFocus()
+        self._toast.show_message(t("msg.filter_edit_hint"))
+
+    def _toggle_pin_filter(self, name: str) -> None:
+        pinned = self.settings.pinned_filters()
+        if name in pinned:
+            pinned.remove(name)
+        else:
+            pinned.append(name)
+        self.settings.set_pinned_filters(pinned)
+        self._refresh_saved_filters()
+
+    def _open_saved_filter_menu(self) -> None:
+        from ..widgets.saved_filter_menu import SavedFilterMenu
+
+        if self._saved_filter_menu is None:
+            m = self._saved_filter_menu = SavedFilterMenu(self)
+            m.filterActivated.connect(self._apply_saved_filter)
+            m.editRequested.connect(self._edit_saved_filter)
+            m.renameRequested.connect(self._rename_filter)
+            m.deleteRequested.connect(self._delete_filter)
+            m.pinToggled.connect(self._toggle_pin_filter)
+            m.manageRequested.connect(self._open_filter_manager)
+        self._populate_saved_filter_menu()
+        btn = self._filters_btn
+        self._saved_filter_menu.popup_at(btn.mapToGlobal(btn.rect().bottomLeft()))
+
+    def _open_filter_manager(self) -> None:
+        from ..widgets.filter_manager import FilterManagerDialog
+
+        dlg = FilterManagerDialog(self.settings, self)
+        dlg.changed.connect(self._refresh_saved_filters)
+        dlg.exec()
+
+    def _populate_saved_filter_menu(self) -> None:
+        if self._saved_filter_menu is None:
+            return
+        self._saved_filter_menu.set_data(
+            self.settings.saved_filters(), self._saved_counts,
+            self.settings.pinned_filters(), self.settings.filter_order(),
+            self.settings.theme,
+        )
+
+    def _rebuild_pin_chips(self) -> None:
+        from PyQt6.QtWidgets import QToolButton
+
+        for chip in self._pin_chips:
+            chip.deleteLater()
+        self._pin_chips = []
+        row2 = self._toolbars[1]
+        saved = self.settings.saved_filters()
+        for name in self.settings.pinned_filters():
+            raw = saved.get(name)
+            if raw is None:
+                continue
+            leaf = name.rpartition("/")[2]
+            chip = QToolButton()
+            chip.setObjectName("PinChip")
+            chip.setText(leaf if len(leaf) <= 16 else leaf[:15] + "…")
+            chip.setToolTip(f"{name}\n{raw}")
+            chip.clicked.connect(lambda _c=False, r=raw: self._apply_saved_filter(r))
+            row2.insertWidget(self._pin_anchor, chip)
+            self._pin_chips.append(chip)
+
+    def _refresh_saved_filters(self) -> None:
+        self._rebuild_pin_chips()
+        self._populate_saved_filter_menu()
+
+    def _on_view_counts(self, counts: dict) -> None:
+        self._sidebar.set_view_counts(counts)
+        self._saved_counts = counts
+        self._populate_saved_filter_menu()
 

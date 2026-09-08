@@ -94,41 +94,53 @@ def test_starred_quick_view_exists():
     assert keys["starred"]["filter"] == ["+starred", "status:pending"]
 
 
-# --- sidebar folders + counts --------------------------------------
+# --- saved-filter dropdown: folders + counts ----------------------
 
 def test_saved_filter_names_with_a_slash_nest_in_a_folder(qtbot):
-    from jtask_gui.widgets.sidebar import Sidebar
+    from jtask_gui.widgets.saved_filter_menu import SavedFilterMenu
 
-    sb = Sidebar()
-    qtbot.addWidget(sb)
-    sb.populate_saved_filters({
+    m = SavedFilterMenu()
+    qtbot.addWidget(m)
+    m.set_data({
         "Work/Urgent": "+urgent project:Work",
         "Work/Review": "+review",
         "Personal": "project:Home",
-    })
-    top = [sb._saved.child(i).text(0) for i in range(sb._saved.childCount())]
+    }, {}, [])
+    tree = m._tree
+    top = [tree.topLevelItem(i).text(0) for i in range(tree.topLevelItemCount())]
     assert "Work" in top and "Personal" in top
-    work = next(sb._saved.child(i) for i in range(sb._saved.childCount())
-               if sb._saved.child(i).text(0) == "Work")
+    work = next(tree.topLevelItem(i) for i in range(tree.topLevelItemCount())
+               if tree.topLevelItem(i).text(0) == "Work")
     assert {work.child(i).text(0) for i in range(work.childCount())} == {"Urgent", "Review"}
 
 
-def test_set_view_counts_appends_to_quick_views_and_saved_filters(qtbot):
+def test_saved_filter_menu_shows_counts(qtbot):
+    from jtask_gui import fmt
+    from jtask_gui.widgets.saved_filter_menu import SavedFilterMenu
+
+    m = SavedFilterMenu()
+    qtbot.addWidget(m)
+    m.set_data({"Personal": "project:Home"}, {"Personal": 7}, [])
+    leaf = m._tree.topLevelItem(0)
+    assert f"·  {fmt.num(7)}" in leaf.text(0)
+
+
+def test_quick_view_counts_still_append(qtbot):
+    from jtask_gui import fmt
     from jtask_gui.widgets.sidebar import Sidebar
 
     sb = Sidebar()
     qtbot.addWidget(sb)
-    sb.populate_saved_filters({"Personal": "project:Home"})
-    sb.set_view_counts({"today": 3, "starred": 1, "Personal": 7})
+    sb.set_view_counts({"today": 3, "starred": 1})
 
-    def label(section, needle):
-        for it in sb._iter_items(section):
+    def label(needle):
+        for it in sb._iter_items(sb._quick):
             if needle in it.text(0):
                 return it.text(0)
         return ""
 
-    assert "·  3" in label(sb._quick, "امروز") or "·  3" in label(sb._quick, "Today")
-    assert "·  7" in label(sb._saved, "Personal")
+    row = label("امروز") or label("Today")
+    assert f"·  {fmt.num(3)}" in row
 
 
 def test_view_counts_worker_returns_ints(qapp, qtbot, tw_env):

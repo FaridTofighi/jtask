@@ -56,37 +56,34 @@ def test_saved_filters_roundtrip(tmp_path, monkeypatch):
     assert s.saved_filters() == {}
 
 
-def test_saved_filter_rename_and_delete_via_context_menu(qtbot, tmp_path, monkeypatch):
+def test_saved_filter_rename_and_delete_via_menu(qtbot, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     from PyQt6.QtCore import QSettings
 
     QSettings("jtask", "jtask-gui").clear()
     from jtask_gui.settings import Settings
-    from jtask_gui.widgets.sidebar import _SPEC_ROLE, Sidebar
+    from jtask_gui.widgets.saved_filter_menu import _NAME_ROLE, SavedFilterMenu
 
     s = Settings()
     s.save_filter("اولی", "+یک")
 
-    sb = Sidebar()
-    qtbot.addWidget(sb)
-    sb.savedFilterRenameRequested.connect(s.rename_filter)
-    sb.savedFilterDeleteRequested.connect(s.delete_filter)
-    sb.populate_saved_filters(s.saved_filters())
-    assert sb._saved.child(0).data(0, _SPEC_ROLE)["name"] == "اولی"
+    m = SavedFilterMenu()
+    qtbot.addWidget(m)
+    m.renameRequested.connect(s.rename_filter)
+    m.deleteRequested.connect(s.delete_filter)
+    m.set_data(s.saved_filters(), {}, s.pinned_filters(), s.filter_order())
+    assert m._tree.topLevelItem(0).data(0, _NAME_ROLE) == "اولی"
 
-    # rename (bypassing the QInputDialog, exercising the wired signal + storage)
-    sb.savedFilterRenameRequested.emit("اولی", "دومی")
-    sb.populate_saved_filters(s.saved_filters())
+    m.renameRequested.emit("اولی", "دومی")
+    m.set_data(s.saved_filters(), {}, s.pinned_filters(), s.filter_order())
     assert s.saved_filters() == {"دومی": "+یک"}
     assert s.saved_filters() == Settings().saved_filters()  # persisted
-    assert sb._saved.child(0).data(0, _SPEC_ROLE)["name"] == "دومی"
+    assert m._tree.topLevelItem(0).data(0, _NAME_ROLE) == "دومی"
 
-    # delete (confirmation is the QMessageBox; the signal is the post-confirm action)
-    sb.savedFilterDeleteRequested.emit("دومی")
-    sb.populate_saved_filters(s.saved_filters())
+    m.deleteRequested.emit("دومی")
+    m.set_data(s.saved_filters(), {}, s.pinned_filters(), s.filter_order())
     assert Settings().saved_filters() == {}
-    names = [sb._saved.child(i).data(0, _SPEC_ROLE) for i in range(sb._saved.childCount())]
-    assert all(n is None or n.get("kind") != "saved" for n in names)
+    assert m._tree.topLevelItemCount() == 0
 
 
 def test_dep_graph_empty_state_sized_within_panel_on_first_open(qtbot, tw_env, qapp):
@@ -118,20 +115,17 @@ def test_dep_graph_empty_state_sized_within_panel_on_first_open(qtbot, tw_env, q
     assert dg.transform().m11() <= 1.0        # nothing scaled up
 
 
-def test_sidebar_lists_and_activates_saved_filter(qtbot):
-    from jtask_gui.widgets.sidebar import Sidebar
+def test_saved_filter_menu_lists_and_activates(qtbot):
+    from jtask_gui.widgets.saved_filter_menu import SavedFilterMenu
 
-    sb = Sidebar()
-    qtbot.addWidget(sb)
-    sb.populate_saved_filters({"مهم‌ها": "+مهم status:pending"})
+    m = SavedFilterMenu()
+    qtbot.addWidget(m)
+    m.set_data({"مهم‌ها": "+مهم status:pending"}, {}, [])
     got = []
-    sb.savedFilterActivated.connect(got.append)
+    m.filterActivated.connect(got.append)
 
-    from jtask_gui.widgets.sidebar import _SPEC_ROLE
-
-    leaf = sb._saved.child(0)
-    assert leaf.data(0, _SPEC_ROLE)["kind"] == "saved"
-    sb._on_click(leaf, 0)
+    leaf = m._tree.topLevelItem(0)
+    m._on_click(leaf, 0)
     assert got == ["+مهم status:pending"]
 
 

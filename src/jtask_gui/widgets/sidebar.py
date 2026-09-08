@@ -151,11 +151,8 @@ class Sidebar(QTreeWidget):
     projectDeleteRequested = pyqtSignal(str)  # project — delete it and its sub-tasks
     projectColorRequested = pyqtSignal(str, str)  # (project, taskwarrior colour string)
     projectColorClearRequested = pyqtSignal(str)  # project — unset its colour
-    savedFilterActivated = pyqtSignal(str)  # raw filter string
     boardActivated = pyqtSignal(str)        # board name
     boardManageRequested = pyqtSignal()
-    savedFilterDeleteRequested = pyqtSignal(str)  # name
-    savedFilterRenameRequested = pyqtSignal(str, str)  # (old, new)
     addNextActionRequested = pyqtSignal(str)  # project — open Add Task pre-filled
 
     def __init__(self, parent=None) -> None:
@@ -186,7 +183,6 @@ class Sidebar(QTreeWidget):
         # (sidebar IA redesign) — the sidebar keeps only navigation that grows
         # with the data: quick views, boards, projects, tags.
         self._boards = self._section(t("sidebar.section.boards"))
-        self._saved = self._section(t("sidebar.section.saved"))
 
         self._projects = self._section(t("sidebar.section.projects"))
         self._project_items: list[QTreeWidgetItem] = []
@@ -442,53 +438,13 @@ class Sidebar(QTreeWidget):
         manage.setFont(0, f)
         self.retint()
 
-    def populate_saved_filters(self, filters: dict[str, str]) -> None:
-        self._saved.takeChildren()
-        self._saved_items: dict[str, QTreeWidgetItem] = {}
-        if not filters:
-            hint = QTreeWidgetItem([t("sidebar.saved.hint")])
-            hint.setFlags(Qt.ItemFlag.NoItemFlags)
-            hint.setForeground(0, getattr(self, "_hint_colour", QColor("#888")))
-            self._saved.addChild(hint)
-            return
-        folders: dict[str, QTreeWidgetItem] = {}
-        for name, raw in sorted(filters.items()):
-            # a "/" in the saved-filter name nests it under a folder
-            folder, _, leaf = name.rpartition("/")
-            parent = self._saved
-            if folder:
-                if folder not in folders:
-                    fi = QTreeWidgetItem([folder])
-                    fi.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    fi.setData(0, _ICON_ROLE, "folder")
-                    self._saved.addChild(fi)
-                    folders[folder] = fi
-                parent = folders[folder]
-            item = self._leaf(
-                parent, leaf,
-                {"kind": "saved", "name": name, "raw": raw}, "filter",
-            )
-            item.setToolTip(0, raw)
-            self._saved_items[name] = item
-        self.expandItem(self._saved)
-        for fi in folders.values():
-            self.expandItem(fi)
-        self.retint()
-
     def set_view_counts(self, counts: dict[str, int]) -> None:
-        """Append ``· N`` to quick-view / saved-filter rows (keyed by spec key
-        or saved-filter name)."""
-        def label_with_count(base: str, n: int | None) -> str:
-            return f"{base}  ·  {n}" if n is not None else base
-
+        """Append ``· N`` to the quick-view rows (keyed by spec key)."""
         for item in self._iter_items(self._quick):
             spec = item.data(0, _SPEC_ROLE)
             if isinstance(spec, dict) and spec.get("key") in counts:
-                item.setText(0, label_with_count(spec["title"], counts[spec["key"]]))
-        for name, item in getattr(self, "_saved_items", {}).items():
-            if name in counts:
-                leaf = name.rpartition("/")[2]
-                item.setText(0, label_with_count(leaf, counts[name]))
+                n = counts[spec["key"]]
+                item.setText(0, f"{spec['title']}  ·  {fmt.num(n)}")
 
     # --- drag & drop -----------------------------------------
 
@@ -526,7 +482,7 @@ class Sidebar(QTreeWidget):
     # --- context menu (saved filters + tags + projects) ------
 
     def _context_menu(self, pos) -> None:
-        from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
+        from PyQt6.QtWidgets import QInputDialog, QMenu
 
         item = self.itemAt(pos)
         spec = item.data(0, _SPEC_ROLE) if item else None
@@ -571,29 +527,6 @@ class Sidebar(QTreeWidget):
                 self.projectDeleteRequested.emit(name)
             return
 
-        if spec.get("kind") != "saved":
-            return
-        name = spec["name"]
-        menu = QMenu(self)
-        act_rename = menu.addAction(t("sidebar.menu.rename"))
-        act_delete = menu.addAction(t("sidebar.menu.delete"))
-        chosen = menu.exec(self.viewport().mapToGlobal(pos))
-        if chosen == act_rename:
-            new, ok = QInputDialog.getText(
-                self, t("sidebar.rename.title"), t("sidebar.rename.label"), text=name
-            )
-            if ok and new.strip() and new.strip() != name:
-                self.savedFilterRenameRequested.emit(name, new.strip())
-        elif chosen == act_delete:
-            confirm = QMessageBox.question(
-                self, t("sidebar.delete.title"),
-                t("sidebar.delete.body", name=name),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if confirm == QMessageBox.StandardButton.Yes:
-                self.savedFilterDeleteRequested.emit(name)
-
     def _show_tag_menu(self, tag: str, global_pos) -> None:
         from PyQt6.QtWidgets import QInputDialog, QMenu
 
@@ -634,9 +567,6 @@ class Sidebar(QTreeWidget):
     def activate_spec(self, spec: dict) -> None:
         """Route a sidebar spec to the right signal — shared by clicks and the
         command palette."""
-        if spec.get("kind") == "saved":
-            self.savedFilterActivated.emit(spec["raw"])
-            return
         if spec.get("kind") == "board":
             self.boardActivated.emit(spec["name"])
             return
